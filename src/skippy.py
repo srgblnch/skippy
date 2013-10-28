@@ -39,6 +39,7 @@ import time
 import traceback
 import communicator
 import instructionSet
+import numpy,struct
 #----- PROTECTED REGION END -----#	//	Skippy.additionnal_import
 
 ##############################################################################
@@ -120,29 +121,63 @@ class Skippy (PyTango.Device_4Impl):
            - attributes that reading is recent (TODO)
         '''
         try:
-            exclude = []
-            exclude.append(multiattr.get_attr_ind_by_name('QueryWindow'))
-            exclude.append(multiattr.get_attr_ind_by_name('TimeStampsThreshold'))
-            exclude.append(multiattr.get_attr_ind_by_name('Idn'))
-            filtered = []
+            t = time.time()
+            delta_t = self.attr_TimeStampsThreshold_read
+            scalar = []
+            spectrum = []
+            image = []
             for attr_index in data:
-                attr_name = multiattr.get_attr_by_ind(attr_index).get_name()
-                if attr_index in exclude:
+                attrObj = multiattr.get_attr_by_ind(attr_index)
+                attrName = attrObj.get_name()
+                if not self.attributes.has_key(attrName):
                         self.debug_stream("In %s.__filterAttributes() "\
-                                          "excluding %s"
-                                          %(self.get_name(),attr_name))
+                                          "excluding %s: is not a hw attr."
+                                          %(self.get_name(),attrName))
                 else:
-                    filtered.append(attr_name)
-            self.debug_stream("In %s.__filterAttributes() filtered list: %s"
-                              %(self.get_name(),filtered))
-            return filtered
+                    t_a = self.attributes[attrName]['timestamp']
+                    if not t_a == None and t - t_a < delta_t:
+                        self.debug_stream("In %s.__filterAttributes() "\
+                                          "excluding %s: t < delta_t"
+                                          %(self.get_name(),attrName))
+                    else:
+                        if attrObj.get_data_format() == PyTango.AttrDataFormat.SCALAR:
+                            scalar.append(attrName)
+                        elif attrObj.get_data_format() == PyTango.AttrDataFormat.SPECTRUM:
+                            spectrum.append(attrName)
+                            #when an spectrum are required, some reference attributes will be needed
+                            if self.attributes.has_key('WaveformDataFormat'):
+                                scalar.append('WaveformDataFormat')
+                            if self.attributes.has_key('WaveformOrigin'):
+                                scalar.append('WaveformOrigin')
+                            if self.attributes.has_key('WaveformIncrement'):
+                                scalar.append('WaveformIncrement')
+                        elif attrObj.get_data_format() == PyTango.AttrDataFormat.IMAGE:
+                            image.append(attrName)
+                        else:
+                            self.error_stream("In %s.__filterAttributes() "\
+                                              "unknown data format for "\
+                                              "attribute %s"%(self.get_name(),attrName))
+            self.debug_stream("In %s.__filterAttributes() scalar list: %s; "\
+                              "spectrum list: %s; image list: %s"
+                              %(self.get_name(),scalar,spectrum,image))
+            #Remove repeated attributes
+            for attr in scalar:
+                while scalar.count(attr) > 1:
+                    scalar.pop(scalar.index(attr))
+            for attr in spectrum:
+                while spectrum.count(attr) > 1:
+                    spectrum.pop(spectrum.index(attr))
+            for attr in image:
+                while image.count(attr) > 1:
+                    image.pop(image.index(attr))
+            return scalar,spectrum,image
         except Exception,e:
             self.error_stream("In %s.__filterAttributes(%s) Exception: %s"
                               %(self.get_name(),data,e))
             traceback.print_exc()
             return None
     
-    def __preHardwareRead(self,attrList):
+    def __preHardwareRead(self,attrList,window=1):
         '''Given a list of attributes to be read, prepare it.
            - Divide the attributes to be read in subsets of QueryWindow size.
            - Build the concatenations of queries per subset.
@@ -159,8 +194,8 @@ class Skippy (PyTango.Device_4Impl):
             self.debug_stream("In %s.__preHardwareRead()"%self.get_name())
             subsetsIndexes = []
             subsetsQueries = []
-            for i in range(0,len(attrList),self.attr_QueryWindow_read):
-                subsetsIndexes.append(attrList[i:i+self.attr_QueryWindow_read])
+            for i in range(0,len(attrList),window):
+                subsetsIndexes.append(attrList[i:i+window])
                 subsetsQueries.append("")
                 for j in range(len(subsetsIndexes[len(subsetsIndexes)-1])):
                     attrName = subsetsIndexes[len(subsetsIndexes)-1][j]
@@ -171,18 +206,22 @@ class Skippy (PyTango.Device_4Impl):
             self.error_stream("In %s.__preHardwareRead() Exception: %s"\
                               %(self.get_name(),e))
             traceback.print_exc()
-            print subsetsIndexes
-            print i
-            print j
             return None,None
 
-    def __hardwareRead(self,query):
+    def __hardwareScalarRead(self,query):
         '''Given a string with a ';' separated list of scpi commands 'ask'
            to the instrument and return what the instrument responds.
         '''
         return self.__instrument.ask(query)
+    def __hardwareSpectrumRead(self,query):
+        '''Given a string with a ';' separated list of scpi commands 'ask'
+           to the instrument and return what the instrument responds.
+        '''
+        #return self.__instrument.ask_for_values(query)
+        return self.__instrument.ask(query)
+        #FIXME: spectrum and scalar are equal, only one method is required
 
-    def __postHardwareRead(self,indexes,answers):
+    def __postHardwareScalarRead(self,indexes,answers):
         '''Given the answers organise them in the self.attributes dictionary.
            Example: QueryWindow = 4
            Input: indexes = [[a1,a2,a3,a4],
@@ -192,14 +231,14 @@ class Skippy (PyTango.Device_4Impl):
                              "ans;ans;ans;ans;",
                              "ans;ans;"]
         '''
-        t = time.ctime()
+        t = time.time()
         try:
             for i,answer in enumerate(answers):
                 for j,value in enumerate(answer.split('\n')[0].split(';')):
                     attrName = indexes[i][j]
                     try:
                         if self.attributes[attrName]['type'] in [PyTango.CmdArgType.DevBoolean]:
-                            self.attributes[attrName]['lastValue'] = bool(int(value))
+                            self.attributes[attrName]['lastReadValue'] = bool(int(value))
                         elif self.attributes[attrName]['type'] in [PyTango.CmdArgType.DevUChar,
                                                                    PyTango.CmdArgType.DevUShort,
                                                                    PyTango.CmdArgType.DevShort,
@@ -207,51 +246,199 @@ class Skippy (PyTango.Device_4Impl):
                                                                    PyTango.CmdArgType.DevLong,
                                                                    PyTango.CmdArgType.DevULong64,
                                                                    PyTango.CmdArgType.DevLong64]:
-                            self.attributes[attrName]['lastValue'] = int(value)
+                            self.attributes[attrName]['lastReadValue'] = int(value)
                         elif self.attributes[attrName]['type'] in [PyTango.CmdArgType.DevFloat,
                                                                    PyTango.CmdArgType.DevDouble]:
                             if value == '9.99999E+37':#this is the instrument tag for non measurable
-                                self.attributes[attrName]['lastValue'] = float('NaN')
+                                self.attributes[attrName]['lastReadValue'] = float('NaN')
                             else:
-                                self.attributes[attrName]['lastValue'] = float(value)
+                                self.attributes[attrName]['lastReadValue'] = float(value)
                         elif self.attributes[attrName]['type'] in [PyTango.CmdArgType.DevString]:
-                            self.attributes[attrName]['lastValue'] = str(value)
+                            self.attributes[attrName]['lastReadValue'] = str(value)
                         else:
-                            self.warn_stream("In %s.__postHardwareRead() "\
+                            self.warn_stream("In %s.__postHardwareScalarRead() "\
                                              "Unrecognized data type for %s"
                                              %(self.get_name(),attrName))
-                            self.attributes[attrName]['lastValue'] = value
+                            self.attributes[attrName]['lastReadValue'] = value
                     except Exception,e:
-                        self.error_stream("In %s.__postHardwareRead() "\
+                        self.error_stream("In %s.__postHardwareScalarRead() "\
                                           "Exception of attribute %s: %s"
                                           %(self.get_name(),attrName,e))
-                        self.attributes[attrName]['lastValue'] = None
+                        self.attributes[attrName]['lastReadValue'] = None
                         self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_INVALID
                     else:
                         self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
                     finally:
                         self.attributes[attrName]['timestamp'] = t
         except Exception,e:
-            self.error_stream("In %s.__postHardwareRead() Exception: %s"\
+            self.error_stream("In %s.__postHardwareScalarRead() Exception: %s"\
+                              %(self.get_name(),e))
+            traceback.print_exc()
+    
+    def __postHardwareSpectrumRead(self,indexes,answers):
+        '''Given the answers organise them in the self.attributes dictionary.
+           QueryWindow doesn't apply here, the spectrums are made in separated reads
+           Input: indexes = [[s1],
+                             [s2],
+                             [a3]]
+                  answers = ["f1,f2,f3,f4,...,fn",
+                             "f1,f2,f3,f4,...,fn",,
+                             "f1,f2,f3,f4,...,fn",]
+           A waveform has always a first character '#'
+           The second is a char with the number of elements in the next variable field
+           The third, represented with Rs, are the number of elements in the waveform that comes next.
+           Example: answer = #532017... means, 5 elements will be in the second
+                    field, and there will be 32017 elements in the third.
+        '''
+        t = time.time()
+        try:
+            for i,answer in enumerate(answers):
+                attrName = indexes[i][0]
+                if attrName.startswith('Channel') or attrName.startswith('Function'):
+                    if self.attributes.has_key('WaveformDataFormat') and \
+                       self.attributes.has_key('WaveformOrigin') and \
+                       self.attributes.has_key('WaveformIncrement'):
+                        dataFormat = self.attributes['WaveformDataFormat']['lastReadValue']
+                        if dataFormat.startswith('ASC'):
+                            self.attributes[attrName]['lastReadValue'] = numpy.fromstring(answer,dtype=float,sep=',')
+                            self.attributes[attrName]['timestamp'] = t
+                            self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
+                        else:
+                            #process the header
+                            if not answer[0] == '#':
+                                self.error_stream("Wrong data receiver for the "\
+                                                  "attribute %s"%attrName)
+                            nBytesLengthBlock = int(answer[1])
+                            nBytesWaveBlock = int(answer[2:nBytesLengthBlock+2])
+                            waveBytes = answer[nBytesLengthBlock+2:nBytesWaveBlock]
+                            self.debug_stream("In %s.__postHardwareSpectrumRead() "\
+                                              "waveform data: header size %d bytes, "\
+                                              "wave size %d bytes"
+                                              %(self.get_name(),nBytesLengthBlock,nBytesWaveBlock))
+                            if dataFormat.startswith('BYT'):
+                                format = 'b'#signed char, 1byte
+                                divisor = 1
+                            elif dataFormat.startswith('WORD'):
+                                format = 'h'#signed short, 2byte
+                                divisor = 2
+#                             elif dataFormat.startswith('LON'):
+#                                 pass
+                            else:
+                                self.error_stream("Cannot decodify data receiver "\
+                                                  "for the attribute %s"%attrName)
+                                self.attributes[attrName]['lastReadValue'] = []
+                                self.attributes[attrName]['timestamp'] = t
+                                self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_INVALID
+                            nCompletBytes = len(waveBytes)-(len(waveBytes)%divisor)
+                            if not len(waveBytes)%4 == 0:
+                                self.debug_stream("nIncompleteBytes = %d"%(len(waveBytes)%divisor))
+                            #convert the received input to integers
+                            unpackInt = struct.unpack(format*(nCompletBytes/divisor),waveBytes[:nCompletBytes])
+                            #expand the input when each float is codified in less than 4 bytes
+                            floats = numpy.array(unpackInt,dtype=float)
+                            waveorigin = self.attributes['WaveformOrigin']['lastReadValue']
+                            waveincrement = self.attributes['WaveformIncrement']['lastReadValue']
+                            self.attributes[attrName]['lastReadValue'] = (waveorigin + (waveincrement * floats))
+                            self.attributes[attrName]['timestamp'] = t
+                            self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
+                    else:
+                        self.warn_stream("In %s.__postHardwareSpectrumRead() "\
+                                         "Unrecognised spectrum attribute, "\
+                                         "storing raw data"%(self.get_name()))
+                        self.attributes[attrName]['lastReadValue'] = answer
+                        self.attributes[attrName]['timestamp'] = t
+                        self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
+        except Exception,e:
+            self.error_stream("In %s.__postHardwareSpectrumRead() Exception: %s"\
                               %(self.get_name(),e))
             traceback.print_exc()
     
     @instructionSet.AttrExc
     def read_attr(self, attr):
         attrName = attr.get_name()
-        value = self.attributes[attrName]['lastValue']
-        timestamp = self.attributes[attrName]['timestamp']
-        quality = self.attributes[attrName]['quality']
-        attr.set_value(value)
+        if self.attributes.has_key(attrName):
+            value = self.attributes[attrName]['lastReadValue']
+            timestamp = self.attributes[attrName]['timestamp']
+            quality = self.attributes[attrName]['quality']
+            if self.attributes[attrName]['dim'] == 0:
+                attr.set_value_date_quality(value,timestamp,quality)
+            elif self.attributes[attrName]['dim'] == 1:
+                attr.set_value_date_quality(value,timestamp,quality,len(value))
+        elif attrName.endswith("Step"):
+            parentAttrName = attrName.split('Step')[0]
+            value = self.attributes[parentAttrName]['rampStep']
+            attr.set_value(value)
+        elif attrName.endswith("StepSpeed"):
+            parentAttrName = attrName.split('StepSpeed')[0]
+            value = self.attributes[parentAttrName]['rampStepSpeed']
+            attr.set_value(value)
+        else:
+            raise AttributeError("Invalid read of the attribute %s"
+                                 %(attrName))
 
     @instructionSet.AttrExc
     def write_attr(self, attr):
+        '''The execution of this method starts with three different branches:
+           - An instrument attribute to be send. This splits in two branches also:
+             - Direct write
+             - Launch a thread (if not yet) to drive a ramp to the setpoint
+           - The other two are the internal ramp attributes
+           - Other case, raise an exception
+        '''
         attrName = attr.get_name()
         data = []
         attr.get_write_value(data)
-        cmd = self.attributes[attrName]['writeStr'](data[0])
-        self.debug_stream("In %s.write_attr() sending: %s"%(self.get_name(),cmd))
-        self.__instrument.write(cmd)
+        if self.attributes.has_key(attrName):
+            self.attributes[attrName]['lastWriteValue'] = data[0]
+            if self.attributes[attrName].has_key('rampThread') and \
+               not (self.attributes[attrName]['rampStep'] == 0.0 \
+                    or self.attributes[attrName]['rampStep'] == 0.0) and\
+               self.attributes[attrName]['rampThread'] == None:
+                self.attributes[attrName]['rampThread'] = threading.Thread(target=self.rampSteeper,args=(attrName))
+                self.attributes[attrName]['rampThread'].setDaemon(True)
+                self.attributes[attrName]['rampThread'].start()
+            else:
+                cmd = self.attributes[attrName]['writeStr'](data[0])
+                self.debug_stream("In %s.write_attr() sending: %s"%(self.get_name(),cmd))
+                self.__instrument.write(cmd)
+        elif attrName.endswith("Step"):
+            parentAttrName = attrName.split('Step')[0]
+            self.attributes[parentAttrName]['rampStep'] = data[0]
+        elif attrName.endswith("StepSpeed"):
+            parentAttrName = attrName.split('StepSpeed')[0]
+            self.attributes[parentAttrName]['rampStepSpeed'] = data[0]
+        else:
+            raise AttributeError("Invalid write of the attribute %s"
+                                 %(attrName))
+
+    def rampSteeper(self,attrName):
+        #prepare
+        backup_state = self.get_state()
+        self.change_state(PyTango.DevState.MOVING)
+        attrReadCmd = self.attributes[attrName]['readStr']
+        #move
+        self.attributes[attrName]['lastReadValue'] = self.__instrument.ask(attrReadCmd)
+        current_pos = self.attributes[attrName]['lastReadValue']
+        self.info_stream("In %s.rampSteeper(): started the movement from %f"
+                         %(self.get_name(),current_pos))
+        while not current_pos == self.attributes[attrName]['lastWriteValue']:
+            if current_pos > self.attributes[attrName]['lastWriteValue']:
+                if current_pos - self.attributes[attrName]['lastWriteValue'] < self.attributes[attrName]['rampStep']:
+                    current_pos = self.attributes[attrName]['lastWriteValue']
+                else: current_pos -= self.attributes[attrName]['rampStep']
+            elif current_pos < self.attributes[attrName]['lastWriteValue']:
+                if self.attributes[attrName]['lastWriteValue'] - current_pos < self.attributes[attrName]['rampStep']:
+                    current_pos = self.attributes[attrName]['lastWriteValue']
+                else: current_pos += self.attributes[attrName]['rampStep']
+            attrWriteCmd = self.attributes[attrName]['writeStr'](current_pos)
+            self.debug_stream("In %s.write_attr() sending: %s"%(self.get_name(),cmd))
+            self.__instrument.write(attrWriteCmd)
+            time.sleep(self.attributes[attrName]['rampStepSpeed'])
+        self.info_stream("In %s.rampSteeper(): finished the movement at %f"
+                         %(self.get_name(),current_pos))
+        #close
+        self.change_state(backup_state)
+        self.attributes[attrName]['rampThread'] = None
 
     #----- done dynamic attributes builder section
     ######
@@ -268,8 +455,8 @@ class Skippy (PyTango.Device_4Impl):
                 else:
                     self.push_change_event(attrEvent[0],attrEvent[1],timestamp,PyTango.AttrQuality.ATTR_VALID)
             except Exception,e:
-                self.error_stream("In %s.fireEventsList() Exception with attribute %s"%(self.get_name(),attrEvent[0]))
-                print e
+                self.error_stream("In %s.fireEventsList() Exception with attribute %s: %s"%(self.get_name(),attrEvent[0],e))
+                traceback.print_exc()
     #@todo: clean the important logs when they loose importance.
     def change_state(self,newstate):
         self.debug_stream("In %s.change_state(%s)"%(self.get_name(),str(newstate)))
@@ -321,13 +508,6 @@ class Skippy (PyTango.Device_4Impl):
         self.attr_QueryWindow_read = 0
         self.attr_TimeStampsThreshold_read = 0.0
         #----- PROTECTED REGION ID(Skippy.init_device) ENABLED START -----#
-        #dictionary with all attribute information
-        # each attribute in the dict is a dictionary with:
-        # 'readMethod'
-        # 'writeMethod'
-        # 'type'
-        # 'lastValue'
-        # 'timestamp'
         self.attributes={}
         self._important_logs = []
         self.set_state(PyTango.DevState.INIT)
@@ -426,17 +606,28 @@ class Skippy (PyTango.Device_4Impl):
     def read_attr_hardware(self, data):
         self.debug_stream("In " + self.get_name() + ".read_attr_hardware()")
         #----- PROTECTED REGION ID(Skippy.read_attr_hardware) ENABLED START -----#
+        #TODO: !! spectrumList
         try:
             multiattr = self.get_device_attr()
-            attrList = self.__filterAttributes(multiattr, data)
-            if len(attrList) == 0: return
-            indexes,queries = self.__preHardwareRead(attrList)
-            answers = []
-            for query in queries:
-                answers.append(self.__hardwareRead(query))
-            self.debug_stream("In %s.read_attr_hardware() answers: %s"\
-                              %(self.get_name(),answers))
-            self.__postHardwareRead(indexes,answers)
+            scalarList,spectrumList,imageList = self.__filterAttributes(multiattr, data)
+            if not len(scalarList) == 0:
+                indexes,queries = self.__preHardwareRead(scalarList,self.attr_QueryWindow_read)
+                answers = []
+                for query in queries:
+                    answers.append(self.__hardwareScalarRead(query))
+                self.debug_stream("In %s.read_attr_hardware() scalar answers: %s"\
+                                  %(self.get_name(),answers))
+                self.__postHardwareScalarRead(indexes,answers)
+            if not len(spectrumList) == 0:
+                indexes,queries = self.__preHardwareRead(spectrumList,1)
+                answers = []
+                for query in queries:
+                    answers.append(self.__hardwareSpectrumRead(query))
+                self.debug_stream("In %s.read_attr_hardware() spectrum answers number: %s"\
+                                  %(self.get_name(),len(answers)))
+                self.__postHardwareSpectrumRead(indexes,answers)
+            if not len(imageList) == 0:
+                self.error_stream("Excluding 2 dimensional attributes")
         except Exception,e:
             self.error_stream("In %s.read_attr_hardware() Exception: %s"\
                               %(self.get_name(),e))
