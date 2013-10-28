@@ -122,7 +122,7 @@ class AttributeBuilder:
                self.__device.NumChannels > 0:
                 for ch in range(1,self.__device.NumChannels+1):
                     try:
-                        attr = self.__getAttrObj(attributeName,attributeDefinition,channel=ch)
+                        attr = self.__getAttrObj( "%sCh%d"%(attributeName,ch),attributeDefinition,channel=ch)
                         self.__device.debug_stream("Added attribute: %s"%attr.get_name())
                     except Exception,e:
                         self.__device.error_stream("NOT added attribute: %sCh%d "\
@@ -134,7 +134,7 @@ class AttributeBuilder:
                self.__device.NumFunctions > 0:
                 for fn in range(1,self.__device.NumFunctions+1):
                     try:
-                        attr = self.__getAttrObj(attributeName,attributeDefinition,function=fn)
+                        attr = self.__getAttrObj("%sFn%d"%(attributeName,fn),attributeDefinition,function=fn)
                         self.__device.debug_stream("Added attribute: %s"%attr.get_name())
                     except Exception,e:
                         self.__device.error_stream("NOT added attribute: %sFn%d "\
@@ -152,20 +152,8 @@ class AttributeBuilder:
                                            %(attributeName,e))
                 traceback.print_exc()
 
-    def __getAttrObj(self,name,definition,channel=None,function=None):
+    def __getAttrObj(self,attrName,definition,channel=None,function=None):
         #TODO: image dimensions
-        if channel:
-            if definition['dim'] == [0]:
-                attrName = "%sCh%d"%(name,channel)
-            else:
-                attrName = "%s%d"%(name,channel)
-        elif function:
-            if definition['dim'] == [0]:
-                attrName = "%sFn%d"%(name,function)
-            else:
-                attrName = "%s%d"%(name,function)
-        else:
-            attrName = name
         if definition['dim'] == [0]:
             if definition.has_key('writeCmd'):
                 attr = PyTango.Attr(attrName,definition['type'],PyTango.READ_WRITE)
