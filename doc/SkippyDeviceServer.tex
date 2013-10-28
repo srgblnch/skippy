@@ -2,9 +2,11 @@
 \usepackage[utf8x]{inputenc}
 
 \usepackage[left=2.5cm,right=2.5cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{amsmath,amsfonts,amssymb}
 \usepackage{graphicx}
 \usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue]{hyperref}
 \usepackage{color}
+\usepackage{listings}
 
 %opening
 \title{Skippy Device Server}
@@ -69,9 +71,40 @@ The main restriction that the PyVisaInstrWrapper shows is the dependency on the 
 
 Other attributes can be built using a \href{http://en.wikipedia.org/wiki/Builder_pattern}{Builder pattern}. In fact, when the device starts and the instrument is identified, with the information provided in this identification, the device can find how to build the instructions set.
 
+An example of an attribute definition:
+
+\begin{lstlisting}[language=python,basicstyle=\footnotesize]
+Attribute('State',
+          {'type':PyTango.CmdArgType.DevBoolean,
+           'dim':[0],
+           'readCmd':lambda ch,num:":%s%d:DISPlay?"%(ch,num),
+           'writeCmd':lambda ch,num:(lambda value:":%s%d:DISPlay %s"%(ch,num,value)),
+           'channels':True,
+           'functions':True,
+         })
+\end{lstlisting}
+
+This example, in a oscilloscope with 4 channels and 4 functions, will setup 8 {\tt READ\_WRITE} boolean attributes, called with the pattern: {\tt State\{Ch,Fn\}[1..4]}. Point to comment is the {\tt readCmd} and the {\tt writeCmd} and the use of {\tt lambda}s. In the \emph{read} case, and because this is an attribute description to build more than one, the {\tt lambda} function is set to build the final command for each of the channels and functions. A bit more complicated is the \emph{write} case, where there are two nested {\tt lambda}s, one used in the attribute build and the other used when write the attribute because is when the value is known.
+
+Another example of an attribute definition:
+
+\begin{lstlisting}[language=python,basicstyle=\footnotesize]
+Attribute('Frequency',
+          {'type':PyTango.CmdArgType.DevDouble,
+           'dim':[0],
+           'readCmd':":FREQ?",
+           'writeCmd':lambda value:":FREQ %s"%(str(value)),
+           'rampeable':True,
+         })
+\end{lstlisting}
+
+That example, in a RF generator, will setup 3 {\tt READ\_WRITE} double attributes, called {\tt Frequency}, {\tt FrequencyStep}, {\tt FrequencyStepSpeed}. This describes a behabiour where, when a \emph{frequency} is set, a thread will be launched to each \emph{StepSpeed} seconds, the current value will be increased/decreased by the \emph{Step} in the direction of the setpoint.
+
 \subsection{Class Diagram}
 
-\begin{figure}[h]
+In figure \ref{fig:classDiagram} can be found a UML draw with the class diagram.
+
+\begin{figure}[h!]
     \centering{
          \includegraphics[width=\textwidth]{ClassDiagram.png}
          \caption{Class diagram of the Skippy device.} \label{fig:classDiagram}
@@ -83,7 +116,9 @@ Other attributes can be built using a \href{http://en.wikipedia.org/wiki/Builder
 \begin{itemize}
     \item Device is capable to dynamically build attributes based on the instrument identification (described in the the particular instruction set).
     \begin{itemize}
-        \item By now supports only Scalar attributes, but should support Spectrum (as an example, to have the waveforms from the scopes). Image attributes are not currently in the development scope because there are no yet a need for that in the current supported instruments, but the device is prepared for a later development if is needed (for example, an spectra of frequencies in a SpectrumAnalyser).
+        \item {[\color{red}pending}] By now supports only Scalar attributes, but should support Spectrum (as an example, to have the waveforms from the scopes). Image attributes are not currently in the development scope because there are no yet a need for that in the current supported instruments, but the device is prepared for a later development if is needed (for example, an spectra of frequencies in a SpectrumAnalyser).
+        \item {[\color{red}pending}] Memorized dynamic attributes.
+        \item {[\color{red}pending}] Reconnect after network cut (or PyVisa)
     \end{itemize}
     \item Multiple request of data to the instrument: As figure \ref{fig:groupedRequests} describes, when the device receives a request for reading to the instrument it can manage to cut those requests in subsets to avoid stress in the instrument. The communication itself supports a direct socket connection to the instrument and the use of the PyVisa device as a bridge in the communication.
 \end{itemize}
