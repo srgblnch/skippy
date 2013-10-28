@@ -171,20 +171,6 @@ Attribute('Waveform',
            'functions':True,
          })
 
-# Attribute('Channel',
-#           {'type':PyTango.CmdArgType.DevDouble,
-#            'dim':[1,40000000],
-#            'readCmd':lambda ch,num:":WAVeform:SOURce %s%d;:WAVeform:DATA?"%(ch,num),
-#            'channels':True,
-#          })
-
-# Attribute('Function',
-#           {'type':PyTango.CmdArgType.DevDouble,
-#            'dim':[1,40000000],
-#            'readCmd':lambda ch,num:":WAVeform:SOURce %s%d;:WAVeform:DATA?"%(ch,num),
-#            'functions':True,
-#          })
-
 Attribute('CurrentSampleRate',
           {'type':PyTango.CmdArgType.DevDouble,
            'dim':[0],
