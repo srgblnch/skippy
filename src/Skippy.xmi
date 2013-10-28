@@ -87,39 +87,12 @@
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>
-    <commands name="OpenCh" description="In case the instrument has channels open the numbered in the argin." execMethod="open_ch" displayLevel="OPERATOR" polledPeriod="0">
+    <commands name="Exec" description="evaluate python code inside the device server. This command can be very helpful and dangerous." execMethod="exec" displayLevel="EXPERT" polledPeriod="0">
       <argin description="">
-        <type xsi:type="pogoDsl:UShortType"/>
+        <type xsi:type="pogoDsl:StringType"/>
       </argin>
       <argout description="">
-        <type xsi:type="pogoDsl:VoidType"/>
-      </argout>
-      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
-    </commands>
-    <commands name="CloseCh" description="In case the instrument has channels close the numbered in the argin." execMethod="close_ch" displayLevel="OPERATOR" polledPeriod="0">
-      <argin description="">
-        <type xsi:type="pogoDsl:UShortType"/>
-      </argin>
-      <argout description="">
-        <type xsi:type="pogoDsl:VoidType"/>
-      </argout>
-      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
-    </commands>
-    <commands name="OpenFn" description="In case the instrument has functions open the numbered in the argin." execMethod="open_fn" displayLevel="OPERATOR" polledPeriod="0">
-      <argin description="">
-        <type xsi:type="pogoDsl:UShortType"/>
-      </argin>
-      <argout description="">
-        <type xsi:type="pogoDsl:VoidType"/>
-      </argout>
-      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
-    </commands>
-    <commands name="CloseFn" description="In case the instrument has functions close the numbered in the argin." execMethod="close_fn" displayLevel="OPERATOR" polledPeriod="0">
-      <argin description="">
-        <type xsi:type="pogoDsl:UShortType"/>
-      </argin>
-      <argout description="">
-        <type xsi:type="pogoDsl:VoidType"/>
+        <type xsi:type="pogoDsl:StringType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </commands>

@@ -35,11 +35,13 @@ import sys
 # Add additional import
 #----- PROTECTED REGION ID(Skippy.additionnal_import) ENABLED START -----#
 import socket
+import threading
 import time
 import traceback
 import communicator
 import instructionSet
 import numpy,struct
+from types import StringType
 #----- PROTECTED REGION END -----#	//	Skippy.additionnal_import
 
 ##############################################################################
@@ -62,10 +64,10 @@ class Skippy (PyTango.Device_4Impl):
     #----- section to resolve instrument property
     def getConnectionObj(self,instrumentName):
         if self.isHostName(instrumentName):
-            return communicator.bySocket(instrumentName,self.Port,self)
+            return communicator.bySocket(instrumentName,port=self.Port,parent=self)
         elif self.isTangoName(instrumentName):
             if self.isVisaDevice(instrumentName):
-                return communicator.byVisa(instrumentName,self)
+                return communicator.byVisa(instrumentName,parent=self)
             raise SyntaxError("Instrument device type not identified")
         raise SyntaxError("Instrument name not identified")
     
@@ -110,7 +112,13 @@ class Skippy (PyTango.Device_4Impl):
     ######
     #----- dynamic attributes builder section
     def builder(self):
-        instructionSet.identifier(self.__idn,self)
+        try:
+            instructionSet.identifier(self.__idn,self)
+        except Exception,e:
+            msg = "identification error: %s (*IDN?:%s)"%(e,repr(self.__idn))
+            self.error_stream("%s %s"%(self.get_name(),msg))
+            self.change_state(PyTango.DevState.FAULT)
+            self.addStatusMsg(msg)
         
     def unbuilder(self):
         pass #TODO: remove all the dynamic attributes from the current builded.
@@ -208,18 +216,12 @@ class Skippy (PyTango.Device_4Impl):
             traceback.print_exc()
             return None,None
 
-    def __hardwareScalarRead(self,query):
+    def __hardwareRead(self,query):
         '''Given a string with a ';' separated list of scpi commands 'ask'
            to the instrument and return what the instrument responds.
         '''
+        self.debug_stream("In %s.__hardwareRead()"%self.get_name())
         return self.__instrument.ask(query)
-    def __hardwareSpectrumRead(self,query):
-        '''Given a string with a ';' separated list of scpi commands 'ask'
-           to the instrument and return what the instrument responds.
-        '''
-        #return self.__instrument.ask_for_values(query)
-        return self.__instrument.ask(query)
-        #FIXME: spectrum and scalar are equal, only one method is required
 
     def __postHardwareScalarRead(self,indexes,answers):
         '''Given the answers organise them in the self.attributes dictionary.
@@ -231,6 +233,7 @@ class Skippy (PyTango.Device_4Impl):
                              "ans;ans;ans;ans;",
                              "ans;ans;"]
         '''
+        self.debug_stream("In %s.__postHardwareScalarRead()"%self.get_name())
         t = time.time()
         try:
             for i,answer in enumerate(answers):
@@ -290,6 +293,7 @@ class Skippy (PyTango.Device_4Impl):
            Example: answer = #532017... means, 5 elements will be in the second
                     field, and there will be 32017 elements in the third.
         '''
+        self.debug_stream("In %s.__postHardwareSpectrumRead()"%self.get_name())
         t = time.time()
         try:
             for i,answer in enumerate(answers):
@@ -368,12 +372,22 @@ class Skippy (PyTango.Device_4Impl):
                 attr.set_value_date_quality(value,timestamp,quality,len(value))
         elif attrName.endswith("Step"):
             parentAttrName = attrName.split('Step')[0]
+            print parentAttrName
             value = self.attributes[parentAttrName]['rampStep']
-            attr.set_value(value)
+            print self.attributes[parentAttrName]
+            if value == None:
+                attr.set_value_date_quality(0,time.time(),PyTango.AttrQuality.ATTR_INVALID)
+            else:
+                attr.set_value(value)
         elif attrName.endswith("StepSpeed"):
             parentAttrName = attrName.split('StepSpeed')[0]
+            print parentAttrName
             value = self.attributes[parentAttrName]['rampStepSpeed']
-            attr.set_value(value)
+            print self.attributes[parentAttrName]
+            if value == None:
+                attr.set_value_date_quality(0,time.time(),PyTango.AttrQuality.ATTR_INVALID)
+            else:
+                attr.set_value(value)
         else:
             raise AttributeError("Invalid read of the attribute %s"
                                  %(attrName))
@@ -392,13 +406,16 @@ class Skippy (PyTango.Device_4Impl):
         attr.get_write_value(data)
         if self.attributes.has_key(attrName):
             self.attributes[attrName]['lastWriteValue'] = data[0]
-            if self.attributes[attrName].has_key('rampThread') and \
-               not (self.attributes[attrName]['rampStep'] == 0.0 \
-                    or self.attributes[attrName]['rampStep'] == 0.0) and\
-               self.attributes[attrName]['rampThread'] == None:
-                self.attributes[attrName]['rampThread'] = threading.Thread(target=self.rampSteeper,args=(attrName))
-                self.attributes[attrName]['rampThread'].setDaemon(True)
-                self.attributes[attrName]['rampThread'].start()
+            isRampeable = self.attributes[attrName].has_key('rampThread')
+            hasStep = not self.attributes[attrName]['rampStep'] in [None,0.0]
+            hasSpeed = not self.attributes[attrName]['rampStepSpeed'] in [None,0.0]
+            if isRampeable and hasStep and hasSpeed:
+                if self.attributes[attrName]['rampThread'] == None:
+                    self.attributes[attrName]['rampThread'] = threading.Thread(target=self.rampStepper,
+                                                                               args=([attrName]))
+                    self.attributes[attrName]['rampThread'].setDaemon(True)
+                    self.attributes[attrName]['rampThread'].start()
+                self.attributes[attrName]['lastWriteValue']
             else:
                 cmd = self.attributes[attrName]['writeStr'](data[0])
                 self.debug_stream("In %s.write_attr() sending: %s"%(self.get_name(),cmd))
@@ -413,13 +430,16 @@ class Skippy (PyTango.Device_4Impl):
             raise AttributeError("Invalid write of the attribute %s"
                                  %(attrName))
 
-    def rampSteeper(self,attrName):
+    def rampStepper(self,attrName):
+        #Remember the arguments when this is called as thread target, is a tuple
+        # and the content of this tuple is a list with one string element.
+        self.debug_stream("In %s.rampStepper(%s)"%(self.get_name(),attrName))
         #prepare
         backup_state = self.get_state()
         self.change_state(PyTango.DevState.MOVING)
         attrReadCmd = self.attributes[attrName]['readStr']
         #move
-        self.attributes[attrName]['lastReadValue'] = self.__instrument.ask(attrReadCmd)
+        self.attributes[attrName]['lastReadValue'] = float(self.__instrument.ask(attrReadCmd))
         current_pos = self.attributes[attrName]['lastReadValue']
         self.info_stream("In %s.rampSteeper(): started the movement from %f"
                          %(self.get_name(),current_pos))
@@ -433,7 +453,7 @@ class Skippy (PyTango.Device_4Impl):
                     current_pos = self.attributes[attrName]['lastWriteValue']
                 else: current_pos += self.attributes[attrName]['rampStep']
             attrWriteCmd = self.attributes[attrName]['writeStr'](current_pos)
-            self.debug_stream("In %s.write_attr() sending: %s"%(self.get_name(),cmd))
+            #self.debug_stream("In %s.write_attr() sending: %s"%(self.get_name(),attrWriteCmd))
             self.__instrument.write(attrWriteCmd)
             time.sleep(self.attributes[attrName]['rampStepSpeed'])
         self.info_stream("In %s.rampSteeper(): finished the movement at %f"
@@ -510,6 +530,16 @@ class Skippy (PyTango.Device_4Impl):
         self.attr_QueryWindow_read = 0
         self.attr_TimeStampsThreshold_read = 0.0
         #----- PROTECTED REGION ID(Skippy.init_device) ENABLED START -----#
+        self.attr_QueryWindow_read = 1#Not allow 0
+        #tools for the Exec() cmd
+        DS_MODULE = __import__(self.__class__.__module__)
+        kM = dir(DS_MODULE)
+        vM = map(DS_MODULE.__getattribute__, kM)
+        self.__globals = dict(zip(kM, vM))
+        self.__globals['self'] = self
+        self.__globals['module'] = DS_MODULE
+        self.__locals = {}
+        
         self.attributes={}
         self._important_logs = []
         self.set_state(PyTango.DevState.INIT)
@@ -529,7 +559,16 @@ class Skippy (PyTango.Device_4Impl):
             self.addStatusMsg("initialisation exception: %s"%(e))
             return
         self.change_state(PyTango.DevState.OFF)
-        self.On()
+        try:
+            self.__instrument.connect()
+            self.__idn = self.__instrument.ask("*IDN?")
+        except Exception,e:
+            self.error_stream("Cannot connect to the instrument due to: %s"%e)
+        else:
+            self.info_stream("Connected to the instrument and "\
+                             "identified as: %s"%(repr(self.__idn)))
+            self.change_state(PyTango.DevState.ON)
+            self.builder()
         #----- PROTECTED REGION END -----#	//	Skippy.init_device
 
 #------------------------------------------------------------------
@@ -616,7 +655,7 @@ class Skippy (PyTango.Device_4Impl):
                 indexes,queries = self.__preHardwareRead(scalarList,self.attr_QueryWindow_read)
                 answers = []
                 for query in queries:
-                    answers.append(self.__hardwareScalarRead(query))
+                    answers.append(self.__hardwareRead(query))
                 self.debug_stream("In %s.read_attr_hardware() scalar answers: %s"\
                                   %(self.get_name(),answers))
                 self.__postHardwareScalarRead(indexes,answers)
@@ -624,7 +663,7 @@ class Skippy (PyTango.Device_4Impl):
                 indexes,queries = self.__preHardwareRead(spectrumList,1)
                 answers = []
                 for query in queries:
-                    answers.append(self.__hardwareSpectrumRead(query))
+                    answers.append(self.__hardwareRead(query))
                 self.debug_stream("In %s.read_attr_hardware() spectrum answers number: %s"\
                                   %(self.get_name(),len(answers)))
                 self.__postHardwareSpectrumRead(indexes,answers)
@@ -704,8 +743,11 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION ID(Skippy.On) ENABLED START -----#
         try:
             self.__instrument.connect()
-        except:
-            self.error_stream("Cannot connect to the instrument")
+        except Exception,e:
+            msg = "Cannot connect to the instrument due to: %s"%e
+            self.error_stream(msg)
+            self.addStatusMsg(msg)
+            self.change_state(PyTango.DevState.FAULT)
         else:
             self.__idn = self.__instrument.ask("*IDN?")
             self.info_stream("Connected to the instrument and "\
@@ -741,68 +783,42 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION END -----#	//	Skippy.Off
         
 #------------------------------------------------------------------
-#    OpenCh command:
+#    Exec command:
 #------------------------------------------------------------------
-    def OpenCh(self, argin):
-        """ In case the instrument has channels open the numbered in the argin.
+    def Exec(self, argin):
+        """ evaluate python code inside the device server. This command can be very helpful and dangerous.
         
         :param argin: 
-        :type: PyTango.DevUShort
+        :type: PyTango.DevString
         :return: 
-        :rtype: PyTango.DevVoid """
-        self.debug_stream("In " + self.get_name() +  ".OpenCh()")
-        #----- PROTECTED REGION ID(Skippy.OpenCh) ENABLED START -----#
-        if int(argin) > self.NumChannels:
-            raise IndexError("Channel number not available")
-        #----- PROTECTED REGION END -----#	//	Skippy.OpenCh
-        
-#------------------------------------------------------------------
-#    CloseCh command:
-#------------------------------------------------------------------
-    def CloseCh(self, argin):
-        """ In case the instrument has channels close the numbered in the argin.
-        
-        :param argin: 
-        :type: PyTango.DevUShort
-        :return: 
-        :rtype: PyTango.DevVoid """
-        self.debug_stream("In " + self.get_name() +  ".CloseCh()")
-        #----- PROTECTED REGION ID(Skippy.CloseCh) ENABLED START -----#
-        if int(argin) > self.NumChannels:
-            raise IndexError("Channel number not available")
-        #----- PROTECTED REGION END -----#	//	Skippy.CloseCh
-        
-#------------------------------------------------------------------
-#    OpenFn command:
-#------------------------------------------------------------------
-    def OpenFn(self, argin):
-        """ In case the instrument has functions open the numbered in the argin.
-        
-        :param argin: 
-        :type: PyTango.DevUShort
-        :return: 
-        :rtype: PyTango.DevVoid """
-        self.debug_stream("In " + self.get_name() +  ".OpenFn()")
-        #----- PROTECTED REGION ID(Skippy.OpenFn) ENABLED START -----#
-        if int(argin) > self.NumFunctions:
-            raise IndexError("Function number not available")
-        #----- PROTECTED REGION END -----#	//	Skippy.OpenFn
-        
-#------------------------------------------------------------------
-#    CloseFn command:
-#------------------------------------------------------------------
-    def CloseFn(self, argin):
-        """ In case the instrument has functions close the numbered in the argin.
-        
-        :param argin: 
-        :type: PyTango.DevUShort
-        :return: 
-        :rtype: PyTango.DevVoid """
-        self.debug_stream("In " + self.get_name() +  ".CloseFn()")
-        #----- PROTECTED REGION ID(Skippy.CloseFn) ENABLED START -----#
-        if int(argin) > self.NumFunctions:
-            raise IndexError("Function number not available")
-        #----- PROTECTED REGION END -----#	//	Skippy.CloseFn
+        :rtype: PyTango.DevString """
+        self.debug_stream("In " + self.get_name() +  ".Exec()")
+        argout = ''
+        #----- PROTECTED REGION ID(Skippy.Exec) ENABLED START -----#
+        try:
+            try:
+                # interpretation as expression
+                argout = eval(argin,self.__globals,self.__locals)
+            except SyntaxError:
+                # interpretation as statement
+                exec cmd in self.__globals, self.__locals
+                argout = self.__locals.get("y")
+
+        except Exception, exc:
+            # handles errors on both eval and exec level
+            argout = traceback.format_exc()
+
+        if type(argout)==StringType:
+            return argout
+        elif isinstance(argout, BaseException):
+            return "%s!\n%s" % (argout.__class__.__name__, str(argout))
+        else:
+            try:
+                return pprint.pformat(argout)
+            except Exception:
+                return str(argout)
+        #----- PROTECTED REGION END -----#	//	Skippy.Exec
+        return argout
         
 
 #==================================================================
@@ -855,18 +871,12 @@ class SkippyClass(PyTango.DeviceClass):
         'Off':
             [[PyTango.DevVoid, "none"],
             [PyTango.DevVoid, "none"]],
-        'OpenCh':
-            [[PyTango.DevUShort, "none"],
-            [PyTango.DevVoid, "none"]],
-        'CloseCh':
-            [[PyTango.DevUShort, "none"],
-            [PyTango.DevVoid, "none"]],
-        'OpenFn':
-            [[PyTango.DevUShort, "none"],
-            [PyTango.DevVoid, "none"]],
-        'CloseFn':
-            [[PyTango.DevUShort, "none"],
-            [PyTango.DevVoid, "none"]],
+        'Exec':
+            [[PyTango.DevString, "none"],
+            [PyTango.DevString, "none"],
+            {
+                'Display level': PyTango.DispLevel.EXPERT,
+            } ],
         }
 
 

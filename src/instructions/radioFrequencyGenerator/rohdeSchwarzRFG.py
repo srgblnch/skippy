@@ -49,33 +49,33 @@ Attribute('FrequencyRangeLow',
           {'type':PyTango.CmdArgType.DevDouble,
            'dim':[0],
            'readCmd':":FREQ:PHAS:CONT:LOW?",
-           'writeCmd':lambda value:":FREQ:PHAS:CONT:LOW %s"%(str(value)),
+           #'writeCmd':lambda value:":FREQ:PHAS:CONT:LOW %s"%(str(value)),
          })
 
 Attribute('FrequencyRangeHigh',
           {'type':PyTango.CmdArgType.DevDouble,
            'dim':[0],
            'readCmd':":FREQ:PHAS:CONT:HIGH?",
-           'writeCmd':lambda value:":FREQ:PHAS:CONT:HIGH %s"%(str(value)),
+           #'writeCmd':lambda value:":FREQ:PHAS:CONT:HIGH %s"%(str(value)),
          })
 
 Attribute('PowerRangeLow',
           {'type':PyTango.CmdArgType.DevDouble,
            'dim':[0],
-           'readCmd':"::OUTP:AFIX:RANG:LOW?",
-           'writeCmd':lambda value:":OUTP:AFIX:RANG:LOW %s"%(str(value)),
+           'readCmd':":OUTP:AFIX:RANG:LOW?",
+           #'writeCmd':lambda value:":OUTP:AFIX:RANG:LOW %s"%(str(value)),
          })
 
 Attribute('PowerRangeHigh',
           {'type':PyTango.CmdArgType.DevDouble,
            'dim':[0],
            'readCmd':":OUTP:AFIX:RANG:UPP?",
-           'writeCmd':lambda value:":OUTP:AFIX:RANG:UPP %s"%(str(value)),
+           #'writeCmd':lambda value:":OUTP:AFIX:RANG:UPP %s"%(str(value)),
          })
 
 Attribute('Impedancy',
-          {'type':PyTango.CmdArgType.DevShort,
-           'dim':[1,100],
+          {'type':PyTango.CmdArgType.DevString,
+           'dim':[0],
            'readCmd':":OUTP:IMP?",
          })
 
@@ -91,15 +91,15 @@ Attribute('PhaseContinuousFrequencyNarrow',
            'readCmd':":FREQ:PHAS:CONT:MODE?",
          })
 
-Attribute('ExtOscSrc',
-          {'type':PyTango.CmdArgType.DevBoolean,
-           'dim':[0],
-           'readCmd':":ROSCillator:SOURce?",
-           'writeCmd':lambda value:":ROSCillator:SOURce %s"%(str(value)),
-         })
-
-Attribute('Errors',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[1,100],
-           'readCmd':":SYST:SERROR?",
-         })
+# Attribute('ExtOscSrc',
+#           {'type':PyTango.CmdArgType.DevBoolean,
+#            'dim':[0],
+#            'readCmd':":ROSCillator:SOURce?",
+#            'writeCmd':lambda value:":ROSCillator:SOURce %s"%(str(value)),
+#          })
+# 
+# Attribute('Errors',
+#           {'type':PyTango.CmdArgType.DevString,
+#            'dim':[1,100],
+#            'readCmd':":SYST:SERROR?",
+#          })
