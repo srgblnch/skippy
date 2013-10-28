@@ -294,60 +294,61 @@ class Skippy (PyTango.Device_4Impl):
         try:
             for i,answer in enumerate(answers):
                 attrName = indexes[i][0]
-                if attrName.startswith('Channel') or attrName.startswith('Function'):
-                    if self.attributes.has_key('WaveformDataFormat') and \
-                       self.attributes.has_key('WaveformOrigin') and \
-                       self.attributes.has_key('WaveformIncrement'):
-                        dataFormat = self.attributes['WaveformDataFormat']['lastReadValue']
-                        if dataFormat.startswith('ASC'):
-                            self.attributes[attrName]['lastReadValue'] = numpy.fromstring(answer,dtype=float,sep=',')
-                            self.attributes[attrName]['timestamp'] = t
-                            self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
-                        else:
-                            #process the header
-                            if not answer[0] == '#':
-                                self.error_stream("Wrong data receiver for the "\
-                                                  "attribute %s"%attrName)
-                            nBytesLengthBlock = int(answer[1])
-                            nBytesWaveBlock = int(answer[2:nBytesLengthBlock+2])
-                            waveBytes = answer[nBytesLengthBlock+2:nBytesWaveBlock]
-                            self.debug_stream("In %s.__postHardwareSpectrumRead() "\
-                                              "waveform data: header size %d bytes, "\
-                                              "wave size %d bytes"
-                                              %(self.get_name(),nBytesLengthBlock,nBytesWaveBlock))
-                            if dataFormat.startswith('BYT'):
-                                format = 'b'#signed char, 1byte
-                                divisor = 1
-                            elif dataFormat.startswith('WORD'):
-                                format = 'h'#signed short, 2byte
-                                divisor = 2
-#                             elif dataFormat.startswith('LON'):
-#                                 pass
-                            else:
-                                self.error_stream("Cannot decodify data receiver "\
-                                                  "for the attribute %s"%attrName)
-                                self.attributes[attrName]['lastReadValue'] = []
-                                self.attributes[attrName]['timestamp'] = t
-                                self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_INVALID
-                            nCompletBytes = len(waveBytes)-(len(waveBytes)%divisor)
-                            if not len(waveBytes)%4 == 0:
-                                self.debug_stream("nIncompleteBytes = %d"%(len(waveBytes)%divisor))
-                            #convert the received input to integers
-                            unpackInt = struct.unpack(format*(nCompletBytes/divisor),waveBytes[:nCompletBytes])
-                            #expand the input when each float is codified in less than 4 bytes
-                            floats = numpy.array(unpackInt,dtype=float)
-                            waveorigin = self.attributes['WaveformOrigin']['lastReadValue']
-                            waveincrement = self.attributes['WaveformIncrement']['lastReadValue']
-                            self.attributes[attrName]['lastReadValue'] = (waveorigin + (waveincrement * floats))
-                            self.attributes[attrName]['timestamp'] = t
-                            self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
-                    else:
-                        self.warn_stream("In %s.__postHardwareSpectrumRead() "\
-                                         "Unrecognised spectrum attribute, "\
-                                         "storing raw data"%(self.get_name()))
-                        self.attributes[attrName]['lastReadValue'] = answer
+                if self.attributes.has_key('WaveformDataFormat') and \
+                   self.attributes.has_key('WaveformOrigin') and \
+                   self.attributes.has_key('WaveformIncrement'):
+                    dataFormat = self.attributes['WaveformDataFormat']['lastReadValue']
+                    if dataFormat.startswith('ASC'):
+                        self.debug_stream("Spectrum received in ascii: %s"%(repr(answer)[:100]))
+                        self.attributes[attrName]['lastReadValue'] = numpy.fromstring(answer,dtype=float,sep=',')
                         self.attributes[attrName]['timestamp'] = t
                         self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
+                    else:
+                        self.debug_stream("Spectrum received in binary: %s"%(repr(answer)[:100]))
+                        #process the header
+                        if not answer[0] == '#':
+                            self.error_stream("Wrong data receiver for the "\
+                                              "attribute %s"%attrName)
+                        nBytesLengthBlock = int(answer[1])
+                        nBytesWaveBlock = int(answer[2:nBytesLengthBlock+2])
+                        waveBytes = answer[nBytesLengthBlock+2:nBytesWaveBlock]
+                        self.debug_stream("In %s.__postHardwareSpectrumRead() "\
+                                          "waveform data: header size %d bytes, "\
+                                          "wave size %d bytes"
+                                          %(self.get_name(),nBytesLengthBlock,nBytesWaveBlock))
+                        if dataFormat.startswith('BYT'):
+                            format = 'b'#signed char, 1byte
+                            divisor = 1
+                        elif dataFormat.startswith('WORD'):
+                            format = 'h'#signed short, 2byte
+                            divisor = 2
+#                             elif dataFormat.startswith('LON'):
+#                                 pass
+                        else:
+                            self.error_stream("Cannot decodify data receiver "\
+                                              "for the attribute %s"%attrName)
+                            self.attributes[attrName]['lastReadValue'] = []
+                            self.attributes[attrName]['timestamp'] = t
+                            self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_INVALID
+                        nCompletBytes = len(waveBytes)-(len(waveBytes)%divisor)
+                        if not len(waveBytes)%4 == 0:
+                            self.debug_stream("nIncompleteBytes = %d"%(len(waveBytes)%divisor))
+                        #convert the received input to integers
+                        unpackInt = struct.unpack(format*(nCompletBytes/divisor),waveBytes[:nCompletBytes])
+                        #expand the input when each float is codified in less than 4 bytes
+                        floats = numpy.array(unpackInt,dtype=float)
+                        waveorigin = self.attributes['WaveformOrigin']['lastReadValue']
+                        waveincrement = self.attributes['WaveformIncrement']['lastReadValue']
+                        self.attributes[attrName]['lastReadValue'] = (waveorigin + (waveincrement * floats))
+                        self.attributes[attrName]['timestamp'] = t
+                        self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
+                else:
+                    self.warn_stream("In %s.__postHardwareSpectrumRead() "\
+                                     "Unrecognised spectrum attribute, "\
+                                     "storing raw data"%(self.get_name()))
+                    self.attributes[attrName]['lastReadValue'] = answer
+                    self.attributes[attrName]['timestamp'] = t
+                    self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
         except Exception,e:
             self.error_stream("In %s.__postHardwareSpectrumRead() Exception: %s"\
                               %(self.get_name(),e))
@@ -356,6 +357,7 @@ class Skippy (PyTango.Device_4Impl):
     @instructionSet.AttrExc
     def read_attr(self, attr):
         attrName = attr.get_name()
+        self.debug_stream("read_attr for %s"%(attrName))
         if self.attributes.has_key(attrName):
             value = self.attributes[attrName]['lastReadValue']
             timestamp = self.attributes[attrName]['timestamp']
