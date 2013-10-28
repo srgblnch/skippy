@@ -21,3 +21,5 @@
 ##        (c) - Controls Software Section - ALBA/CELLS
 ##############################################################################
 
+import PyTango
+
