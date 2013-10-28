@@ -128,6 +128,7 @@ class AttributeBuilder:
                         self.__device.error_stream("NOT added attribute: %sCh%d "\
                                                    "due to exception: %s"
                                                    %(attributeName,ch,e))
+                        traceback.print_exc()
             if attributeDefinition.has_key('functions') and \
                attributeDefinition['functions'] and \
                self.__device.NumFunctions > 0:
@@ -139,6 +140,7 @@ class AttributeBuilder:
                         self.__device.error_stream("NOT added attribute: %sFn%d "\
                                                    "due to exception: %s"
                                                    %(attributeName,fn,e))
+                        traceback.print_exc()
         #when is a single attribute, no loop required
         else:
             try:
@@ -148,25 +150,44 @@ class AttributeBuilder:
                 self.__device.error_stream("NOT added attribute: %s "\
                                            "due to exception: %s"
                                            %(attributeName,e))
+                traceback.print_exc()
 
     def __getAttrObj(self,name,definition,channel=None,function=None):
-        #TODO: spectrum, image dimensions
+        #TODO: image dimensions
         if channel:
-            attrName = "%sCh%d"%(name,channel)
+            if definition['dim'] == [0]:
+                attrName = "%sCh%d"%(name,channel)
+            else:
+                attrName = "%s%d"%(name,channel)
         elif function:
-            attrName = "%sFn%d"%(name,function)
+            if definition['dim'] == [0]:
+                attrName = "%sFn%d"%(name,function)
+            else:
+                attrName = "%s%d"%(name,function)
         else:
             attrName = name
-        if not definition['dim'] == 0:
-            raise AttributeError("Not supported dimensions")
-        if definition.has_key('writeCmd'):
-            attr = PyTango.Attr(attrName,definition['type'],PyTango.READ_WRITE)
-            readmethod = AttrExc(getattr(self.__device,'read_attr'))
-            writemethod = AttrExc(getattr(self.__device,'write_attr'))
+        if definition['dim'] == [0]:
+            if definition.has_key('writeCmd'):
+                attr = PyTango.Attr(attrName,definition['type'],PyTango.READ_WRITE)
+                readmethod = AttrExc(getattr(self.__device,'read_attr'))
+                writemethod = AttrExc(getattr(self.__device,'write_attr'))
+            else:
+                attr = PyTango.Attr(attrName,definition['type'],PyTango.READ)
+                readmethod = AttrExc(getattr(self.__device,'read_attr'))
+                writemethod = None
+        elif definition['dim'][0] == 1:
+            if definition.has_key('writeCmd'):
+                attr = PyTango.SpectrumAttr(attrName,definition['type'],
+                                            PyTango.READ_WRITE,definition['dim'][1])
+                readmethod = AttrExc(getattr(self.__device,'read_attr'))
+                writemethod = AttrExc(getattr(self.__device,'write_attr'))
+            else:
+                attr = PyTango.SpectrumAttr(attrName,definition['type'],
+                                            PyTango.READ,definition['dim'][1])
+                readmethod = AttrExc(getattr(self.__device,'read_attr'))
+                writemethod = None
         else:
-            attr = PyTango.Attr(attrName,definition['type'],PyTango.READ)
-            readmethod = AttrExc(getattr(self.__device,'read_attr'))
-            writemethod = None
+            raise AttributeError("Not supported dimensions")
         #attribute properties
         aprop = PyTango.UserDefaultAttrProp()
         if definition.has_key('unit'):
@@ -187,9 +208,11 @@ class AttributeBuilder:
         
         self.__device.add_attribute(attr, r_meth=readmethod, w_meth=writemethod)
         self.__attributeList.append(attr)
-        self.__device.attributes[attrName] = {'lastValue':None,
-                                          'timestamp':None,
-                                          'quality':PyTango.AttrQuality.ATTR_INVALID}
+        self.__device.attributes[attrName] = {'lastReadValue':None,
+                                              'timestamp':None,
+                                              'quality':PyTango.AttrQuality.ATTR_INVALID}
+        if definition.has_key('writeCmd'):
+            self.__device.attributes[attrName]['lastWriteValue'] = None
         if channel:
             self.__device.attributes[attrName]['readStr'] = definition['readCmd']("CHAN",channel)
             if definition.has_key('writeCmd'):
@@ -202,8 +225,20 @@ class AttributeBuilder:
             self.__device.attributes[attrName]['readStr'] = definition['readCmd']
             if definition.has_key('writeCmd'):
                 self.__device.attributes[attrName]['writeStr'] = definition['writeCmd']
+        if definition.has_key('rampeable'):
+            step = PyTango.Attr(attrName+"Step",definition['type'],PyTango.READ_WRITE)
+            self.__device.add_attribute(step, r_meth=readmethod, w_meth=writemethod)
+            self.__attributeList.append(step)
+            self.__device.attributes[attrName]['rampStep'] = None
+            stepspeed = PyTango.Attr(attrName+"StepSpeed",PyTango.CmdArgType.DevDouble,PyTango.READ_WRITE)
+            self.__device.add_attribute(stepspeed, r_meth=readmethod, w_meth=writemethod)
+            self.__attributeList.append(stepspeed)
+            self.__device.attributes[attrName]['rampStepSpeed'] = None
+            self.__device.attributes[attrName]['rampThread'] = None
         self.__device.attributes[attrName]['type'] = definition['type']
-        self.__device.debug_stream("New attribute build: %s:%s"%(attrName,self.__device.attributes[attrName]))
+        self.__device.attributes[attrName]['dim'] = definition['dim'][0]
+        self.__device.debug_stream("New attribute build: %s:%s"
+                                   %(attrName,self.__device.attributes[attrName]))
         return attr
 
     #TODO: parse the file with the definition of the attributes
