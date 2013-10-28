@@ -1,0 +1,109 @@
+\documentclass[a4paper,10pt]{article}
+\usepackage[utf8x]{inputenc}
+
+\usepackage[left=2.5cm,right=2.5cm,top=2cm,bottom=2cm]{geometry}
+\usepackage{graphicx}
+\usepackage[colorlinks=true,linkcolor=blue,urlcolor=blue,citecolor=blue]{hyperref}
+\usepackage{color}
+
+%opening
+\title{Skippy Device Server}
+\author{Sergi Blanch-Torn\'e\\\small{Controls Software Engineer - Alba Synchrotron}\\{\tt \small{sblanch@cells.es}}}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+Following the \href{https://en.wikipedia.org/wiki/Standard_Commands_for_Programmable_Instruments}{wikipedia}'s definition:  the SCPI ``\emph{defines a standard for syntax and commands to use in controlling programmable test and measurement devices}''. Many scientific instrumentation uses this schema for the configuration and operation of the instrument of its purpose.
+
+Alba has used an specific Device Server, under the name \emph{PyVisaInstrWrapper}, to communicate with instruments like scopes, radio frequency generators, arbitrary signal generators and spectrum analyser. This device was an extension from the original PyScope, becoming it one of the internal device classes. Many improvements has been introduced to this Device Server, but nowadays it is showing the limit of this design. A complete refactoring is needed.
+\end{abstract}
+
+\section{Design}
+
+The main restriction that the PyVisaInstrWrapper shows is the dependency on the PyVisa subdevice to manage the communications with the instrument. Also the growing number of query commands to the instrument has reach the limit of the basic design.
+
+\subsection{Machine state}
+
+\begin{figure}[h]
+    \centering{
+         \includegraphics[width=0.75\textwidth]{StateMachine.png}
+         \caption{State machine diagram of the Device in the Skippy Device Server} \label{fig:stateMachine}
+    }
+\end{figure}
+
+\subsection{Properties}
+
+\begin{itemize}
+    \item Instrument: mandatory property to configure the instrument that will be introduced to the distributed system via the device.
+    \begin{itemize}
+        \item If the content string is a host name, use sockets to communicate with the instrument
+        \item If the content string is a device name and the class of it is a PyVisa, use it as the bridge to the instrument.
+        \item else, decay to fault state with the appropriate status message
+    \end{itemize}
+    \item Port: optional property to specify a port, in the socket communication, when it should be different than the default 5025.
+    \item NumChannels: optional property to define, in case the instrument has channels, the number of them available.
+    \item NumFunctions: optional property to define, in case the instrument has functions, the number of them available.
+\end{itemize}
+
+\subsection{Commands}
+
+\begin{itemize}
+    \item IDN(): Request identification to the instrument.
+    \item Off(): Release the communication with the instrument.
+    \item On(): Stablish communication with the instrument.
+    \item Start(): Start an active monitoring.
+    \item Stop(): Stop the active monitoring.
+    \item OpenCh(): In case the instrument has channels open the numbered in the argin.
+    \item CloseCh(): In case the instrument has channels close the numbered in the argin.
+    \item OpenFn(): In case the instrument has functions open the numbered in the argin.
+    \item CloseFn(): In case the instrument has functions close the numbered in the argin.
+\end{itemize}
+
+\subsection{Attributes}
+
+\begin{itemize}
+    \item idn: read attribute with the identification of the instrument linked.
+\end{itemize}
+
+Other attributes can be built using a \href{http://en.wikipedia.org/wiki/Builder_pattern}{Builder pattern}. In fact, when the device starts and the instrument is identified, with the information provided in this identification, the device can find how to build the instructions set.
+
+\subsection{Class Diagram}
+
+\begin{figure}[h]
+    \centering{
+         \includegraphics[width=\textwidth]{ClassDiagram.png}
+         \caption{Class diagram of the Skippy device.} \label{fig:classDiagram}
+    }
+\end{figure}
+
+\subsection{Device features}
+
+\begin{itemize}
+    \item Device is capable to dynamically build attributes based on the instrument identification (described in the the particular instruction set).
+    \begin{itemize}
+        \item By now supports only Scalar attributes, but should support Spectrum (as an example, to have the waveforms from the scopes). Image attributes are not currently in the development scope because there are no yet a need for that in the current supported instruments, but the device is prepared for a later development if is needed (for example, an spectra of frequencies in a SpectrumAnalyser).
+    \end{itemize}
+    \item Multiple request of data to the instrument: As figure \ref{fig:groupedRequests} describes, when the device receives a request for reading to the instrument it can manage to cut those requests in subsets to avoid stress in the instrument. The communication itself supports a direct socket connection to the instrument and the use of the PyVisa device as a bridge in the communication.
+\end{itemize}
+
+\begin{figure}[h]
+    \centering{
+         \includegraphics[width=0.75\textwidth]{groupedRequests.png}
+         \caption{multiple request of readings to the instrument.} \label{fig:groupedRequests}
+    }
+\end{figure}
+
+\begin{itemize}
+    \item {[\color{red}pending}] Write process to some attributes would require a smooth ramp. As an example, to change the frequency in the RFGenerator, the change would not be set directly (or the timing system will suffer). Then in the build process of an specific attribute with a certain flag of "movability" (name to be determined) two extra attributes, internals in the device, must be built also: a Step and a StepSpeed. On the write operation a thread should be launched and every "StepSpeed" seconds change the value by the content in "Step" in the direction to the final setpoint. This was already implemented in PyRfSignalGenerator Class.
+    \item {[\color{red}pending}] Monitor attributes. Having a property with a list of attributes, if they exist in the instrument definition, configure them in events and do a separeted thread polling that will emit events on this attributes. This feature is different that setting up a "polling" from tango to the attribute because this fails to use the multiple reading.
+    \begin{itemize}
+        \item Perhaps in the definition of the attributes to be monitored, extra information can be added to allow different polling periods each.
+        \item Also a command way feature is required to add and remove elements from this monitoring list.
+    \end{itemize}
+    \item {[\color{red}pending}] Once this monitoring feature is available, other attributes not monitored that have reached some reading frequency, would be included in the monitoring loop (not emitting events) in order to reduce the load of the readings. The frequency reading should be monitored to notice when this has reduced over another threshold to avoid unnecessary readings.
+\end{itemize}
+
+
+\end{document}
