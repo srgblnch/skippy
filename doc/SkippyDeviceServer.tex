@@ -12,6 +12,10 @@
 \title{Skippy Device Server}
 \author{Sergi Blanch-Torn\'e\\\small{Controls Software Engineer - Alba Synchrotron}\\{\tt \small{sblanch@cells.es}}}
 
+\newcommand{\todo}[1]{\texttt{\color{red}TODO:} ``\emph{#1}''}
+\newcommand{\fixme}[1]{\texttt{\color{red}FIXME:} ``\emph{#1}''}
+\newcommand{\ok}[1]{``#1'' [\texttt{\color{green}OK}]}
+
 \begin{document}
 
 \maketitle
@@ -35,7 +39,9 @@ The main restriction that the PyVisaInstrWrapper shows is the dependency on the 
     }
 \end{figure}
 
-\subsection{Properties}
+\todo{explain the figure \ref{fig:stateMachine}}
+
+\subsection{Device Properties}
 
 \begin{itemize}
     \item Instrument: mandatory property to configure the instrument that will be introduced to the distributed system via the device.
@@ -49,7 +55,7 @@ The main restriction that the PyVisaInstrWrapper shows is the dependency on the 
     \item NumFunctions: optional property to define, in case the instrument has functions, the number of them available.
 \end{itemize}
 
-\subsection{Commands}
+\subsection{Device Commands}
 
 \begin{itemize}
     \item IDN(): Request identification to the instrument.
@@ -63,7 +69,7 @@ The main restriction that the PyVisaInstrWrapper shows is the dependency on the 
     \item CloseFn(): In case the instrument has functions close the numbered in the argin.
 \end{itemize}
 
-\subsection{Attributes}
+\subsection{Device Attributes}
 
 \begin{itemize}
     \item idn: read attribute with the identification of the instrument linked.
@@ -100,6 +106,20 @@ Attribute('Frequency',
 
 That example, in a RF generator, will setup 3 {\tt READ\_WRITE} double attributes, called {\tt Frequency}, {\tt FrequencyStep}, {\tt FrequencyStepSpeed}. This describes a behabiour where, when a \emph{frequency} is set, a thread will be launched to each \emph{StepSpeed} seconds, the current value will be increased/decreased by the \emph{Step} in the direction of the setpoint.
 
+Here an example of an spectrum attribute definition:
+
+\begin{lstlisting}[language=python,basicstyle=\footnotesize]
+Attribute('Waveform',
+          {'type':PyTango.CmdArgType.DevDouble,
+           'dim':[1,40000000],
+           'readCmd':lambda ch,num:":WAVeform:SOURce %s%d;:WAVeform:DATA?"%(ch,num),
+           'channels':True,
+           'functions':True,
+         })
+\end{lstlisting}
+
+With this attribute is broken a backward compatibility with PyVisaInstrWrapper because there those spectrum attributes did not follow the naming of name. There is a naming convention in attribute definitions with channels and functions, to the name given in the definition is concatenated at the end two characters ({\tt Ch} or {\tt Fn}) followed by the number of the channel.
+
 \subsection{Class Diagram}
 
 In figure \ref{fig:classDiagram} can be found a UML draw with the class diagram.
@@ -116,9 +136,9 @@ In figure \ref{fig:classDiagram} can be found a UML draw with the class diagram.
 \begin{itemize}
     \item Device is capable to dynamically build attributes based on the instrument identification (described in the the particular instruction set).
     \begin{itemize}
-        \item {[\color{red}pending}] By now supports only Scalar attributes, but should support Spectrum (as an example, to have the waveforms from the scopes). Image attributes are not currently in the development scope because there are no yet a need for that in the current supported instruments, but the device is prepared for a later development if is needed (for example, an spectra of frequencies in a SpectrumAnalyser).
-        \item {[\color{red}pending}] Memorized dynamic attributes.
-        \item {[\color{red}pending}] Reconnect after network cut (or PyVisa)
+        \item Supported Scalar and Spectrum (1 dimension arrays) attribute definition. Image (2 dimension arrays) are not currently developed, neither in the schedule because they are not needed by any of the current supported instruments. Although the device is prepared to sopport them if need be. (Perhaps the frequencies spectra in SpectrumAnalyser).
+        \item \todo{Memorized dynamic attributes.}
+        \item \todo{Reconnect after network cut (or PyVisa)}
     \end{itemize}
     \item Multiple request of data to the instrument: As figure \ref{fig:groupedRequests} describes, when the device receives a request for reading to the instrument it can manage to cut those requests in subsets to avoid stress in the instrument. The communication itself supports a direct socket connection to the instrument and the use of the PyVisa device as a bridge in the communication.
 \end{itemize}
@@ -131,13 +151,13 @@ In figure \ref{fig:classDiagram} can be found a UML draw with the class diagram.
 \end{figure}
 
 \begin{itemize}
-    \item {[\color{red}pending}] Write process to some attributes would require a smooth ramp. As an example, to change the frequency in the RFGenerator, the change would not be set directly (or the timing system will suffer). Then in the build process of an specific attribute with a certain flag of "movability" (name to be determined) two extra attributes, internals in the device, must be built also: a Step and a StepSpeed. On the write operation a thread should be launched and every "StepSpeed" seconds change the value by the content in "Step" in the direction to the final setpoint. This was already implemented in PyRfSignalGenerator Class.
-    \item {[\color{red}pending}] Monitor attributes. Having a property with a list of attributes, if they exist in the instrument definition, configure them in events and do a separeted thread polling that will emit events on this attributes. This feature is different that setting up a "polling" from tango to the attribute because this fails to use the multiple reading.
+    \item \todo{Write process to some attributes would require a smooth ramp. As an example, to change the frequency in the RFGenerator, the change would not be set directly (or the timing system will suffer). Then in the build process of an specific attribute with a certain flag of "movability" (name to be determined) two extra attributes, internals in the device, must be built also: a Step and a StepSpeed. On the write operation a thread should be launched and every "StepSpeed" seconds change the value by the content in "Step" in the direction to the final setpoint. This was already implemented in PyRfSignalGenerator Class.}
+    \item \todo{Monitor attributes. Having a property with a list of attributes, if they exist in the instrument definition, configure them in events and do a separeted thread polling that will emit events on this attributes. This feature is different that setting up a "polling" from tango to the attribute because this fails to use the multiple reading.}
     \begin{itemize}
         \item Perhaps in the definition of the attributes to be monitored, extra information can be added to allow different polling periods each.
         \item Also a command way feature is required to add and remove elements from this monitoring list.
     \end{itemize}
-    \item {[\color{red}pending}] Once this monitoring feature is available, other attributes not monitored that have reached some reading frequency, would be included in the monitoring loop (not emitting events) in order to reduce the load of the readings. The frequency reading should be monitored to notice when this has reduced over another threshold to avoid unnecessary readings.
+    \item \todo{Once this monitoring feature is available, other attributes not monitored that have reached some reading frequency, would be included in the monitoring loop (not emitting events) in order to reduce the load of the readings. The frequency reading should be monitored to notice when this has reduced over another threshold to avoid unnecessary readings.}
 \end{itemize}
 
 
