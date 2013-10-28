@@ -1,0 +1,97 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
+<html>
+<head>
+<title> Skippy Tango Class Commands </title>
+</head>
+<body text="Black" bgcolor="White" link="Blue" vlink="Purple" alink="Red">
+<br><br><br><br>
+<Table Border=2 Cellpadding=3 CELLSPACING=0>
+	<tr bgcolor="#CCCCFF" class="TableHeadingColor">
+	<td colspan=5> <font size=+1> <center><b> Skippy Class Commands </b></font></center></td>
+	<tr bgcolor="#CCCCFF" class="TableHeadingColor">
+		<td> <center><b> Name </b></center> </td>
+		<td> <center><b> Input type </b></center> </td>
+		<td> <center><b> Output type </b></center> </td>
+		<td> <center><b> Level </b></center> </td>
+		<td> <center><b> Description </b></center> </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdState.html"> State </a> </td>
+		<td> DEV_VOID </td>
+		<td> DEV_STATE </td>
+		<td> OPERATOR </td>
+		<td> This command gets the device state (stored in its device_state data member) and returns it to the caller. </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdStatus.html"> Status </a> </td>
+		<td> DEV_VOID </td>
+		<td> CONST_DEV_STRING </td>
+		<td> OPERATOR </td>
+		<td> This command gets the device status (stored in its device_status data member) and returns it to the caller. </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdIDN.html"> IDN </a> </td>
+		<td> DEV_VOID </td>
+		<td> DEV_STRING </td>
+		<td> OPERATOR </td>
+		<td> Request identification to the instrument. </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdStart.html"> Start </a> </td>
+		<td> DEV_VOID </td>
+		<td> DEV_VOID </td>
+		<td> OPERATOR </td>
+		<td> Start an active monitoring. </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdStop.html"> Stop </a> </td>
+		<td> DEV_VOID </td>
+		<td> DEV_VOID </td>
+		<td> OPERATOR </td>
+		<td> Stop the active monitoring. </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdOn.html"> On </a> </td>
+		<td> DEV_VOID </td>
+		<td> DEV_VOID </td>
+		<td> OPERATOR </td>
+		<td> Stablish communication with the instrument. </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdOff.html"> Off </a> </td>
+		<td> DEV_VOID </td>
+		<td> DEV_VOID </td>
+		<td> OPERATOR </td>
+		<td> Release the communication with the instrument. </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdOpenCh.html"> OpenCh </a> </td>
+		<td> DEV_USHORT </td>
+		<td> DEV_VOID </td>
+		<td> OPERATOR </td>
+		<td> In case the instrument has channels open the numbered in the argin. </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdCloseCh.html"> CloseCh </a> </td>
+		<td> DEV_USHORT </td>
+		<td> DEV_VOID </td>
+		<td> OPERATOR </td>
+		<td> In case the instrument has channels close the numbered in the argin. </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdOpenFn.html"> OpenFn </a> </td>
+		<td> DEV_USHORT </td>
+		<td> DEV_VOID </td>
+		<td> OPERATOR </td>
+		<td> In case the instrument has functions open the numbered in the argin. </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdCloseFn.html"> CloseFn </a> </td>
+		<td> DEV_USHORT </td>
+		<td> DEV_VOID </td>
+		<td> OPERATOR </td>
+		<td> In case the instrument has functions close the numbered in the argin. </td>
+	</tr>
+</table>
+</body>
+</html>
