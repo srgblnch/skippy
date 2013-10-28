@@ -39,8 +39,22 @@ def identifier(idn,deviceObj):
             #the DSO80204B Agilent scope
             attrList = AttributeBuilder(deviceObj)
             file = "instructions/scope/agilentDSO.py"
+        else:
+            raise EnvironmentError("Agilent %s model not supported"%(model))
     elif company.lower() == 'tektronix':
-        pass
+        if model.upper().startswith('DPO'):
+            attrList = AttributeBuilder(deviceObj)
+            file = "instructions/scope/tektronixDPO.py"
+        elif model.upper().startswith('AFG'):
+            attrList = AttributeBuilder(deviceObj)
+            file = "instructions/arbitraryFunctionGenerator/tektronicsAFG.py"
+        raise EnvironmentError("Tektronix %s model not supported"%(model))
+    elif company.lower() == 'rohde&schwarz':
+        if model.lower() == 'sma100a':
+            attrList = AttributeBuilder(deviceObj)
+            file = "instructions/radioFrequencyGenerator/rohdeSchwarzRFG.py"
+        else:
+            raise EnvironmentError("Rohde&Schwarz %s model not supported"%(model))
     else:
         raise EnvironmentError("instrument not supported")
     attrList.parseFile(file)
@@ -214,22 +228,30 @@ class AttributeBuilder:
             if definition.has_key('writeCmd'):
                 self.__device.attributes[attrName]['writeStr'] = definition['writeCmd']
         if definition.has_key('rampeable'):
+            db = PyTango.Database()
             step = PyTango.Attr(attrName+"Step",definition['type'],PyTango.READ_WRITE)
+            step.set_memorized_init(True)
             self.__device.add_attribute(step, r_meth=readmethod, w_meth=writemethod)
             self.__attributeList.append(step)
-            self.__device.attributes[attrName]['rampStep'] = None
+            try:
+                self.__device.attributes[attrName]['rampStep'] = float(db.get_device_attribute_property(self.__device.get_name(),attrName+"Step")[attrName+"Step"]['__value'][0])
+            except:
+                self.__device.attributes[attrName]['rampStep'] = None
             stepspeed = PyTango.Attr(attrName+"StepSpeed",PyTango.CmdArgType.DevDouble,PyTango.READ_WRITE)
+            stepspeed.set_memorized_init(True)
             self.__device.add_attribute(stepspeed, r_meth=readmethod, w_meth=writemethod)
             self.__attributeList.append(stepspeed)
-            self.__device.attributes[attrName]['rampStepSpeed'] = None
+            try:
+                self.__device.attributes[attrName]['rampStepSpeed'] = float(db.get_device_attribute_property(self.__device.get_name(),attrName+"StepSpeed")[attrName+"StepSpeed"]['__value'][0])
+            except:
+                self.__device.attributes[attrName]['rampStepSpeed'] = None
             self.__device.attributes[attrName]['rampThread'] = None
         self.__device.attributes[attrName]['type'] = definition['type']
         self.__device.attributes[attrName]['dim'] = definition['dim'][0]
         self.__device.debug_stream("New attribute build: %s:%s"
                                    %(attrName,self.__device.attributes[attrName]))
         return attr
-
-    #TODO: parse the file with the definition of the attributes
+        
     #TODO: remove dynamic attributes
     #      remember to clean the self.__device.attributes 
     #      and the self.__attributeList

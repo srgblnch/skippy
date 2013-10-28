@@ -31,8 +31,8 @@ class Communicator:
         raise NotImplementedError("This class is pure abstract")
 
     def debug_stream(self,msg):
-        if hasattr(self,'__parent') and not self.__parent == None:
-            self.__parent.debug_stream(msg)
+        if hasattr(self._parent,'debug_stream'):
+            self._parent.debug_stream(msg)
         else:
             print(msg)
 
@@ -79,7 +79,7 @@ class bySocket(Communicator):
     def __init__(self,hostName,port=5025,parent=None):
         self.__hostName = hostName
         self.__port = port
-        self.__parent = parent
+        self._parent = parent
         self.mutex = threading.Lock()
         self.debug_stream("building a communication to %s by socket "\
                           "using port %d"%(self.__hostName,self.__port))
@@ -89,6 +89,7 @@ class bySocket(Communicator):
         self.__sock.connect((self.__hostName, self.__port))
 
     def _send(self,msg):
+        self.debug_stream("Sending to %s:%d %s"%(self.__hostName,self.__port,repr(msg)))
         self.__sock.send(msg)
 
     def _recv(self,bufsize=10240):
@@ -107,6 +108,9 @@ class bySocket(Communicator):
                     #FIXME: there must be a better stopper than a timeout
                 else:
                     completeMsg = ''.join([completeMsg,buffer])
+        self.debug_stream("Received from %s:%d %s"
+                          %(self.__hostName,self.__port,
+                            repr(completeMsg)[:100]))
         return completeMsg
 
     def close(self):
@@ -126,7 +130,7 @@ class bySocket(Communicator):
 class byVisa(Communicator):
     def __init__(self,devName,parent=None):
         self.__device = PyTango.DeviceProxy(devName)
-        self.__parent = parent
+        self._parent = parent
         self.mutex = threading.Lock()
         self.debug_stream("building a communication to %s by PyVisa"%(devName))
 
@@ -135,10 +139,14 @@ class byVisa(Communicator):
             self.__device.Open()
     
     def _send(self,msg):
+        self.debug_stream("Sending to %s %s"%(self.__device.get_name(),repr(msg)))
         self.__device.Write(array.array('B',msg).tolist())
 
     def _recv(self):
-        return array.array('B',self.__device.ReadLine())
+        msg = array.array('B',self.__device.ReadLine())
+        self.debug_stream("Received from %s %s"%(self.__device.get_name(),
+                                                 repr(msg)[:100]))
+        return msg
 
     def close(self):
         if self.__device.State() == PyTango.DevState.ON:
