@@ -120,15 +120,16 @@ class Skippy (PyTango.Device_4Impl):
            - attributes that reading is recent (TODO)
         '''
         try:
-            nonHwAttr = []
-            nonHwAttr.append(multiattr.get_attr_ind_by_name('QueryWindow'))
-            nonHwAttr.append(multiattr.get_attr_ind_by_name('TimeStampsThreshold'))
+            exclude = []
+            exclude.append(multiattr.get_attr_ind_by_name('QueryWindow'))
+            exclude.append(multiattr.get_attr_ind_by_name('TimeStampsThreshold'))
+            exclude.append(multiattr.get_attr_ind_by_name('Idn'))
             filtered = []
             for attr_index in data:
                 attr_name = multiattr.get_attr_by_ind(attr_index).get_name()
-                if attr_index in nonHwAttr:
+                if attr_index in exclude:
                         self.debug_stream("In %s.__filterAttributes() "\
-                                          "excluding (nonHwAttr) %s"
+                                          "excluding %s"
                                           %(self.get_name(),attr_name))
                 else:
                     filtered.append(attr_name)
@@ -198,7 +199,7 @@ class Skippy (PyTango.Device_4Impl):
                     attrName = indexes[i][j]
                     try:
                         if self.attributes[attrName]['type'] in [PyTango.CmdArgType.DevBoolean]:
-                            self.attributes[attrName]['lastValue'] = bool(value)
+                            self.attributes[attrName]['lastValue'] = bool(int(value))
                         elif self.attributes[attrName]['type'] in [PyTango.CmdArgType.DevUChar,
                                                                    PyTango.CmdArgType.DevUShort,
                                                                    PyTango.CmdArgType.DevShort,
@@ -213,6 +214,8 @@ class Skippy (PyTango.Device_4Impl):
                                 self.attributes[attrName]['lastValue'] = float('NaN')
                             else:
                                 self.attributes[attrName]['lastValue'] = float(value)
+                        elif self.attributes[attrName]['type'] in [PyTango.CmdArgType.DevString]:
+                            self.attributes[attrName]['lastValue'] = str(value)
                         else:
                             self.warn_stream("In %s.__postHardwareRead() "\
                                              "Unrecognized data type for %s"
@@ -425,8 +428,9 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION ID(Skippy.read_attr_hardware) ENABLED START -----#
         try:
             multiattr = self.get_device_attr()
-            hwAttrList = self.__filterAttributes(multiattr, data)
-            indexes,queries = self.__preHardwareRead(hwAttrList)
+            attrList = self.__filterAttributes(multiattr, data)
+            if len(attrList) == 0: return
+            indexes,queries = self.__preHardwareRead(attrList)
             answers = []
             for query in queries:
                 answers.append(self.__hardwareRead(query))

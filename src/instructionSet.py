@@ -125,9 +125,9 @@ class AttributeBuilder:
                         attr = self.__getAttrObj(attributeName,attributeDefinition,channel=ch)
                         self.__device.debug_stream("Added attribute: %s"%attr.get_name())
                     except Exception,e:
-                        self.__device.error_stream("NOT added attribute: %s "\
+                        self.__device.error_stream("NOT added attribute: %sCh%d "\
                                                    "due to exception: %s"
-                                                   %(attr.get_name(),e))
+                                                   %(attributeName,ch,e))
             if attributeDefinition.has_key('functions') and \
                attributeDefinition['functions'] and \
                self.__device.NumFunctions > 0:
@@ -136,9 +136,9 @@ class AttributeBuilder:
                         attr = self.__getAttrObj(attributeName,attributeDefinition,function=fn)
                         self.__device.debug_stream("Added attribute: %s"%attr.get_name())
                     except Exception,e:
-                        self.__device.error_stream("NOT added attribute: %s "\
+                        self.__device.error_stream("NOT added attribute: %sFn%d "\
                                                    "due to exception: %s"
-                                                   %(attr.get_name(),e))
+                                                   %(attributeName,fn,e))
         #when is a single attribute, no loop required
         else:
             try:
@@ -193,11 +193,11 @@ class AttributeBuilder:
         if channel:
             self.__device.attributes[attrName]['readStr'] = definition['readCmd']("CHAN",channel)
             if definition.has_key('writeCmd'):
-                self.__device.attributes[name]['writeStr'] = definition['writeCmd']("CHAN",channel)
+                self.__device.attributes[attrName]['writeStr'] = definition['writeCmd']("CHAN",channel)
         elif function:
             self.__device.attributes[attrName]['readStr'] = definition['readCmd']("FUNC",function)
             if definition.has_key('writeCmd'):
-                self.__device.attributes[name]['writeStr'] = definition['writeCmd']("FUNC",function)
+                self.__device.attributes[attrName]['writeStr'] = definition['writeCmd']("FUNC",function)
         else:
             self.__device.attributes[attrName]['readStr'] = definition['readCmd']
             if definition.has_key('writeCmd'):
