@@ -34,7 +34,7 @@ class Communicator:
         if hasattr(self._parent,'debug_stream'):
             self._parent.debug_stream(msg)
         else:
-            print(msg)
+            print("DEBUG: "+msg)
 
     def ask(self, commandList):
         '''Prepare the command list and do a combination of send(msg) and recv()
@@ -84,9 +84,12 @@ class bySocket(Communicator):
         self.debug_stream("building a communication to %s by socket "\
                           "using port %d"%(self.__hostName,self.__port))
         self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.__sock.settimeout(1)
     def connect(self):
+        self.__sock.settimeout(1)
         self.__sock.connect((self.__hostName, self.__port))
+    def disconnect(self):
+        self.__sock = None
+        self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def _send(self,msg):
         self.debug_stream("Sending to %s:%d %s"%(self.__hostName,self.__port,repr(msg)))
@@ -96,21 +99,39 @@ class bySocket(Communicator):
         completeMsg = ''
         buffer = self.__sock.recv(bufsize)
         completeMsg = ''.join([completeMsg,buffer])
-        if completeMsg.startswith('#') or completeMsg.count(','):
-            #This is when what was requested is an array of values from one attr
-            #when binary mode starts with #, on ASCII mode the values are ',' separated
-            while not len(buffer) == 0:
-                try:
-                    buffer = self.__sock.recv(bufsize)
-                except Exception,e:
-                    #print("reception break due to exception: %s"%(e))
-                    break
-                    #FIXME: there must be a better stopper than a timeout
-                else:
-                    completeMsg = ''.join([completeMsg,buffer])
-        self.debug_stream("Received from %s:%d %s"
-                          %(self.__hostName,self.__port,
-                            repr(completeMsg)[:100]))
+#         if completeMsg.startswith('#'):
+#             try:
+#                 nBytesLengthBlock = int(completeMsg[1])
+#                 nBytesWaveBlock = int(completeMsg[2:nBytesLengthBlock+2])
+#                 self.debug_stream("From the beginning %s, understood a %d "\
+#                                   "characters subheader with further %d "\
+#                                   "elements to be read."
+#                                   %(repr(completeMsg[:10]),nBytesLengthBlock,nBytesWaveBlock))
+#                 while len(completeMsg) < nBytesWaveBlock:
+#                     buffer = self.__sock.recv(bufsize)
+#                     completeMsg = ''.join([completeMsg,buffer])
+#             except Exception,e:
+#                 self.debug_stream("Exception in %s:%d array data "\
+#                                   "interpretation: %s"
+#                                   %(self.__hostName,self.__port,e))
+#         else:
+        try:
+            while not completeMsg[len(completeMsg)-1] == '\n':
+                buffer = self.__sock.recv(bufsize)
+                completeMsg = ''.join([completeMsg,buffer])
+        except Exception,e:
+            self.debug_stream("Exception in %s:%d string data "\
+                              "interpretation: %s"
+                              %(self.__hostName,self.__port,e))
+        if len(completeMsg) > 100:
+            self.debug_stream("Received from %s:%d %s...%s (len %d)"
+                              %(self.__hostName,self.__port,
+                                repr(completeMsg[:45]),repr(completeMsg[len(completeMsg)-45:]),
+                                len(completeMsg)))
+        else:
+            self.debug_stream("Received from %s:%d %s..."
+                              %(self.__hostName,self.__port,
+                                repr(completeMsg)))
         return completeMsg
 
     def close(self):
@@ -137,6 +158,8 @@ class byVisa(Communicator):
     def connect(self):
         if not self.__device.State() == PyTango.DevState.ON:
             self.__device.Open()
+    def disconnect(self):
+        self.__device.Close()
     
     def _send(self,msg):
         self.debug_stream("Sending to %s %s"%(self.__device.get_name(),repr(msg)))

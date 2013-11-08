@@ -24,6 +24,20 @@
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
       <DefaultPropValue>0</DefaultPropValue>
     </deviceProperties>
+    <deviceProperties name="MonitoredAttributes" description="When the device is in RUNNING state, the attributes listed here will be monitored (having events) with a period said in the attribute TimeStampsThreashold (or different if specified with a : separator after the attrName)">
+      <type xsi:type="pogoDsl:StringVectorType"/>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+    </deviceProperties>
+    <deviceProperties name="AutoOn" description="When device startup, try an on() to connect to the instrument authomatically">
+      <type xsi:type="pogoDsl:BooleanType"/>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+      <DefaultPropValue>True</DefaultPropValue>
+    </deviceProperties>
+    <deviceProperties name="AutoStart" description="When device startup, try an Start() to monitor attributes, if MonitoredAttributes is configuredc, authomatically">
+      <type xsi:type="pogoDsl:BooleanType"/>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+      <DefaultPropValue>True</DefaultPropValue>
+    </deviceProperties>
     <commands name="State" description="This command gets the device state (stored in its device_state data member) and returns it to the caller." execMethod="dev_state" displayLevel="OPERATOR" polledPeriod="0">
       <argin description="none">
         <type xsi:type="pogoDsl:VoidType"/>
@@ -110,7 +124,7 @@
       <archiveEvent fire="false" libCheckCriteria="false"/>
       <dataReadyEvent fire="false" libCheckCriteria="true"/>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
-      <properties description="When many attributes are requested at the same time, they are grouped in subqueries of this size" label="Query Window" unit="queries" standardUnit="" displayUnit="" format="%2d" maxValue="" minValue="" maxAlarm="" minAlarm="" maxWarning="" minWarning="" deltaTime="" deltaValue=""/>
+      <properties description="When many attributes are requested at the same time, they are grouped in subqueries of this size" label="Query Window" unit="queries" standardUnit="" displayUnit="" format="%2d" maxValue="" minValue="1" maxAlarm="" minAlarm="" maxWarning="20" minWarning="" deltaTime="" deltaValue=""/>
     </attributes>
     <attributes name="TimeStampsThreshold" attType="Scalar" rwType="READ_WRITE" displayLevel="EXPERT" polledPeriod="0" maxX="" maxY="" memorized="true" memorizedAtInit="true" allocReadMember="true" isDynamic="false">
       <dataType xsi:type="pogoDsl:FloatType"/>

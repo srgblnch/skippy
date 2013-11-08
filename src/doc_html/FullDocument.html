@@ -162,6 +162,24 @@
 		<td> short </td>
 		<td> 0 <br> </td>
 	</tr>
+	<tr>
+		<td> MonitoredAttributes </td>
+		<td> When the device is in RUNNING state, the attributes listed here will be monitored (having events) with a period said in the attribute TimeStampsThreashold (or different if specified with a : separator after the attrName) </td>
+		<td> String[] </td>
+		<td> none </td>
+	</tr>
+	<tr>
+		<td> AutoOn </td>
+		<td> When device startup, try an on() to connect to the instrument authomatically </td>
+		<td> boolean </td>
+		<td> True <br> </td>
+	</tr>
+	<tr>
+		<td> AutoStart </td>
+		<td> When device startup, try an Start() to monitor attributes, if MonitoredAttributes is configuredc, authomatically </td>
+		<td> boolean </td>
+		<td> True <br> </td>
+	</tr>
 </table>
 <br><br>
 <hr>
@@ -935,7 +953,7 @@
 				</tr>
 				<tr>
 					<td> min_value </td>
-					<td>  </td>
+					<td> 1 </td>
 				</tr>
 				<tr>
 					<td> max_alarm </td>
@@ -947,7 +965,7 @@
 				</tr>
 				<tr>
 					<td> max_warning </td>
-					<td>  </td>
+					<td> 20 </td>
 				</tr>
 				<tr>
 					<td> min_warning </td>
