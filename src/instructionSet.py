@@ -246,6 +246,8 @@ class AttributeBuilder:
             except:
                 self.__device.attributes[attrName]['rampStepSpeed'] = None
             self.__device.attributes[attrName]['rampThread'] = None
+        if definition.has_key('writeValues'):
+            self.__device.attributes[attrName]['writeValues'] = definition['writeValues']
         self.__device.attributes[attrName]['type'] = definition['type']
         self.__device.attributes[attrName]['dim'] = definition['dim'][0]
         self.__device.debug_stream("New attribute build: %s:%s"
