@@ -39,6 +39,7 @@ import PyTango
 #              'label'    -> attribute property
 #              'description' -> attribute property
 #              'memorized' -> attribute property
+#              'writeValues' -> list of accepted values to write
 #             }
 #            )
 #
@@ -217,6 +218,9 @@ Attribute('WaveformDataFormat',
            'dim':[0],
            'readCmd':":waveform:format?",
            'writeCmd':lambda value:":waveform:format %s"%(str(value)),
+           'writeValues':['BYTE','BYT',
+                          'WORD','WOR',
+                          'ASCII','ASCI','ASC'],
          })
 
 Attribute('WaveformOrigin',
