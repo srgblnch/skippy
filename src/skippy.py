@@ -172,7 +172,9 @@ class Skippy (PyTango.Device_4Impl):
                                           %(self.get_name(),attrName))
                 else:
                     t_a = self.attributes[attrName]['timestamp']
-                    if not t_a == None and t - t_a < delta_t:
+                    if not attrName in self._monitoredAttr['Special'].keys() and\
+                       not attrName in self._monitoredAttr['Normal'] and \
+                       not t_a == None and t - t_a < delta_t:
                         self.debug_stream("In %s.__filterAttributes() "\
                                           "excluding %s: t < delta_t"
                                           %(self.get_name(),attrName))
@@ -228,7 +230,7 @@ class Skippy (PyTango.Device_4Impl):
                                      "cmd;cmd;"]
         '''
         try:
-            self.debug_stream("In %s.__preHardwareRead()"%self.get_name())
+            #self.debug_stream("In %s.__preHardwareRead()"%self.get_name())
             subsetsIndexes = []
             subsetsQueries = []
             for i in range(0,len(attrList),window):
@@ -249,7 +251,7 @@ class Skippy (PyTango.Device_4Impl):
         '''Given a string with a ';' separated list of scpi commands 'ask'
            to the instrument and return what the instrument responds.
         '''
-        self.debug_stream("In %s.__hardwareRead()"%self.get_name())
+        #self.debug_stream("In %s.__hardwareRead()"%self.get_name())
         return self.__instrument.ask(query)
 
     def __postHardwareScalarRead(self,indexes,answers):
@@ -262,7 +264,7 @@ class Skippy (PyTango.Device_4Impl):
                              "ans;ans;ans;ans;",
                              "ans;ans;"]
         '''
-        self.debug_stream("In %s.__postHardwareScalarRead()"%self.get_name())
+        #self.debug_stream("In %s.__postHardwareScalarRead()"%self.get_name())
         t = time.time()
         try:
             attrWithEvents = []
@@ -272,6 +274,7 @@ class Skippy (PyTango.Device_4Impl):
                     try:
                         if self.attributes[attrName]['type'] in [PyTango.CmdArgType.DevBoolean]:
                             self.attributes[attrName]['lastReadValue'] = bool(int(value))
+                            self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
                         elif self.attributes[attrName]['type'] in [PyTango.CmdArgType.DevUChar,
                                                                    PyTango.CmdArgType.DevUShort,
                                                                    PyTango.CmdArgType.DevShort,
@@ -280,14 +283,18 @@ class Skippy (PyTango.Device_4Impl):
                                                                    PyTango.CmdArgType.DevULong64,
                                                                    PyTango.CmdArgType.DevLong64]:
                             self.attributes[attrName]['lastReadValue'] = int(value)
+                            self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
                         elif self.attributes[attrName]['type'] in [PyTango.CmdArgType.DevFloat,
                                                                    PyTango.CmdArgType.DevDouble]:
                             if value == '9.99999E+37':#this is the instrument tag for non measurable
                                 self.attributes[attrName]['lastReadValue'] = float('NaN')
+                                self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_WARNING
                             else:
                                 self.attributes[attrName]['lastReadValue'] = float(value)
+                                self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
                         elif self.attributes[attrName]['type'] in [PyTango.CmdArgType.DevString]:
                             self.attributes[attrName]['lastReadValue'] = str(value)
+                            self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
                         else:
                             self.warn_stream("In %s.__postHardwareScalarRead() "\
                                              "Unrecognized data type for %s"
@@ -299,17 +306,16 @@ class Skippy (PyTango.Device_4Impl):
                                           %(self.get_name(),attrName,e))
                         self.attributes[attrName]['lastReadValue'] = None
                         self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_INVALID
-                    else:
-                        self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
                     finally:
                         self.attributes[attrName]['timestamp'] = t
-                        if attrName in self.__monitoredAttr['Special'].keys() or\
-                           attrName in self.__monitoredAttr['Normal']:
+                        if attrName in self._monitoredAttr['Special'].keys() or\
+                           attrName in self._monitoredAttr['Normal']:
+                            #self.debug_stream("Append %s to fire events"%(attrName))
                             attrWithEvents.append([attrName,
                                                    self.attributes[attrName]['lastReadValue'],
                                                    self.attributes[attrName]['quality']
                                                  ])
-            self.debug_stream("to fire events: %s"%(repr(attrWithEvents)))
+            #self.debug_stream("to fire events: %s"%(repr(attrWithEvents)))
             self.fireEventsList(attrWithEvents)
         except Exception,e:
             self.error_stream("In %s.__postHardwareScalarRead() Exception: %s"\
@@ -331,7 +337,7 @@ class Skippy (PyTango.Device_4Impl):
            Example: answer = #532017... means, 5 elements will be in the second
                     field, and there will be 32017 elements in the third.
         '''
-        self.debug_stream("In %s.__postHardwareSpectrumRead()"%self.get_name())
+        #self.debug_stream("In %s.__postHardwareSpectrumRead()"%self.get_name())
         t = time.time()
         try:
             attrWithEvents = []
@@ -342,17 +348,18 @@ class Skippy (PyTango.Device_4Impl):
                    self.attributes.has_key('WaveformIncrement'):
                     dataFormat = self.attributes['WaveformDataFormat']['lastReadValue']
                     if dataFormat.startswith('ASC'):
-                        self.debug_stream("Spectrum received in ascii: %s"%(repr(answer)[:100]))
+                        #self.debug_stream("Spectrum received in ascii: %s"%(repr(answer)[:100]))
                         self.attributes[attrName]['lastReadValue'] = numpy.fromstring(answer,dtype=float,sep=',')
                         self.attributes[attrName]['timestamp'] = t
                         self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
                     else:
-                        self.debug_stream("Spectrum received in binary: %s...%s"
-                                          %(repr(answer[:45]),repr(answer[len(answer)-45:])))
+                        #self.debug_stream("Spectrum received in binary: %s...%s"
+                        #                  %(repr(answer[:25]),repr(answer[len(answer)-25:])))
                         #process the header
                         if not answer[0] == '#':
                             self.error_stream("Wrong data receiver for the "\
                                               "attribute %s"%attrName)
+                            return
                         nBytesLengthBlock = int(answer[1])
                         nBytesWaveBlock = int(answer[2:nBytesLengthBlock+2])
                         waveBytes = answer[nBytesLengthBlock+2:nBytesWaveBlock]
@@ -393,14 +400,14 @@ class Skippy (PyTango.Device_4Impl):
                     self.attributes[attrName]['lastReadValue'] = answer
                     self.attributes[attrName]['timestamp'] = t
                     self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
-                if attrName in self.__monitoredAttr['Special'].keys() or\
-                   attrName in self.__monitoredAttr['Normal']:
+                if attrName in self._monitoredAttr['Special'].keys() or\
+                   attrName in self._monitoredAttr['Normal']:
                     attrWithEvents.append([
                                            attrName,
                                            self.attributes[attrName]['lastReadValue'],
                                            self.attributes[attrName]['quality']
                                          ])
-            self.debug_stream("to fire events: %s"%(repr(attrWithEvents)))
+            #self.debug_stream("to fire events: %s"%(repr(attrWithEvents)))
             self.fireEventsList(attrWithEvents)
         except Exception,e:
             self.error_stream("In %s.__postHardwareSpectrumRead() Exception: %s"\
@@ -410,7 +417,7 @@ class Skippy (PyTango.Device_4Impl):
     @instructionSet.AttrExc
     def read_attr(self, attr):
         attrName = attr.get_name()
-        self.debug_stream("read_attr for %s"%(attrName))
+        #self.debug_stream("read_attr for %s"%(attrName))
         if self.attributes.has_key(attrName):
             value = self.attributes[attrName]['lastReadValue']
             timestamp = self.attributes[attrName]['timestamp']
@@ -546,7 +553,7 @@ class Skippy (PyTango.Device_4Impl):
         timestamp = time.time()
         for attrEvent in eventsAttrList:
             try:
-                self.debug_stream("In %s.fireEventsList() attribute: %s"%(self.get_name(),attrEvent[0]))
+                #self.debug_stream("In %s.fireEventsList() attribute: %s"%(self.get_name(),attrEvent[0]))
                 if len(attrEvent) == 3:#specifies quality
                     self.push_change_event(attrEvent[0],attrEvent[1],timestamp,attrEvent[2])
                 else:
@@ -564,16 +571,42 @@ class Skippy (PyTango.Device_4Impl):
         self.debug_stream("In %s.cleanAllImportantLogs()"%self.get_name())
         self._important_logs = []
         self.addStatusMsg("")
-    def addStatusMsg(self,current,important = False):
+    def addStatusMsg(self,newStatusLine,important = False):
         self.debug_stream("In %s.addStatusMsg()"%self.get_name())
         msg = "The device is in %s state.\n"%(self.get_state())
         for ilog in self._important_logs:
             msg = "%s%s\n"%(msg,ilog)
-        status = "%s%s"%(msg,current)
+        status = "%s%s"%(msg,newStatusLine)
         self.set_status(status)
         self.push_change_event('Status',status)
-        if important and not current in self._important_logs:
-            self._important_logs.append(current)
+        if important and not newStatusLine in self._important_logs:
+            self._important_logs.append(newStatusLine)
+    def pushAlarmState(self,who):
+        self.__monitorAlarms.append(who)
+        self.change_state(PyTango.DevState.ALARM)
+        self.rebuildStatus()
+    def popAlarmState(self,who):
+        self.__monitorAlarms.pop(self.__monitorAlarms.index(who))
+        if len(self.__monitorAlarms) == 0:
+            if self.__monitorThread.isAlive():
+                self.change_state(PyTango.DevState.RUNNING)
+                self.cleanAllImportantLogs()
+                self.addStatusMsg("Attributes to monitor: %s"
+                                  %(repr(self.MonitoredAttributes)),important=True)
+            else:
+                self.change_state(PyTango.DevState.ON)
+        else:
+            self.rebuildStatus()
+    def rebuildStatus(self):
+        self.cleanAllImportantLogs()
+        self.addStatusMsg("Attributes to monitor: %s"
+                          %(repr(self.MonitoredAttributes)),important=True)
+        for attrName in self.__monitorAlarms:
+            if attrName == 'NormalMonitorThread':
+                self.addStatusMsg("Normal monitoring required too much time")
+            else:
+                self.addStatusMsg("Special monitoring for %s required too "\
+                                  "much time"%(attrName))
     #----- done event manager section
     ######
     
@@ -590,8 +623,8 @@ class Skippy (PyTango.Device_4Impl):
                 if not attrName in self.attributes.keys():
                     self.error_stream("The %s is not an attribute in this device"
                                       %(attrName))
-                elif attrName in self.__monitoredAttr['Special'].keys() or\
-                   attrName in self.__monitoredAttr['Normal']:
+                elif attrName in self._monitoredAttr['Special'].keys() or\
+                   attrName in self._monitoredAttr['Normal']:
                     self.error_stream("The attribute %s is configured to "\
                                       "monitor more than one time"%(attrName))
                 else:
@@ -601,11 +634,11 @@ class Skippy (PyTango.Device_4Impl):
                                       "%s with period %f"%(attrName,attrPeriod))
                     attrThread = threading.Thread(target=self._specialMonitor,
                                                   args=(attrName,attrPeriod,attrId))
-                    self.__monitoredAttr['Special'][attrName] = {}
-                    self.__monitoredAttr['Special'][attrName]['period'] = attrPeriod
-                    self.__monitoredAttr['Special'][attrName]['Thread'] = attrThread
-                    self.__monitoredAttr['Special'][attrName]['Event'] = threading.Event()
-                    self.__monitoredAttr['Special'][attrName]['Event'].clear()
+                    self._monitoredAttr['Special'][attrName] = {}
+                    self._monitoredAttr['Special'][attrName]['period'] = attrPeriod
+                    self._monitoredAttr['Special'][attrName]['Thread'] = attrThread
+                    self._monitoredAttr['Special'][attrName]['Event'] = threading.Event()
+                    self._monitoredAttr['Special'][attrName]['Event'].clear()
                     attrThread.setDaemon(True)
                     specialThreads.append(attrThread)
                     self.set_change_event(attrName,True,False)
@@ -613,42 +646,40 @@ class Skippy (PyTango.Device_4Impl):
                 if not attrName in self.attributes.keys():
                     self.error_stream("The %s is not an attribute in this device"
                                       %(attrName))
-                elif attrName in self.__monitoredAttr['Special'].keys() or\
-                   attrName in self.__monitoredAttr['Normal']:
+                elif attrName in self._monitoredAttr['Special'].keys() or\
+                   attrName in self._monitoredAttr['Normal']:
                     self.error_stream("The attribute %s is configured to "\
                                       "monitor more than one time"%(attrName))
                 else:
                     self.debug_stream("Normal monitoring for the attribute %s"
                                       %(attrName))
                     attrId = multiattr.get_attr_ind_by_name(attrName)
-                    self.__monitoredAttr['Normal'].append(attrName)
-                    self.__monitoredAttr['NormalIDs'].append(attrId)
+                    self._monitoredAttr['Normal'].append(attrName)
+                    self._monitoredAttr['NormalIDs'].append(attrId)
                     self.set_change_event(attrName,True,False)
         ### once is prepared launch all the special monitors and then enter in 
         #   the loop for the normals.
         for thread in specialThreads:
             thread.start()
         self.change_state(PyTango.DevState.RUNNING)
-        self.addStatusMsg("Attributes to monitor: %s"
-                          %(repr(self.MonitoredAttributes)),important=True)
+        self.rebuildStatus()
         self.info_stream("Attributes to monitor: %s"%(repr(self.MonitoredAttributes)))
         while not self.__monitorEvent.isSet():
             t0 = time.time()
-            self.info_stream("Monitoring normal attributes: %s"
-                              %(repr(self.__monitoredAttr['Normal'])))
-            self.read_attr_hardware(self.__monitoredAttr['NormalIDs'])
-            #FIXME: it may depend on the attr time stamp
+            self.debug_stream("Monitoring normal attributes: %s"
+                              %(repr(self._monitoredAttr['Normal'])))
+            self.read_attr_hardware(self._monitoredAttr['NormalIDs'])
             tf = time.time()
-            #TODO: set alarm state and recover when period goes normal
-            #      but who raises the alarm state should flag it to know if 
-            #      there is ome than one that sets this condition
             if tf-t0<self.attr_TimeStampsThreshold_read:
+                if 'NormalMonitorThread' in self.__monitorAlarms:
+                    self.popAlarmState('NormalMonitorThread')
                 time.sleep(self.attr_TimeStampsThreshold_read-(tf-t0))
             else:
-                self.addStatusMsg("Normal monitoring required too much time")
+                if not 'NormalMonitorThread' in self.__monitorAlarms:
+                    self.pushAlarmState('NormalMonitorThread')
         self.change_state(PyTango.DevState.STANDBY)
-        for attrName in self.__monitoredAttr['Special'].keys():
-            attrThread = self.__monitoredAttr['Special'][attrName]['Thread']
+        for attrName in self._monitoredAttr['Special'].keys():
+            attrThread = self._monitoredAttr['Special'][attrName]['Thread']
             while attrThread.is_alive():
                 self.debug_stream("Waiting special monitor attribute %s to "\
                                   "finish"%(attrName))
@@ -659,10 +690,10 @@ class Skippy (PyTango.Device_4Impl):
     def _specialMonitor(self,attrName,attrPeriod,attrId):
         self.info_stream("Special monitoring thread for the attribute %s "\
                           "starts"%(attrName))
-        attrEvent = self.__monitoredAttr['Special'][attrName]['Event']
+        attrEvent = self._monitoredAttr['Special'][attrName]['Event']
         while not self.__monitorEvent.isSet() and not attrEvent.isSet():
             t0 = time.time()
-            self.info_stream("Monitoring special attribute: %s (%f)"
+            self.debug_stream("Monitoring special attribute: %s (%f)"
                               %(attrName,attrPeriod))
             self.read_attr_hardware([attrId])
             tf = time.time()
@@ -670,12 +701,14 @@ class Skippy (PyTango.Device_4Impl):
             #      but who raises the alarm state should flag it to know if 
             #      there is ome than one that sets this condition
             if tf-t0<attrPeriod:
+                if attrName in self.__monitorAlarms:
+                    self.popAlarmState(attrName)
                 time.sleep(attrPeriod-(tf-t0))
             else:
-                self.addStatusMsg("Special monitoring for %s required too "\
-                                  "much time"%(attrName))
+                if not attrName in self.__monitorAlarms:
+                    self.pushAlarmState(attrName)
         self.debug_stream("Ending the special monitor for attribute %s"%(attrName))
-        self.__monitoredAttr['Special'].pop(attrName)
+        self._monitoredAttr['Special'].pop(attrName)
         
     def __appendPropertyElement(self,propertyName,element):
         db = PyTango.Database()
@@ -755,9 +788,10 @@ class Skippy (PyTango.Device_4Impl):
         self.__monitorThread = None
         self.__monitorEvent = threading.Event()
         self.__monitorEvent.clear()
-        self.__monitoredAttr = {'Normal':[],
+        self._monitoredAttr = {'Normal':[],
                                 'NormalIDs':[],
                                 'Special':{}}
+        self.__monitorAlarms = []
         if self.AutoStart:
             self.Start()
         #----- PROTECTED REGION END -----#	//	Skippy.init_device
@@ -846,8 +880,15 @@ class Skippy (PyTango.Device_4Impl):
                 answers = []
                 for query in queries:
                     answers.append(self.__hardwareRead(query))
+                msg = ""
+                for answer in answers:
+                    if len(answer) > 100:
+                        msg = ''.join([msg,"%s(...)%s"%(repr(answer[:25]),
+                                    repr(answer[len(answer)-25:]))])
+                    else:
+                        msg = ''.join([msg,"%s"%(repr(answer))])
                 self.debug_stream("In %s.read_attr_hardware() scalar answers: %s"\
-                                  %(self.get_name(),answers))
+                                  %(self.get_name(),msg))
                 self.__postHardwareScalarRead(indexes,answers)
             if not len(spectrumList) == 0:
                 indexes,queries = self.__preHardwareRead(spectrumList,1)
@@ -1035,8 +1076,8 @@ class Skippy (PyTango.Device_4Impl):
         try:
             if not argin in self.attributes.keys():
                 raise AttributeError("No attribute named %s"%(argin))
-            elif argin in self.__monitoredAttr['Special'].keys() or\
-                 argin in self.__monitoredAttr['Normal']:
+            elif argin in self._monitoredAttr['Special'].keys() or\
+                 argin in self._monitoredAttr['Normal']:
                 raise AttributeError("Attribute %s already monitored"%(argin))
             else:
                 #manage the property
@@ -1052,9 +1093,10 @@ class Skippy (PyTango.Device_4Impl):
                                   %(argin))
                 multiattr = self.get_device_attr()
                 attrId = multiattr.get_attr_ind_by_name(argin)
-                self.__monitoredAttr['Normal'].append(argin)
-                self.__monitoredAttr['NormalIDs'].append(attrId)
+                self._monitoredAttr['Normal'].append(argin)
+                self._monitoredAttr['NormalIDs'].append(attrId)
                 self.set_change_event(argin,True,False)
+                self.rebuildStatus()
         except Exception,e:
             self.error_stream("In %s.AddMonitoring(%s) exception: %s"%
                               (self.get_name(),argin,e))
@@ -1076,20 +1118,21 @@ class Skippy (PyTango.Device_4Impl):
         try:
             if not argin in self.attributes.keys():
                 raise AttributeError("No attribute named %s"%(argin))
-            elif not argin in self.__monitoredAttr['Special'].keys() and\
-                 not argin in self.__monitoredAttr['Normal']:
+            elif not argin in self._monitoredAttr['Special'].keys() and\
+                 not argin in self._monitoredAttr['Normal']:
                 raise AttributeError("Attribute %s is not monitored"%(argin))
             else:
                 #manage the internal monitors
                 self.debug_stream("Removing %s attribute from monitoring"%(argin))
-                if argin in self.__monitoredAttr['Special'].keys():
-                    self.__monitoredAttr['Special'][argin]['Event'].set()
-                elif argin in self.__monitoredAttr['Normal']:
-                    self.__monitoredAttr['Normal'].pop(self.__monitoredAttr['Normal'].index(argin))
+                if argin in self._monitoredAttr['Special'].keys():
+                    self._monitoredAttr['Special'][argin]['Event'].set()
+                elif argin in self._monitoredAttr['Normal']:
+                    self._monitoredAttr['Normal'].pop(self._monitoredAttr['Normal'].index(argin))
                     multiattr = self.get_device_attr()
                     attrId = multiattr.get_attr_ind_by_name(argin)
-                    self.__monitoredAttr['NormalIDs'].pop(self.__monitoredAttr['NormalIDs'].index(attrId))
+                    self._monitoredAttr['NormalIDs'].pop(self._monitoredAttr['NormalIDs'].index(attrId))
                 self.set_change_event(argin,False,False)
+                self.rebuildStatus()
                 #manage the property
                 try:
                     self.MonitoredAttributes = self.__popPropertyElement('MonitoredAttributes',argin)
@@ -1126,40 +1169,40 @@ class Skippy (PyTango.Device_4Impl):
                                  %(self.get_name(),attrName,attrPeriod))
             if not attrName in self.attributes.keys():
                 raise AttributeError("No attribute named %s"%(attrName))
-            elif not attrName in self.__monitoredAttr['Special'].keys() and\
-                 not attrName in self.__monitoredAttr['Normal']:
+            elif not attrName in self._monitoredAttr['Special'].keys() and\
+                 not attrName in self._monitoredAttr['Normal']:
                 raise AttributeError("Attribute %s is not monitored"%(attrName))
             else:
-                if attrName in self.__monitoredAttr['Special'].keys():
+                if attrName in self._monitoredAttr['Special'].keys():
                     if attrPeriod == 0:
                         #remove from special and move it to normal
-                        self.__monitoredAttr['Special'][attrName]['Event'].set()
+                        self._monitoredAttr['Special'][attrName]['Event'].set()
                         self.__popPropertyElement('MonitoredAttributes',attrName)
                         self.MonitoredAttributes = self.__appendPropertyElement(\
                             'MonitoredAttributes',attrName)
                         multiattr = self.get_device_attr()
                         attrId = multiattr.get_attr_ind_by_name(attrName)
-                        self.__monitoredAttr['Normal'].append(attrName)
-                        self.__monitoredAttr['NormalIDs'].append(attrId)
+                        self._monitoredAttr['Normal'].append(attrName)
+                        self._monitoredAttr['NormalIDs'].append(attrId)
                     else:
-                        self.__monitoredAttr['Special'][attrName]['Period'] = attrPeriod
+                        self._monitoredAttr['Special'][attrName]['Period'] = attrPeriod
                         self.__popPropertyElement('MonitoredAttributes',attrName)
                         self.MonitoredAttributes = self.__appendPropertyElement(\
                             'MonitoredAttributes',"%s:%6.3f"%(attrName,attrPeriod))
-                elif attrName in self.__monitoredAttr['Normal']:
+                elif attrName in self._monitoredAttr['Normal']:
                     #remove the attribute from monitoring
-                    self.__monitoredAttr['Normal'].pop(self.__monitoredAttr['Normal'].index(attrName))
+                    self._monitoredAttr['Normal'].pop(self._monitoredAttr['Normal'].index(attrName))
                     self.__popPropertyElement('MonitoredAttributes',attrName)
                     #add the attribute to specialMonitor
                     multiattr = self.get_device_attr()
                     attrId = multiattr.get_attr_ind_by_name(attrName)
                     attrThread = threading.Thread(target=self._specialMonitor,
                                                   args=(attrName,attrPeriod,attrId))
-                    self.__monitoredAttr['Special'][attrName] = {}
-                    self.__monitoredAttr['Special'][attrName]['period'] = attrPeriod
-                    self.__monitoredAttr['Special'][attrName]['Thread'] = attrThread
-                    self.__monitoredAttr['Special'][attrName]['Event'] = threading.Event()
-                    self.__monitoredAttr['Special'][attrName]['Event'].clear()
+                    self._monitoredAttr['Special'][attrName] = {}
+                    self._monitoredAttr['Special'][attrName]['period'] = attrPeriod
+                    self._monitoredAttr['Special'][attrName]['Thread'] = attrThread
+                    self._monitoredAttr['Special'][attrName]['Event'] = threading.Event()
+                    self._monitoredAttr['Special'][attrName]['Event'].clear()
                     attrThread.setDaemon(True)
                     self.MonitoredAttributes = self.__appendPropertyElement(\
                         'MonitoredAttributes',"%s:%6.3f"%(attrName,attrPeriod))
@@ -1184,9 +1227,9 @@ class Skippy (PyTango.Device_4Impl):
         argout = 0.0
         #----- PROTECTED REGION ID(Skippy.GetMonitoringPeriod) ENABLED START -----#
         try:
-            if argin in self.__monitoredAttr['Special'].keys():
-                argout = self.__monitoredAttr['Special'][argin]['period']
-            elif argin in self.__monitoredAttr['Normal']:
+            if argin in self._monitoredAttr['Special'].keys():
+                argout = self._monitoredAttr['Special'][argin]['period']
+            elif argin in self._monitoredAttr['Normal']:
                 argout = self.attr_TimeStampsThreshold_read
             else:
                 argout = float('nan')
