@@ -604,6 +604,8 @@ class Skippy (PyTango.Device_4Impl):
                     self.__monitoredAttr['Special'][attrName] = {}
                     self.__monitoredAttr['Special'][attrName]['period'] = attrPeriod
                     self.__monitoredAttr['Special'][attrName]['Thread'] = attrThread
+                    self.__monitoredAttr['Special'][attrName]['Event'] = threading.Event()
+                    self.__monitoredAttr['Special'][attrName]['Event'].clear()
                     attrThread.setDaemon(True)
                     specialThreads.append(attrThread)
                     self.set_change_event(attrName,True,False)
@@ -653,7 +655,8 @@ class Skippy (PyTango.Device_4Impl):
     def _specialMonitor(self,attrName,attrPeriod,attrId):
         self.debug_stream("Special monitoring thread for the attribute %s "\
                           "starts"%(attrName))
-        while not self.__monitorEvent.isSet():
+        attrEvent = self.__monitoredAttr['Special'][attrName]['Event']
+        while not self.__monitorEvent.isSet() and not attrEvent.isSet():
             t0 = time.time()
             self.debug_stream("Monitoring special attribute: %s (%f)"
                               %(attrName,attrPeriod))
@@ -664,6 +667,35 @@ class Skippy (PyTango.Device_4Impl):
             else:
                 self.addStatusMsg("Special monitoring for %s required too "\
                                   "much time"%(attrName))
+        self.debug_stream("Ending the special monitor for attribute %s"%(attrName))
+        self.__monitoredAttr['Special'].pop(attrName)
+        
+    def __appendPropertyElement(self,propertyName,element):
+        db = PyTango.Database()
+        propertiesDict = db.get_device_property(self.get_name(),propertyName)
+        propertiesDict[propertyName].append(element)
+        db.put_device_property(self.get_name(),propertiesDict)
+        return propertiesDict[propertyName]
+    def __popPropertyElement(self,propertyName,element):
+        db = PyTango.Database()
+        propertiesDict = db.get_device_property(self.get_name(),propertyName)
+        print propertiesDict
+        propertyList = list(propertiesDict[propertyName])
+        try:
+            index = propertyList.index(element)
+        except:
+            #in case is an specially monitored, previous will throw an exception
+            for name in propertyList:
+                if name.startswith(element):
+                    #find in the list something that starts with the attrName
+                    #that continues with ':' and the period
+                    index = propertyList.index(name)
+                    break
+        propertyList.pop(index)
+        propertiesDict[propertyName] = propertyList
+        print propertiesDict
+        db.put_device_property(self.get_name(),propertiesDict)
+        return propertiesDict[propertyName]
     #----- done attribute monitor section
     ######
 
@@ -964,7 +996,7 @@ class Skippy (PyTango.Device_4Impl):
                 argout = eval(argin,self.__globals,self.__locals)
             except SyntaxError:
                 # interpretation as statement
-                exec cmd in self.__globals, self.__locals
+                exec argin in self.__globals, self.__locals
                 argout = self.__locals.get("y")
 
         except Exception, exc:
@@ -982,6 +1014,90 @@ class Skippy (PyTango.Device_4Impl):
                 return str(argout)
         #----- PROTECTED REGION END -----#	//	Skippy.Exec
         return argout
+        
+#------------------------------------------------------------------
+#    AddMonitoring command:
+#------------------------------------------------------------------
+    def AddMonitoring(self, argin):
+        """ Add an attribute to the list of monitored attributes
+        
+        :param argin: 
+        :type: PyTango.DevString
+        :return: 
+        :rtype: PyTango.DevVoid """
+        self.debug_stream("In " + self.get_name() +  ".AddMonitoring()")
+        #----- PROTECTED REGION ID(Skippy.AddMonitoring) ENABLED START -----#
+        try:
+            if not argin in self.attributes.keys():
+                raise AttributeError("No attribute named %s"%(argin))
+            elif argin in self.__monitoredAttr['Special'].keys() or\
+                 argin in self.__monitoredAttr['Normal']:
+                raise AttributeError("Attribute %s already monitored"%(argin))
+            else:
+                #manage the property
+                try:
+                    self.MonitoredAttributes = self.__appendPropertyElement('MonitoredAttributes',argin)
+                except Exception,e:
+                    self.error_stream("In %s.AddMonitoring(%s) cannot append "\
+                                      "to the property: %s"%
+                                      (self.get_name(),argin,e))
+                    raise e
+                #manage the internal list that monitors
+                self.debug_stream("Normal monitoring for the attribute %s"
+                                  %(argin))
+                multiattr = self.get_device_attr()
+                attrId = multiattr.get_attr_ind_by_name(argin)
+                self.__monitoredAttr['Normal'].append(argin)
+                self.__monitoredAttr['NormalIDs'].append(attrId)
+                self.set_change_event(argin,True,False)
+        except Exception,e:
+            self.error_stream("In %s.AddMonitoring(%s) exception: %s"%
+                              (self.get_name(),argin,e))
+            raise e
+        #----- PROTECTED REGION END -----#	//	Skippy.AddMonitoring
+        
+#------------------------------------------------------------------
+#    RemoveMonitoring command:
+#------------------------------------------------------------------
+    def RemoveMonitoring(self, argin):
+        """ Remove an attribute from the list of monitored attributes
+        
+        :param argin: 
+        :type: PyTango.DevString
+        :return: 
+        :rtype: PyTango.DevVoid """
+        self.debug_stream("In " + self.get_name() +  ".RemoveMonitoring()")
+        #----- PROTECTED REGION ID(Skippy.RemoveMonitoring) ENABLED START -----#
+        try:
+            if not argin in self.attributes.keys():
+                raise AttributeError("No attribute named %s"%(argin))
+            elif not argin in self.__monitoredAttr['Special'].keys() and\
+                 not argin in self.__monitoredAttr['Normal']:
+                raise AttributeError("Attribute %s is not monitored"%(argin))
+            else:
+                #manage the internal monitors
+                self.debug_stream("Removing %s attribute from monitoring"%(argin))
+                if argin in self.__monitoredAttr['Special'].keys():
+                    self.__monitoredAttr['Special'][argin]['Event'].set()
+                elif argin in self.__monitoredAttr['Normal']:
+                    self.__monitoredAttr['Normal'].pop(self.__monitoredAttr['Normal'].index(argin))
+                    multiattr = self.get_device_attr()
+                    attrId = multiattr.get_attr_ind_by_name(argin)
+                    self.__monitoredAttr['NormalIDs'].pop(self.__monitoredAttr['NormalIDs'].index(attrId))
+                self.set_change_event(argin,False,False)
+                #manage the property
+                try:
+                    self.MonitoredAttributes = self.__popPropertyElement('MonitoredAttributes',argin)
+                except Exception,e:
+                    self.error_stream("In %s.RemoveMonitoring(%s) cannot remove "\
+                                      "from the property: %s"%
+                                      (self.get_name(),argin,e))
+                    raise e
+        except Exception,e:
+            self.error_stream("In %s.RemoveMonitoring(%s) exception: %s"%
+                              (self.get_name(),argin,e))
+            raise e
+        #----- PROTECTED REGION END -----#	//	Skippy.RemoveMonitoring
         
 
 #==================================================================
@@ -1052,6 +1168,12 @@ class SkippyClass(PyTango.DeviceClass):
             {
                 'Display level': PyTango.DispLevel.EXPERT,
             } ],
+        'AddMonitoring':
+            [[PyTango.DevString, "none"],
+            [PyTango.DevVoid, "none"]],
+        'RemoveMonitoring':
+            [[PyTango.DevString, "none"],
+            [PyTango.DevVoid, "none"]],
         }
 
 

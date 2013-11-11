@@ -56,6 +56,8 @@
 				<li> <a href="FullDocument.html#cmdOn"> On </a>
 				<li> <a href="FullDocument.html#cmdOff"> Off </a>
 				<li> <a href="FullDocument.html#cmdExec"> Exec </a>
+				<li> <a href="FullDocument.html#cmdAddMonitoring"> AddMonitoring </a>
+				<li> <a href="FullDocument.html#cmdRemoveMonitoring"> RemoveMonitoring </a>
 			</ul>
 			<li> <a href="FullDocument.html#attributes">   Attributes   </a>
 			<ul>
@@ -250,6 +252,20 @@
 		<td> DEV_STRING </td>
 		<td> EXPERT </td>
 		<td> evaluate python code inside the device server. This command can be very helpful and dangerous. </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdAddMonitoring.html"> AddMonitoring </a> </td>
+		<td> DEV_STRING </td>
+		<td> DEV_VOID </td>
+		<td> OPERATOR </td>
+		<td> Add an attribute to the list of monitored attributes </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdRemoveMonitoring.html"> RemoveMonitoring </a> </td>
+		<td> DEV_STRING </td>
+		<td> DEV_VOID </td>
+		<td> OPERATOR </td>
+		<td> Remove an attribute from the list of monitored attributes </td>
 	</tr>
 </table>
 <br><br><hr>
@@ -620,6 +636,104 @@
 	<tr>
 		<td> DisplayLevel </td>
 		<td> EXPERT </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Inherited </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Abstract </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Polling Period </td>
+		<td> Not polled </td>
+		<td> .. </td>
+	</tr>
+<Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
+	<tr>
+		<td> Command allowed for </td>
+		<td> All states </td>
+		<td> .. </td>
+	</tr>
+</table>
+<br><br><hr>
+<a name="cmdAddMonitoring"> </a>
+<br><br><br>
+<font size="+1"><u><b> Command AddMonitoring : </b></u></font>
+<ul>
+	Add an attribute to the list of monitored attributes
+</ul>
+<br><br><br>
+<Table Border=2 Cellpadding=3 CELLSPACING=0>
+	<tr bgcolor="#CCCCFF" class="TableHeadingColor">
+	<td colspan=0> <font size=+1> <center><b> AddMonitoring Definition </b></font></center></td>
+	</tr>
+	<tr>
+		<td> Input Argument </td>
+		<td> Tango::DEV_STRING </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> Output Argument </td>
+		<td> Tango::DEV_VOID </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> DisplayLevel </td>
+		<td> OPERATOR </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Inherited </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Abstract </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Polling Period </td>
+		<td> Not polled </td>
+		<td> .. </td>
+	</tr>
+<Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
+	<tr>
+		<td> Command allowed for </td>
+		<td> All states </td>
+		<td> .. </td>
+	</tr>
+</table>
+<br><br><hr>
+<a name="cmdRemoveMonitoring"> </a>
+<br><br><br>
+<font size="+1"><u><b> Command RemoveMonitoring : </b></u></font>
+<ul>
+	Remove an attribute from the list of monitored attributes
+</ul>
+<br><br><br>
+<Table Border=2 Cellpadding=3 CELLSPACING=0>
+	<tr bgcolor="#CCCCFF" class="TableHeadingColor">
+	<td colspan=0> <font size=+1> <center><b> RemoveMonitoring Definition </b></font></center></td>
+	</tr>
+	<tr>
+		<td> Input Argument </td>
+		<td> Tango::DEV_STRING </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> Output Argument </td>
+		<td> Tango::DEV_VOID </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> DisplayLevel </td>
+		<td> OPERATOR </td>
 		<td> .. </td>
 	</tr>
 	<tr>

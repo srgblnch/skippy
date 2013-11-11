@@ -67,6 +67,10 @@ The main restriction that the PyVisaInstrWrapper shows is the dependency on the 
     \item Start(): Start an active monitoring.
     \item Stop(): Stop the active monitoring.
     \item \emph{Exec():} Expert attribute to look inside the device during execution.
+    \item AddMonitoring(AttrName): Add an attribute to the list of monitored attributes
+    \item RemoveMonitoring(AttrName): Remove an attribute from the list of monitored attributes
+    \item \todo{SetMonitoringPeriod([AttrName,AttrPeriod]): }
+    \item \todo{GetMonitoringPeriod(AttrName): }
 \end{itemize}
 
 \subsection{Device Attributes}
@@ -157,7 +161,7 @@ In figure \ref{fig:classDiagram} can be found a UML draw with the class diagram.
     \item Monitor attributes. Having a property with a list of attributes, if they exist in the instrument definition, configure them in events and do a separeted thread polling that will emit events on this attributes. This feature is different that setting up a "polling" from tango to the attribute because this fails to use the multiple reading.
     \begin{itemize}
         \item In the definition of the attribute to be monitored, the \emph{MonitoredAttributes} property, using an specific notation (a ':' followed by a number of seconds) can set up an specific monitoring period for it in particular.
-        \item \todo{A command way feature is required to add and remove elements from this monitoring list.}
+        \item A command way feature is required to add and remove elements from this monitoring list. \todo{Together with a set of commands to setup specific monitoring periods}.
     \end{itemize}
     \item \todo{Once this monitoring feature is available, other attributes not monitored that have reached some reading frequency, would be included in the monitoring loop (not emitting events) in order to reduce the load of the readings. The frequency reading should be monitored to notice when this has reduced over another threshold to avoid unnecessary readings.}
 \end{itemize}
