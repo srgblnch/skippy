@@ -36,6 +36,12 @@ class Communicator:
         else:
             print("DEBUG: "+msg)
 
+    def error_stream(self,msg):
+        if hasattr(self._parent,'error_stream'):
+            self._parent.error_stream(msg)
+        else:
+            print("ERROR: "+msg)
+
     def ask(self, commandList):
         '''Prepare the command list and do a combination of send(msg) and recv()
         '''
@@ -92,46 +98,46 @@ class bySocket(Communicator):
         self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def _send(self,msg):
-        self.debug_stream("Sending to %s:%d %s"%(self.__hostName,self.__port,repr(msg)))
+        #self.debug_stream("Sending to %s:%d %s"%(self.__hostName,self.__port,repr(msg)))
         self.__sock.send(msg)
 
     def _recv(self,bufsize=10240):
         completeMsg = ''
         buffer = self.__sock.recv(bufsize)
         completeMsg = ''.join([completeMsg,buffer])
-#         if completeMsg.startswith('#'):
-#             try:
-#                 nBytesLengthBlock = int(completeMsg[1])
-#                 nBytesWaveBlock = int(completeMsg[2:nBytesLengthBlock+2])
+        if completeMsg.startswith('#'):
+            try:
+                nBytesHeaderLength = int(completeMsg[1])
+                nBytesWaveElement = int(completeMsg[2:nBytesHeaderLength+2])
 #                 self.debug_stream("From the beginning %s, understood a %d "\
-#                                   "characters subheader with further %d "\
+#                                   "characters header with further %d "\
 #                                   "elements to be read."
-#                                   %(repr(completeMsg[:10]),nBytesLengthBlock,nBytesWaveBlock))
-#                 while len(completeMsg) < nBytesWaveBlock:
-#                     buffer = self.__sock.recv(bufsize)
-#                     completeMsg = ''.join([completeMsg,buffer])
-#             except Exception,e:
-#                 self.debug_stream("Exception in %s:%d array data "\
-#                                   "interpretation: %s"
-#                                   %(self.__hostName,self.__port,e))
-#         else:
-        try:
-            while not completeMsg[len(completeMsg)-1] == '\n':
-                buffer = self.__sock.recv(bufsize)
-                completeMsg = ''.join([completeMsg,buffer])
-        except Exception,e:
-            self.debug_stream("Exception in %s:%d string data "\
-                              "interpretation: %s"
-                              %(self.__hostName,self.__port,e))
-        if len(completeMsg) > 100:
-            self.debug_stream("Received from %s:%d %s...%s (len %d)"
-                              %(self.__hostName,self.__port,
-                                repr(completeMsg[:45]),repr(completeMsg[len(completeMsg)-45:]),
-                                len(completeMsg)))
+#                                   %(repr(completeMsg[:10]),nBytesHeaderLength,nBytesWaveElement))
+                while len(completeMsg) < nBytesWaveElement:
+                    buffer = self.__sock.recv(bufsize)
+                    completeMsg = ''.join([completeMsg,buffer])
+            except Exception,e:
+                self.error_stream("Exception in %s:%d array data "\
+                                  "interpretation: %s"
+                                  %(self.__hostName,self.__port,e))
         else:
-            self.debug_stream("Received from %s:%d %s..."
-                              %(self.__hostName,self.__port,
-                                repr(completeMsg)))
+            try:
+                while not completeMsg[len(completeMsg)-1] == '\n':
+                    buffer = self.__sock.recv(bufsize)
+                    completeMsg = ''.join([completeMsg,buffer])
+            except Exception,e:
+                self.error_stream("Exception in %s:%d string data "\
+                                  "interpretation: %s"
+                                  %(self.__hostName,self.__port,e))
+#         if len(completeMsg) > 100:
+#             self.debug_stream("Received from %s:%d %s(...)%s (len %d)"
+#                               %(self.__hostName,self.__port,
+#                                 repr(completeMsg[:25]),repr(completeMsg[len(completeMsg)-25:]),
+#                                 len(completeMsg)))
+#         else:
+#             self.debug_stream("Received from %s:%d %s"
+#                               %(self.__hostName,self.__port,
+#                                 repr(completeMsg)))
         return completeMsg
 
     def close(self):
@@ -162,13 +168,13 @@ class byVisa(Communicator):
         self.__device.Close()
     
     def _send(self,msg):
-        self.debug_stream("Sending to %s %s"%(self.__device.get_name(),repr(msg)))
+        #self.debug_stream("Sending to %s %s"%(self.__device.get_name(),repr(msg)))
         self.__device.Write(array.array('B',msg).tolist())
 
     def _recv(self):
         msg = array.array('B',self.__device.ReadLine())
-        self.debug_stream("Received from %s %s"%(self.__device.get_name(),
-                                                 repr(msg)[:100]))
+        #self.debug_stream("Received from %s %s"%(self.__device.get_name(),
+        #                                         repr(msg)[:100]))
         return msg
 
     def close(self):
@@ -181,7 +187,7 @@ class byVisa(Communicator):
     def ask_for_values(self, commandList):
         self.mutex.acquire()
         answer = self.__device.AskValues(array.array('B',commandList).tolist())
-        self.debug_stream("byVisa.ask_for_values(): %s"%answer)
+        #self.debug_stream("byVisa.ask_for_values(): %s"%answer)
         self.mutex.release()
         return answer
 
