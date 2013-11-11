@@ -58,6 +58,8 @@
 				<li> <a href="FullDocument.html#cmdExec"> Exec </a>
 				<li> <a href="FullDocument.html#cmdAddMonitoring"> AddMonitoring </a>
 				<li> <a href="FullDocument.html#cmdRemoveMonitoring"> RemoveMonitoring </a>
+				<li> <a href="FullDocument.html#cmdSetMonitoringPeriod"> SetMonitoringPeriod </a>
+				<li> <a href="FullDocument.html#cmdGetMonitoringPeriod"> GetMonitoringPeriod </a>
 			</ul>
 			<li> <a href="FullDocument.html#attributes">   Attributes   </a>
 			<ul>
@@ -266,6 +268,20 @@
 		<td> DEV_VOID </td>
 		<td> OPERATOR </td>
 		<td> Remove an attribute from the list of monitored attributes </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdSetMonitoringPeriod.html"> SetMonitoringPeriod </a> </td>
+		<td> DEVVAR_STRINGARRAY </td>
+		<td> DEV_VOID </td>
+		<td> OPERATOR </td>
+		<td> From the list of already monitored attributes, stablish (or change) the period that it is checked. </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdGetMonitoringPeriod.html"> GetMonitoringPeriod </a> </td>
+		<td> DEV_STRING </td>
+		<td> DEV_FLOAT </td>
+		<td> OPERATOR </td>
+		<td> Get the period that is checked an attribute monitored. </td>
 	</tr>
 </table>
 <br><br><hr>
@@ -729,6 +745,104 @@
 	<tr>
 		<td> Output Argument </td>
 		<td> Tango::DEV_VOID </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> DisplayLevel </td>
+		<td> OPERATOR </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Inherited </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Abstract </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Polling Period </td>
+		<td> Not polled </td>
+		<td> .. </td>
+	</tr>
+<Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
+	<tr>
+		<td> Command allowed for </td>
+		<td> All states </td>
+		<td> .. </td>
+	</tr>
+</table>
+<br><br><hr>
+<a name="cmdSetMonitoringPeriod"> </a>
+<br><br><br>
+<font size="+1"><u><b> Command SetMonitoringPeriod : </b></u></font>
+<ul>
+	From the list of already monitored attributes, stablish (or change) the period that it is checked.
+</ul>
+<br><br><br>
+<Table Border=2 Cellpadding=3 CELLSPACING=0>
+	<tr bgcolor="#CCCCFF" class="TableHeadingColor">
+	<td colspan=0> <font size=+1> <center><b> SetMonitoringPeriod Definition </b></font></center></td>
+	</tr>
+	<tr>
+		<td> Input Argument </td>
+		<td> Tango::DEVVAR_STRINGARRAY </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> Output Argument </td>
+		<td> Tango::DEV_VOID </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> DisplayLevel </td>
+		<td> OPERATOR </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Inherited </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Abstract </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Polling Period </td>
+		<td> Not polled </td>
+		<td> .. </td>
+	</tr>
+<Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
+	<tr>
+		<td> Command allowed for </td>
+		<td> All states </td>
+		<td> .. </td>
+	</tr>
+</table>
+<br><br><hr>
+<a name="cmdGetMonitoringPeriod"> </a>
+<br><br><br>
+<font size="+1"><u><b> Command GetMonitoringPeriod : </b></u></font>
+<ul>
+	Get the period that is checked an attribute monitored.
+</ul>
+<br><br><br>
+<Table Border=2 Cellpadding=3 CELLSPACING=0>
+	<tr bgcolor="#CCCCFF" class="TableHeadingColor">
+	<td colspan=0> <font size=+1> <center><b> GetMonitoringPeriod Definition </b></font></center></td>
+	</tr>
+	<tr>
+		<td> Input Argument </td>
+		<td> Tango::DEV_STRING </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> Output Argument </td>
+		<td> Tango::DEV_FLOAT </td>
 		<td>  </td>
 	</tr>
 	<tr>

@@ -631,13 +631,17 @@ class Skippy (PyTango.Device_4Impl):
         self.change_state(PyTango.DevState.RUNNING)
         self.addStatusMsg("Attributes to monitor: %s"
                           %(repr(self.MonitoredAttributes)),important=True)
+        self.info_stream("Attributes to monitor: %s"%(repr(self.MonitoredAttributes)))
         while not self.__monitorEvent.isSet():
             t0 = time.time()
-            self.debug_stream("Monitoring normal attributes: %s"
+            self.info_stream("Monitoring normal attributes: %s"
                               %(repr(self.__monitoredAttr['Normal'])))
             self.read_attr_hardware(self.__monitoredAttr['NormalIDs'])
             #FIXME: it may depend on the attr time stamp
             tf = time.time()
+            #TODO: set alarm state and recover when period goes normal
+            #      but who raises the alarm state should flag it to know if 
+            #      there is ome than one that sets this condition
             if tf-t0<self.attr_TimeStampsThreshold_read:
                 time.sleep(self.attr_TimeStampsThreshold_read-(tf-t0))
             else:
@@ -653,15 +657,18 @@ class Skippy (PyTango.Device_4Impl):
         self.cleanAllImportantLogs()
 
     def _specialMonitor(self,attrName,attrPeriod,attrId):
-        self.debug_stream("Special monitoring thread for the attribute %s "\
+        self.info_stream("Special monitoring thread for the attribute %s "\
                           "starts"%(attrName))
         attrEvent = self.__monitoredAttr['Special'][attrName]['Event']
         while not self.__monitorEvent.isSet() and not attrEvent.isSet():
             t0 = time.time()
-            self.debug_stream("Monitoring special attribute: %s (%f)"
+            self.info_stream("Monitoring special attribute: %s (%f)"
                               %(attrName,attrPeriod))
             self.read_attr_hardware([attrId])
             tf = time.time()
+            #TODO: set alarm state and recover when period goes normal
+            #      but who raises the alarm state should flag it to know if 
+            #      there is ome than one that sets this condition
             if tf-t0<attrPeriod:
                 time.sleep(attrPeriod-(tf-t0))
             else:
@@ -679,7 +686,6 @@ class Skippy (PyTango.Device_4Impl):
     def __popPropertyElement(self,propertyName,element):
         db = PyTango.Database()
         propertiesDict = db.get_device_property(self.get_name(),propertyName)
-        print propertiesDict
         propertyList = list(propertiesDict[propertyName])
         try:
             index = propertyList.index(element)
@@ -693,7 +699,6 @@ class Skippy (PyTango.Device_4Impl):
                     break
         propertyList.pop(index)
         propertiesDict[propertyName] = propertyList
-        print propertiesDict
         db.put_device_property(self.get_name(),propertiesDict)
         return propertiesDict[propertyName]
     #----- done attribute monitor section
@@ -1099,6 +1104,99 @@ class Skippy (PyTango.Device_4Impl):
             raise e
         #----- PROTECTED REGION END -----#	//	Skippy.RemoveMonitoring
         
+#------------------------------------------------------------------
+#    SetMonitoringPeriod command:
+#------------------------------------------------------------------
+    def SetMonitoringPeriod(self, argin):
+        """ From the list of already monitored attributes, stablish (or change) the period that it is checked.
+        
+        :param argin: 
+        :type: PyTango.DevVarStringArray
+        :return: 
+        :rtype: PyTango.DevVoid """
+        self.debug_stream("In " + self.get_name() +  ".SetMonitoringPeriod()")
+        #----- PROTECTED REGION ID(Skippy.SetMonitoringPeriod) ENABLED START -----#
+        try:
+            if not len(argin) == 2:
+                raise AttributeError("Invalid arguments, use [attrName,AttrPeriod]")
+            else:
+                attrName = str(argin[0].split("'")[1])
+                attrPeriod = float(argin[1].split("'")[1])
+                self.info_stream("In %s.SetMonitoringPeriod(%s,%f)"
+                                 %(self.get_name(),attrName,attrPeriod))
+            if not attrName in self.attributes.keys():
+                raise AttributeError("No attribute named %s"%(attrName))
+            elif not attrName in self.__monitoredAttr['Special'].keys() and\
+                 not attrName in self.__monitoredAttr['Normal']:
+                raise AttributeError("Attribute %s is not monitored"%(attrName))
+            else:
+                if attrName in self.__monitoredAttr['Special'].keys():
+                    if attrPeriod == 0:
+                        #remove from special and move it to normal
+                        self.__monitoredAttr['Special'][attrName]['Event'].set()
+                        self.__popPropertyElement('MonitoredAttributes',attrName)
+                        self.MonitoredAttributes = self.__appendPropertyElement(\
+                            'MonitoredAttributes',attrName)
+                        multiattr = self.get_device_attr()
+                        attrId = multiattr.get_attr_ind_by_name(attrName)
+                        self.__monitoredAttr['Normal'].append(attrName)
+                        self.__monitoredAttr['NormalIDs'].append(attrId)
+                    else:
+                        self.__monitoredAttr['Special'][attrName]['Period'] = attrPeriod
+                        self.__popPropertyElement('MonitoredAttributes',attrName)
+                        self.MonitoredAttributes = self.__appendPropertyElement(\
+                            'MonitoredAttributes',"%s:%6.3f"%(attrName,attrPeriod))
+                elif attrName in self.__monitoredAttr['Normal']:
+                    #remove the attribute from monitoring
+                    self.__monitoredAttr['Normal'].pop(self.__monitoredAttr['Normal'].index(attrName))
+                    self.__popPropertyElement('MonitoredAttributes',attrName)
+                    #add the attribute to specialMonitor
+                    multiattr = self.get_device_attr()
+                    attrId = multiattr.get_attr_ind_by_name(attrName)
+                    attrThread = threading.Thread(target=self._specialMonitor,
+                                                  args=(attrName,attrPeriod,attrId))
+                    self.__monitoredAttr['Special'][attrName] = {}
+                    self.__monitoredAttr['Special'][attrName]['period'] = attrPeriod
+                    self.__monitoredAttr['Special'][attrName]['Thread'] = attrThread
+                    self.__monitoredAttr['Special'][attrName]['Event'] = threading.Event()
+                    self.__monitoredAttr['Special'][attrName]['Event'].clear()
+                    attrThread.setDaemon(True)
+                    self.MonitoredAttributes = self.__appendPropertyElement(\
+                        'MonitoredAttributes',"%s:%6.3f"%(attrName,attrPeriod))
+                    attrThread.start()
+        except Exception,e:
+            self.error_stream("In %s.SetMonitoringPeriod(%s) exception: %s"%
+                              (self.get_name(),argin,e))
+            raise e
+        #----- PROTECTED REGION END -----#	//	Skippy.SetMonitoringPeriod
+        
+#------------------------------------------------------------------
+#    GetMonitoringPeriod command:
+#------------------------------------------------------------------
+    def GetMonitoringPeriod(self, argin):
+        """ Get the period that is checked an attribute monitored.
+        
+        :param argin: 
+        :type: PyTango.DevString
+        :return: 
+        :rtype: PyTango.DevFloat """
+        self.debug_stream("In " + self.get_name() +  ".GetMonitoringPeriod()")
+        argout = 0.0
+        #----- PROTECTED REGION ID(Skippy.GetMonitoringPeriod) ENABLED START -----#
+        try:
+            if argin in self.__monitoredAttr['Special'].keys():
+                argout = self.__monitoredAttr['Special'][argin]['period']
+            elif argin in self.__monitoredAttr['Normal']:
+                argout = self.attr_TimeStampsThreshold_read
+            else:
+                argout = float('nan')
+        except Exception,e:
+            self.error_stream("In %s.GetMonitoringPeriod(%s) exception: %s"%
+                              (self.get_name(),argin,e))
+            raise e
+        #----- PROTECTED REGION END -----#	//	Skippy.GetMonitoringPeriod
+        return argout
+        
 
 #==================================================================
 #
@@ -1174,6 +1272,12 @@ class SkippyClass(PyTango.DeviceClass):
         'RemoveMonitoring':
             [[PyTango.DevString, "none"],
             [PyTango.DevVoid, "none"]],
+        'SetMonitoringPeriod':
+            [[PyTango.DevVarStringArray, "none"],
+            [PyTango.DevVoid, "none"]],
+        'GetMonitoringPeriod':
+            [[PyTango.DevString, "none"],
+            [PyTango.DevFloat, "none"]],
         }
 
 
