@@ -234,3 +234,13 @@ Attribute('WaveformIncrement',
            'dim':[0],
            'readCmd':":WAVeform:YINCrement?",
          })
+
+Attribute('ByteOrder',
+          {'type':PyTango.CmdArgType.DevString,
+           'dim':[0],
+           'readCmd':":WAVeform:BYTeorder?",
+           'writeCmd':lambda value:":WAVeform:BYTeorder %s"%(str(value)),
+           'writeValues':['LSBF',
+                          'MSBF'],
+           'memorized':True,
+         })
