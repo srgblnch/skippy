@@ -109,10 +109,10 @@ class bySocket(Communicator):
             try:
                 nBytesHeaderLength = int(completeMsg[1])
                 nBytesWaveElement = int(completeMsg[2:nBytesHeaderLength+2])
-#                 self.debug_stream("From the beginning %s, understood a %d "\
-#                                   "characters header with further %d "\
-#                                   "elements to be read."
-#                                   %(repr(completeMsg[:10]),nBytesHeaderLength,nBytesWaveElement))
+                self.debug_stream("From the beginning %s, understood a %d "\
+                                  "characters header with further %d "\
+                                  "elements to be read."
+                                  %(repr(completeMsg[:10]),nBytesHeaderLength,nBytesWaveElement))
                 while len(completeMsg) < nBytesWaveElement:
                     buffer = self.__sock.recv(bufsize)
                     completeMsg = ''.join([completeMsg,buffer])
@@ -129,15 +129,15 @@ class bySocket(Communicator):
                 self.error_stream("Exception in %s:%d string data "\
                                   "interpretation: %s"
                                   %(self.__hostName,self.__port,e))
-#         if len(completeMsg) > 100:
-#             self.debug_stream("Received from %s:%d %s(...)%s (len %d)"
-#                               %(self.__hostName,self.__port,
-#                                 repr(completeMsg[:25]),repr(completeMsg[len(completeMsg)-25:]),
-#                                 len(completeMsg)))
-#         else:
-#             self.debug_stream("Received from %s:%d %s"
-#                               %(self.__hostName,self.__port,
-#                                 repr(completeMsg)))
+        if len(completeMsg) > 50:
+            self.debug_stream("Received from %s:%d %s(...)%s (len %d)"
+                              %(self.__hostName,self.__port,
+                                repr(completeMsg[:25]),repr(completeMsg[len(completeMsg)-25:]),
+                                len(completeMsg)))
+        else:
+            self.debug_stream("Received from %s:%d %s"
+                              %(self.__hostName,self.__port,
+                                repr(completeMsg)))
         return completeMsg
 
     def close(self):

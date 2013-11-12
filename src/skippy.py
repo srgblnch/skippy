@@ -349,6 +349,7 @@ class Skippy (PyTango.Device_4Impl):
                     dataFormat = self.attributes['WaveformDataFormat']['lastReadValue']
                     if dataFormat.startswith('ASC'):
                         #self.debug_stream("Spectrum received in ascii: %s"%(repr(answer)[:100]))
+                        self.attributes[attrName]['lastReadRaw'] = answer
                         self.attributes[attrName]['lastReadValue'] = numpy.fromstring(answer,dtype=float,sep=',')
                         self.attributes[attrName]['timestamp'] = t
                         self.attributes[attrName]['quality'] = PyTango.AttrQuality.ATTR_VALID
@@ -360,6 +361,9 @@ class Skippy (PyTango.Device_4Impl):
                             self.error_stream("Wrong data receiver for the "\
                                               "attribute %s"%attrName)
                             return
+                        #save values for debugging
+                        self.attributes[attrName]['lastReadRaw'] = answer
+                        #review the header
                         nBytesLengthBlock = int(answer[1])
                         nBytesWaveBlock = int(answer[2:nBytesLengthBlock+2])
                         waveBytes = answer[nBytesLengthBlock+2:nBytesWaveBlock]
@@ -367,6 +371,7 @@ class Skippy (PyTango.Device_4Impl):
                                           "waveform data: header size %d bytes, "\
                                           "wave size %d bytes"
                                           %(self.get_name(),nBytesLengthBlock,nBytesWaveBlock))
+                        #prepare interpretation of the raw data
                         if dataFormat.startswith('BYT'):
                             format = 'b'#signed char, 1byte
                             divisor = 1
@@ -583,11 +588,13 @@ class Skippy (PyTango.Device_4Impl):
             self._important_logs.append(newStatusLine)
     def pushAlarmState(self,who):
         self.__monitorAlarms.append(who)
+        self.warn_stream("ALARM state due to: %s"%(self.__monitorAlarms))
         self.change_state(PyTango.DevState.ALARM)
         self.rebuildStatus()
     def popAlarmState(self,who):
         self.__monitorAlarms.pop(self.__monitorAlarms.index(who))
         if len(self.__monitorAlarms) == 0:
+            self.info_stream("Alarm recovery")
             if self.__monitorThread.isAlive():
                 self.change_state(PyTango.DevState.RUNNING)
                 self.cleanAllImportantLogs()
@@ -785,6 +792,7 @@ class Skippy (PyTango.Device_4Impl):
         if self.AutoOn:
             if self.__connectInstrumentObj():
                 self.builder()
+        self.__hwReadMutex = threading.Lock()
         self.__monitorThread = None
         self.__monitorEvent = threading.Event()
         self.__monitorEvent.clear()
