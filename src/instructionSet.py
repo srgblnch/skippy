@@ -74,6 +74,9 @@ def AttrExc(function):
     functools.update_wrapper(nestedMethod,function)
     return nestedMethod
 
+def latin1(x):
+  return x.decode('utf-8').replace(u'\u2070', u'\u00b0').replace(u'\u03bc',u'\u00b5').encode('latin1')
+
 class AttributeBuilder:
     def __init__(self,parent):
         '''parent: device object to who apply the dynamic attributes
