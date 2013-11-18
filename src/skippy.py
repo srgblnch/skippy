@@ -792,6 +792,8 @@ class Skippy (PyTango.Device_4Impl):
         if self.AutoOn:
             if self.__connectInstrumentObj():
                 self.builder()
+        else:
+            self.info_stream("Do not connect automatically, due to the AutoOn property")
         self.__hwReadMutex = threading.Lock()
         self.__monitorThread = None
         self.__monitorEvent = threading.Event()
@@ -800,8 +802,10 @@ class Skippy (PyTango.Device_4Impl):
                                 'NormalIDs':[],
                                 'Special':{}}
         self.__monitorAlarms = []
-        if self.AutoStart:
+        if self.AutoOn and self.AutoStart:
             self.Start()
+        else:
+            self.info_stream("Do not start automatically, due to the AutoStart property")
         #----- PROTECTED REGION END -----#	//	Skippy.init_device
 
 #------------------------------------------------------------------
@@ -825,7 +829,11 @@ class Skippy (PyTango.Device_4Impl):
     def read_Idn(self, attr):
         self.debug_stream("In " + self.get_name() + ".read_Idn()")
         #----- PROTECTED REGION ID(Skippy.Idn_read) ENABLED START -----#
-        self.attr_Idn_read = self.__idn
+        try:
+            self.attr_Idn_read = self.__idn
+        except:
+            attr.set_value_date_quality("",time.time(),PyTango.AttrQuality.ATTR_INVALID)
+            return
         #----- PROTECTED REGION END -----#	//	Skippy.Idn_read
         attr.set_value(self.attr_Idn_read)
         
@@ -916,8 +924,9 @@ class Skippy (PyTango.Device_4Impl):
             except Excpetion,e:
                 self.error_stream("In %s.read_attr_hardware() Cannot disconnect: %s"\
                                   %(self.get_name(),e))
-            self.__buildInstrumentObj()
-            self.__connectInstrumentObj()
+            if self.AutoOn:
+                self.__buildInstrumentObj()
+                self.__connectInstrumentObj()
         #----- PROTECTED REGION END -----#	//	Skippy.read_attr_hardware
 
 
