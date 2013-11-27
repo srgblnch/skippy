@@ -136,7 +136,8 @@ class Skippy (PyTango.Device_4Impl):
     def __filterAttributes(self,multiattr,data):
         '''Avoid hardware readings of:
            - attributes that are internals to the device
-           - attributes that reading is recent (TODO)
+           - attributes that reading is recent
+           - attributes where its channel/function manager say closed
         '''
         try:
             t = time.time()
@@ -154,30 +155,34 @@ class Skippy (PyTango.Device_4Impl):
                 else:
                     #TODO: discard if the channel or function is not open
                     attrName = self.__checkChannelManager(attrName)
-                    t_a = self.attributes[attrName]['timestamp']
-                    if not attrIndex in self._monitoredAttributeIds and \
-                       not t_a == None and t - t_a < delta_t:
-                        self.debug_stream("In %s.__filterAttributes() "\
-                                          "excluding %s: t < delta_t"
-                                          %(self.get_name(),attrName))
+                    try:
+                        t_a = self.attributes[attrName]['timestamp']
+                    except:
+                        pass
                     else:
-                        if attrObj.get_data_format() == PyTango.AttrDataFormat.SCALAR:
-                            scalar.append(attrName)
-                        elif attrObj.get_data_format() == PyTango.AttrDataFormat.SPECTRUM:
-                            spectrum.append(attrName)
-                            #when an spectrum are required, some reference attributes will be needed
-                            if self.attributes.has_key('WaveformDataFormat'):
-                                scalar.append('WaveformDataFormat')
-                            if self.attributes.has_key('WaveformOrigin'):
-                                scalar.append('WaveformOrigin')
-                            if self.attributes.has_key('WaveformIncrement'):
-                                scalar.append('WaveformIncrement')
-                        elif attrObj.get_data_format() == PyTango.AttrDataFormat.IMAGE:
-                            image.append(attrName)
+                        if not attrIndex in self._monitoredAttributeIds and \
+                           not t_a == None and t - t_a < delta_t:
+                            self.debug_stream("In %s.__filterAttributes() "\
+                                              "excluding %s: t < delta_t"
+                                              %(self.get_name(),attrName))
                         else:
-                            self.error_stream("In %s.__filterAttributes() "\
-                                              "unknown data format for "\
-                                              "attribute %s"%(self.get_name(),attrName))
+                            if attrObj.get_data_format() == PyTango.AttrDataFormat.SCALAR:
+                                scalar.append(attrName)
+                            elif attrObj.get_data_format() == PyTango.AttrDataFormat.SPECTRUM:
+                                spectrum.append(attrName)
+                                #when an spectrum are required, some reference attributes will be needed
+                                if self.attributes.has_key('WaveformDataFormat'):
+                                    scalar.append('WaveformDataFormat')
+                                if self.attributes.has_key('WaveformOrigin'):
+                                    scalar.append('WaveformOrigin')
+                                if self.attributes.has_key('WaveformIncrement'):
+                                    scalar.append('WaveformIncrement')
+                            elif attrObj.get_data_format() == PyTango.AttrDataFormat.IMAGE:
+                                image.append(attrName)
+                            else:
+                                self.error_stream("In %s.__filterAttributes() "\
+                                                  "unknown data format for "\
+                                                  "attribute %s"%(self.get_name(),attrName))
             self.debug_stream("In %s.__filterAttributes() scalar list: %s; "\
                               "spectrum list: %s; image list: %s"
                               %(self.get_name(),scalar,spectrum,image))
@@ -439,7 +444,7 @@ class Skippy (PyTango.Device_4Impl):
                     attr.set_value_date_quality(value,timestamp,quality)
             elif self.attributes[attrName]['dim'] == 1:
                 if value == None:
-                    attr.set_value_date_quality(0,time.time(),PyTango.AttrQuality.ATTR_INVALID,1)
+                    attr.set_value_date_quality([0],time.time(),PyTango.AttrQuality.ATTR_INVALID,1)
                 else:
                     attr.set_value_date_quality(value,timestamp,quality,len(value))
         elif attrName.endswith("Step"):
