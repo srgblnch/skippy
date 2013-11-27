@@ -155,11 +155,9 @@ class Skippy (PyTango.Device_4Impl):
                 else:
                     #TODO: discard if the channel or function is not open
                     attrName = self.__checkChannelManager(attrName)
-                    try:
+                    if attrName != None:
                         t_a = self.attributes[attrName]['timestamp']
-                    except:
-                        pass
-                    else:
+                        attrObj = multiattr.get_attr_by_name(attrName)
                         if not attrIndex in self._monitoredAttributeIds and \
                            not t_a == None and t - t_a < delta_t:
                             self.debug_stream("In %s.__filterAttributes() "\
@@ -213,7 +211,7 @@ class Skippy (PyTango.Device_4Impl):
                 self.debug_stream("In %s.__checkChannelManager() "\
                                   "excluding %s from filter: channel or "\
                                   "function is close"%(self.get_name(),attrName))
-                return ""
+                return None
             else:
                 return attrName
         else:#non channel or function no sub-filter
@@ -910,7 +908,7 @@ class Skippy (PyTango.Device_4Impl):
         self.debug_stream("Attribute value = " + str(data))
         #----- PROTECTED REGION ID(Skippy.TimeStampsThreshold_write) ENABLED START -----#
         self.attr_TimeStampsThreshold_read = float(data)
-        if hasattr(self,'_monitorThreads'):
+        if hasattr(self,'_monitorThreads') and self._monitorThreads.has_key('Generic'):
             self._monitorThreads['Generic']['Period'] = self.attr_TimeStampsThreshold_read
         #----- PROTECTED REGION END -----#	//	Skippy.TimeStampsThreshold_write
         
