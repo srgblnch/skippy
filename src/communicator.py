@@ -26,6 +26,39 @@ import socket
 import array
 import threading
 
+def buildCommunicator(instrumentName,port=None,parent=None):
+    if __isHostName(instrumentName):
+        return bySocket(instrumentName,port=port,parent=parent)
+    elif __isTangoName(instrumentName):
+        if __isVisaDevice(instrumentName):
+            return byVisa(instrumentName,parent=parent)
+        raise SyntaxError("Instrument device type not identified")
+    raise SyntaxError("Instrument name not identified")
+
+def __isHostName(name):
+    try:
+        socket.gethostbyname(name)
+        return True
+    except:
+        return False
+
+def __isTangoName(name):
+    try:
+        PyTango.DeviceProxy(name)
+        return True
+    except:
+        return False
+
+def __isVisaDevice(devName):
+    try:
+        devClass = PyTango.DeviceProxy(devName).info().dev_class
+        if devClass == 'PyVisa':
+            return True
+        else:
+            return False
+    except:
+        return False
+
 class Communicator:
     def __init__(self):
         raise NotImplementedError("This class is pure abstract")
@@ -89,13 +122,19 @@ class bySocket(Communicator):
         self.mutex = threading.Lock()
         self.debug_stream("building a communication to %s by socket "\
                           "using port %d"%(self.__hostName,self.__port))
+        self.__sock = None
+        self.build()
+
+    def build(self):
         self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     def connect(self):
+        if self.__sock == None:
+            self.build()
         self.__sock.settimeout(1)
         self.__sock.connect((self.__hostName, self.__port))
     def disconnect(self):
         self.__sock = None
-        self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        #self.build()
 
     def _send(self,msg):
         #self.debug_stream("Sending to %s:%d %s"%(self.__hostName,self.__port,repr(msg)))

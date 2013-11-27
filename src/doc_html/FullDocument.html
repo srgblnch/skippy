@@ -60,6 +60,9 @@
 				<li> <a href="FullDocument.html#cmdRemoveMonitoring"> RemoveMonitoring </a>
 				<li> <a href="FullDocument.html#cmdSetMonitoringPeriod"> SetMonitoringPeriod </a>
 				<li> <a href="FullDocument.html#cmdGetMonitoringPeriod"> GetMonitoringPeriod </a>
+				<li> <a href="FullDocument.html#cmdCMD"> CMD </a>
+				<li> <a href="FullDocument.html#cmdCMDfloat"> CMDfloat </a>
+				<li> <a href="FullDocument.html#cmdStandby"> Standby </a>
 			</ul>
 			<li> <a href="FullDocument.html#attributes">   Attributes   </a>
 			<ul>
@@ -184,6 +187,12 @@
 		<td> boolean </td>
 		<td> True <br> </td>
 	</tr>
+	<tr>
+		<td> AutoStandby </td>
+		<td> When device startup, try an standby() to connect to the instrument authomatically. </td>
+		<td> boolean </td>
+		<td> True <br> </td>
+	</tr>
 </table>
 <br><br>
 <hr>
@@ -239,7 +248,7 @@
 		<td> DEV_VOID </td>
 		<td> DEV_VOID </td>
 		<td> OPERATOR </td>
-		<td> Stablish communication with the instrument. </td>
+		<td> Allow communication with the instrument. </td>
 	</tr>
 	<tr>
 		<td> <a href="CmdOff.html"> Off </a> </td>
@@ -282,6 +291,27 @@
 		<td> DEV_FLOAT </td>
 		<td> OPERATOR </td>
 		<td> Get the period that is checked an attribute monitored. </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdCMD.html"> CMD </a> </td>
+		<td> DEV_STRING </td>
+		<td> DEV_STRING </td>
+		<td> EXPERT </td>
+		<td> Expert command for a direct send of a SCPI command and read the answer. </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdCMDfloat.html"> CMDfloat </a> </td>
+		<td> DEV_STRING </td>
+		<td> DEVVAR_FLOATARRAY </td>
+		<td> EXPERT </td>
+		<td> Expert command for a direct send of a SCPI command and read the answer converted to a float list. </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdStandby.html"> Standby </a> </td>
+		<td> DEV_VOID </td>
+		<td> DEV_VOID </td>
+		<td> OPERATOR </td>
+		<td> Stablish communication with the instrument. </td>
 	</tr>
 </table>
 <br><br><hr>
@@ -426,8 +456,8 @@
 	</tr>
 <Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
 	<tr>
-		<td> Command allowed for </td>
-		<td> All states </td>
+		<td> Command NOT allowed for </td>
+		<td> <font size="-1">  <li> OFF </li>  <li> FAULT </li>  <li> INIT </li> </font> </td>
 		<td> .. </td>
 	</tr>
 </table>
@@ -475,8 +505,8 @@
 	</tr>
 <Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
 	<tr>
-		<td> Command allowed for </td>
-		<td> All states </td>
+		<td> Command NOT allowed for </td>
+		<td> <font size="-1">  <li> OFF </li>  <li> RUNNING </li>  <li> FAULT </li>  <li> INIT </li>  <li> STANDBY </li> </font> </td>
 		<td> .. </td>
 	</tr>
 </table>
@@ -524,8 +554,8 @@
 	</tr>
 <Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
 	<tr>
-		<td> Command allowed for </td>
-		<td> All states </td>
+		<td> Command NOT allowed for </td>
+		<td> <font size="-1">  <li> OFF </li>  <li> ON </li>  <li> FAULT </li>  <li> INIT </li>  <li> STANDBY </li> </font> </td>
 		<td> .. </td>
 	</tr>
 </table>
@@ -534,7 +564,7 @@
 <br><br><br>
 <font size="+1"><u><b> Command On : </b></u></font>
 <ul>
-	Stablish communication with the instrument.
+	Allow communication with the instrument.
 </ul>
 <br><br><br>
 <Table Border=2 Cellpadding=3 CELLSPACING=0>
@@ -622,8 +652,8 @@
 	</tr>
 <Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
 	<tr>
-		<td> Command allowed for </td>
-		<td> All states </td>
+		<td> Command NOT allowed for </td>
+		<td> <font size="-1">  <li> OFF </li>  <li> FAULT </li>  <li> INIT </li> </font> </td>
 		<td> .. </td>
 	</tr>
 </table>
@@ -720,8 +750,8 @@
 	</tr>
 <Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
 	<tr>
-		<td> Command allowed for </td>
-		<td> All states </td>
+		<td> Command NOT allowed for </td>
+		<td> <font size="-1">  <li> OFF </li>  <li> FAULT </li>  <li> INIT </li> </font> </td>
 		<td> .. </td>
 	</tr>
 </table>
@@ -769,8 +799,8 @@
 	</tr>
 <Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
 	<tr>
-		<td> Command allowed for </td>
-		<td> All states </td>
+		<td> Command NOT allowed for </td>
+		<td> <font size="-1">  <li> OFF </li>  <li> FAULT </li>  <li> INIT </li> </font> </td>
 		<td> .. </td>
 	</tr>
 </table>
@@ -818,8 +848,8 @@
 	</tr>
 <Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
 	<tr>
-		<td> Command allowed for </td>
-		<td> All states </td>
+		<td> Command NOT allowed for </td>
+		<td> <font size="-1">  <li> OFF </li>  <li> FAULT </li>  <li> INIT </li> </font> </td>
 		<td> .. </td>
 	</tr>
 </table>
@@ -867,8 +897,155 @@
 	</tr>
 <Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
 	<tr>
-		<td> Command allowed for </td>
-		<td> All states </td>
+		<td> Command NOT allowed for </td>
+		<td> <font size="-1">  <li> OFF </li>  <li> FAULT </li>  <li> INIT </li> </font> </td>
+		<td> .. </td>
+	</tr>
+</table>
+<br><br><hr>
+<a name="cmdCMD"> </a>
+<br><br><br>
+<font size="+1"><u><b> Command CMD : </b></u></font>
+<ul>
+	Expert command for a direct send of a SCPI command and read the answer.
+</ul>
+<br><br><br>
+<Table Border=2 Cellpadding=3 CELLSPACING=0>
+	<tr bgcolor="#CCCCFF" class="TableHeadingColor">
+	<td colspan=0> <font size=+1> <center><b> CMD Definition </b></font></center></td>
+	</tr>
+	<tr>
+		<td> Input Argument </td>
+		<td> Tango::DEV_STRING </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> Output Argument </td>
+		<td> Tango::DEV_STRING </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> DisplayLevel </td>
+		<td> EXPERT </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Inherited </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Abstract </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Polling Period </td>
+		<td> Not polled </td>
+		<td> .. </td>
+	</tr>
+<Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
+	<tr>
+		<td> Command NOT allowed for </td>
+		<td> <font size="-1">  <li> OFF </li>  <li> FAULT </li>  <li> INIT </li> </font> </td>
+		<td> .. </td>
+	</tr>
+</table>
+<br><br><hr>
+<a name="cmdCMDfloat"> </a>
+<br><br><br>
+<font size="+1"><u><b> Command CMDfloat : </b></u></font>
+<ul>
+	Expert command for a direct send of a SCPI command and read the answer converted to a float list.
+</ul>
+<br><br><br>
+<Table Border=2 Cellpadding=3 CELLSPACING=0>
+	<tr bgcolor="#CCCCFF" class="TableHeadingColor">
+	<td colspan=0> <font size=+1> <center><b> CMDfloat Definition </b></font></center></td>
+	</tr>
+	<tr>
+		<td> Input Argument </td>
+		<td> Tango::DEV_STRING </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> Output Argument </td>
+		<td> Tango::DEVVAR_FLOATARRAY </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> DisplayLevel </td>
+		<td> EXPERT </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Inherited </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Abstract </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Polling Period </td>
+		<td> Not polled </td>
+		<td> .. </td>
+	</tr>
+<Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
+	<tr>
+		<td> Command NOT allowed for </td>
+		<td> <font size="-1">  <li> OFF </li>  <li> FAULT </li>  <li> INIT </li> </font> </td>
+		<td> .. </td>
+	</tr>
+</table>
+<br><br><hr>
+<a name="cmdStandby"> </a>
+<br><br><br>
+<font size="+1"><u><b> Command Standby : </b></u></font>
+<ul>
+	Stablish communication with the instrument.
+</ul>
+<br><br><br>
+<Table Border=2 Cellpadding=3 CELLSPACING=0>
+	<tr bgcolor="#CCCCFF" class="TableHeadingColor">
+	<td colspan=0> <font size=+1> <center><b> Standby Definition </b></font></center></td>
+	</tr>
+	<tr>
+		<td> Input Argument </td>
+		<td> Tango::DEV_VOID </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> Output Argument </td>
+		<td> Tango::DEV_VOID </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> DisplayLevel </td>
+		<td> OPERATOR </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Inherited </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Abstract </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Polling Period </td>
+		<td> Not polled </td>
+		<td> .. </td>
+	</tr>
+<Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
+	<tr>
+		<td> Command NOT allowed for </td>
+		<td> <font size="-1">  <li> RUNNING </li>  <li> FAULT </li>  <li> INIT </li>  <li> STANDBY </li> </font> </td>
 		<td> .. </td>
 	</tr>
 </table>
@@ -974,8 +1151,8 @@
 				</tr>
 			<Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td></Tr>
 				<tr>
-					<td> Read allowed for </td>
-					<td> All states </td>
+					<td> Read NOT allowed for </td>
+					<td> <font size="-1">  <li> OFF </li>  <li> FAULT </li>  <li> INIT </li> </font> </td>
 				</tr>
 			</table>
 		</td>
@@ -1465,6 +1642,10 @@
 	<tr>
 		<td> INIT </td>
 		<td> Initialization stage. </td>
+	</tr>
+	<tr>
+		<td> STANDBY </td>
+		<td>  </td>
 	</tr>
 </table>
 </body>
