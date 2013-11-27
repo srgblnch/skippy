@@ -255,6 +255,15 @@ class AttributeBuilder:
             self.__device.attributes[attrName]['rampThread'] = None
         if definition.has_key('writeValues'):
             self.__device.attributes[attrName]['writeValues'] = definition['writeValues']
+            #this is a very important information to have in the attr descrition
+            if definition.has_key('description'):
+                prefix = definition['description']+". "
+            else:
+                prefix = ""
+            descr = "%sAllowed values: %s"%(prefix,repr(definition['writeValues']))
+            #print ">"*20,descr
+            aprop.set_description(descr)
+            attr.set_default_properties(aprop)
         self.__device.attributes[attrName]['type'] = definition['type']
         self.__device.attributes[attrName]['dim'] = definition['dim'][0]
         self.__device.debug_stream("New attribute build: %s:%s"
