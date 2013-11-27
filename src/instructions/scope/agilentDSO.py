@@ -40,6 +40,7 @@ import PyTango
 #              'description' -> attribute property
 #              'memorized' -> attribute property
 #              'writeValues' -> list of accepted values to write
+#              'manager'  -> to flag if a channel is close to avoid reads there
 #             }
 #            )
 #
@@ -51,6 +52,7 @@ Attribute('State',
            'writeCmd':lambda ch,num:(lambda value:":%s%d:DISPlay %s"%(ch,num,value)),
            'channels':True,
            'functions':True,
+           'manager':True,
          })
 
 Attribute('Impedance',
@@ -262,5 +264,19 @@ Attribute('ByteOrder',
            'writeCmd':lambda value:":WAVeform:BYTeorder %s"%(str(value)),
            'writeValues':['LSBF',
                           'MSBF'],
+           'memorized':True,
+         })
+
+Attribute('Error',
+          {'type':PyTango.CmdArgType.DevString,
+           'dim':[0],
+           'readCmd':":SYSTem:ERRor?",
+         })
+
+Attribute('Lock',
+          {'type':PyTango.CmdArgType.DevBoolean,
+           'dim':[0],
+           'readCmd':"SYSTem:LOCK?",
+           'writeCmd':lambda value:"SYSTem:LOCK %s"%(str(value)),
            'memorized':True,
          })

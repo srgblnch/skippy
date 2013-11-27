@@ -44,41 +44,45 @@ The main restriction that the PyVisaInstrWrapper shows is the dependency on the 
 \subsection{Device Properties}
 
 \begin{itemize}
-    \item Instrument: mandatory property to configure the instrument that will be introduced to the distributed system via the device.
+    \item {\tt Instrument}: mandatory property to configure the instrument that will be introduced to the distributed system via the device.
     \begin{itemize}
         \item If the content string is a host name, use sockets to communicate with the instrument
         \item If the content string is a device name and the class of it is a PyVisa, use it as the bridge to the instrument.
         \item else, decay to fault state with the appropriate status message
     \end{itemize}
-    \item Port: optional property to specify a port, in the socket communication, when it should be different than the default 5025.
-    \item NumChannels: optional property to define, in case the instrument has channels, the number of them available.
-    \item NumFunctions: optional property to define, in case the instrument has functions, the number of them available.
-    \item MonitoredAttributes: When the device is in RUNNING state, the attributes listed here will be monitored (having events) with a period said in the attribute TimeStampsThreashold (or different if specified with a : separator after the attrName).
-    \item AutoOn: When device startup, try an on() to connect to the instrument authomatically. Default True.
-    \item AutoStart: When device startup, try an Start() to monitor attributes, if MonitoredAttributes is configuredc, authomatically. Default True.
+    \item {\tt Port}: optional property to specify a port, in the socket communication, when it should be different than the default 5025.
+    \item {\tt NumChannels}: optional property to define, in case the instrument has channels, the number of them available.
+    \item {\tt NumFunctions}: optional property to define, in case the instrument has functions, the number of them available.
+    \item {\tt MonitoredAttributes}: When the device is in RUNNING state, the attributes listed here will be monitored (having events) with a period said in the attribute TimeStampsThreashold (or different if specified with a : separator after the attrName).
+    \item {\tt AutoStandby}: When device startup, try an standby() to connect to the instrument authomatically. Default True.
+    \item {\tt AutoOn}: When device startup, try an on() begin communication with the instrument. Default True.
+    \item {\tt AutoStart}: When device startup, try an Start() to launch the necessary monitor threads (if {\tt MonitoredAttributes} is configured), authomatically. Default True.
 \end{itemize}
 
 \subsection{Device Commands}
 
 \begin{itemize}
-    \item IDN(): Request identification to the instrument.
-    \item Off(): Release the communication with the instrument.
-    \item On(): Stablish communication with the instrument.
-    \item Start(): Start an active monitoring.
-    \item Stop(): Stop the active monitoring.
-    \item \emph{Exec():} Expert attribute to look inside the device during execution.
-    \item AddMonitoring(AttrName): Add an attribute to the list of monitored attributes
-    \item RemoveMonitoring(AttrName): Remove an attribute from the list of monitored attributes
-    \item SetMonitoringPeriod([AttrName,AttrPeriod]): From the list of already monitored attributes, stablish (or change) the period that it is checked. With this command the monitored attribute will become one of the splitted thread monitor, even if the period in the same thant the normal periodic. To force to place in this normal monitor list, use period value $0$.
-    \item GetMonitoringPeriod(AttrName): Get the period that is checked an attribute monitored. {\tt NaN} if it is not monitored.
+    \item {\tt IDN()}: Request identification to the instrument.
+    \item {\tt Off()}: Release the communication with the instrument.
+    \item {\tt Standby()}: Open the communications with the instrument and do the identification and attribute builder, but do not allow yet any other query.
+    \item {\tt On()}: Stablish communication with the instrument.
+    \item {\tt Start()}: Start an active monitoring.
+    \item {\tt Stop()}: Stop the active monitoring.
+    \item {\tt AddMonitoring(AttrName)}: Add an attribute to the list of monitored attributes
+    \item {\tt RemoveMonitoring(AttrName)}: Remove an attribute from the list of monitored attributes
+    \item {\tt SetMonitoringPeriod([AttrName,AttrPeriod])}: From the list of already monitored attributes, stablish (or change) the period that it is checked. With this command the monitored attribute will become one of the splitted thread monitor, even if the period in the same thant the normal periodic. To force to place in this normal monitor list, use period value $0$.
+    \item {\tt GetMonitoringPeriod(AttrName)}: Get the period that is checked an attribute monitored. {\tt NaN} if it is not monitored.
+    \item {\tt \emph{Exec():}} Expert attribute to look inside the device during execution.
+    \item {\tt \emph{CMD():}} Expert command for a direct send of a SCPI command and read the answer.
+    \item {\tt \emph{CMDfloat():}} Expert command for a direct send of a SCPI command and read the answer converted to a float list.
 \end{itemize}
 
 \subsection{Device Attributes}
 
 \begin{itemize}
-    \item idn: read attribute with the identification of the instrument linked.
-    \item QueryWindow: Expert attribute to configure the number of request sent in parallel to the instrument. Bigger queries will be splitted in subqueries o of this size.
-    \item TimeStampsThreshold: This value sets the threshold time to use a cached value or hardware read it.
+    \item {\tt idn}: read attribute with the identification of the instrument linked.
+    \item {\tt QueryWindow}: Expert attribute to configure the number of request sent in parallel to the instrument. Bigger queries will be splitted in subqueries o of this size.
+    \item {\tt TimeStampsThreshold}: This value sets the threshold time to use a cached value or hardware read it.
 \end{itemize}
 
 Other attributes can be built using a \href{http://en.wikipedia.org/wiki/Builder_pattern}{Builder pattern}. In fact, when the device starts and the instrument is identified, with the information provided in this identification, the device can find how to build the instructions set.
@@ -158,13 +162,22 @@ In figure \ref{fig:classDiagram} can be found a UML draw with the class diagram.
 
 \begin{itemize}
     \item Write process to some attributes would require a smooth ramp. As an example, to change the frequency in the RFGenerator, the change would not be set directly (or the timing system will suffer). Then in the build process of an specific attribute with a certain flag of "movability" (name to be determined) two extra attributes, internals in the device, must be built also: a Step and a StepSpeed. On the write operation a thread should be launched and every "StepSpeed" seconds change the value by the content in "Step" in the direction to the final setpoint. This was already implemented in PyRfSignalGenerator Class.
-    \item Monitor attributes. Having a property with a list of attributes, if they exist in the instrument definition, configure them in events and do a separeted thread polling that will emit events on this attributes. This feature is different that setting up a "polling" from tango to the attribute because this fails to use the multiple reading.
+    \item Monitor attributes. Having a property with a list of attributes, if they exist in the instrument definition, configure them in events and do a separated thread polling that will emit events on this attributes. This feature is different that setting up a "polling" from tango to the attribute because this fails to use the multiple reading.
     \begin{itemize}
         \item In the definition of the attribute to be monitored, the \emph{MonitoredAttributes} property, using an specific notation (a ':' followed by a number of seconds) can set up an specific monitoring period for it in particular.
+        \begin{itemize}
+            \item \todo{When the monitoring is by the specific period, different attributes with the same period, should be read by the same monitor thread.}
+        \end{itemize}
         \item A command way feature is required to add and remove elements from this monitoring list. Together with a set of commands to setup specific monitoring periods.
     \end{itemize}
     \item \todo{Once this monitoring feature is available, other attributes not monitored that have reached some reading frequency, would be included in the monitoring loop (not emitting events) in order to reduce the load of the readings. The frequency reading should be monitored to notice when this has reduced over another threshold to avoid unnecessary readings.}
 \end{itemize}
 
+\subsection{Known bugs}
+
+\begin{itemize}
+    \item \fixme{It have seen, when the read frequency is very fast, like read a waveform above $5Hz$, some exceptions that suggest a responses cross between spectrum and scalar. This is potentially critical, because is undetectable if it happens between scalars.}
+    \item \fixme{When a function is not defined (not when if off like a channel, this is like ask for a channel that doesn't exist physically), the device hangs due to an exception from the instrument and a very long time out.}
+\end{itemize}
 
 \end{document}

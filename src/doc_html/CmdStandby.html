@@ -1,22 +1,22 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2//EN">
 <html>
 <head>
-<title> Skippy Tango Class Command RemoveMonitoring </title>
+<title> Skippy Tango Class Command Standby </title>
 </head>
 <body text="Black" bgcolor="White" link="Blue" vlink="Purple" alink="Red">
 <br><br><br>
-<font size="+1"><u><b> Command RemoveMonitoring : </b></u></font>
+<font size="+1"><u><b> Command Standby : </b></u></font>
 <ul>
-	Remove an attribute from the list of monitored attributes
+	Stablish communication with the instrument.
 </ul>
 <br><br><br>
 <Table Border=2 Cellpadding=3 CELLSPACING=0>
 	<tr bgcolor="#CCCCFF" class="TableHeadingColor">
-	<td colspan=0> <font size=+1> <center><b> RemoveMonitoring Definition </b></font></center></td>
+	<td colspan=0> <font size=+1> <center><b> Standby Definition </b></font></center></td>
 	</tr>
 	<tr>
 		<td> Input Argument </td>
-		<td> Tango::DEV_STRING </td>
+		<td> Tango::DEV_VOID </td>
 		<td>  </td>
 	</tr>
 	<tr>
@@ -47,7 +47,7 @@
 <Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
 	<tr>
 		<td> Command NOT allowed for </td>
-		<td> <font size="-1">  <li> OFF </li>  <li> FAULT </li>  <li> INIT </li> </font> </td>
+		<td> <font size="-1">  <li> RUNNING </li>  <li> FAULT </li>  <li> INIT </li>  <li> STANDBY </li> </font> </td>
 		<td> .. </td>
 	</tr>
 </table>

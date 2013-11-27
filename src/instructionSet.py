@@ -222,10 +222,14 @@ class AttributeBuilder:
             self.__device.attributes[attrName]['readStr'] = definition['readCmd']("CHAN",channel)
             if definition.has_key('writeCmd'):
                 self.__device.attributes[attrName]['writeStr'] = definition['writeCmd']("CHAN",channel)
+            if definition.has_key('manager') and definition['manager'] == True:
+                self.__device.attributesFlags["Ch%d"%channel] = attrName
         elif function:
             self.__device.attributes[attrName]['readStr'] = definition['readCmd']("FUNC",function)
             if definition.has_key('writeCmd'):
                 self.__device.attributes[attrName]['writeStr'] = definition['writeCmd']("FUNC",function)
+            if definition.has_key('manager') and definition['manager'] == True:
+                self.__device.attributesFlags["Fn%d"%function] = attrName
         else:
             self.__device.attributes[attrName]['readStr'] = definition['readCmd']
             if definition.has_key('writeCmd'):

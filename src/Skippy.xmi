@@ -38,6 +38,11 @@
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
       <DefaultPropValue>True</DefaultPropValue>
     </deviceProperties>
+    <deviceProperties name="AutoStandby" description="When device startup, try an standby() to connect to the instrument authomatically.">
+      <type xsi:type="pogoDsl:BooleanType"/>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+      <DefaultPropValue>True</DefaultPropValue>
+    </deviceProperties>
     <commands name="State" description="This command gets the device state (stored in its device_state data member) and returns it to the caller." execMethod="dev_state" displayLevel="OPERATOR" polledPeriod="0">
       <argin description="none">
         <type xsi:type="pogoDsl:VoidType"/>
@@ -64,6 +69,9 @@
         <type xsi:type="pogoDsl:StringType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+      <excludedStates>OFF</excludedStates>
+      <excludedStates>FAULT</excludedStates>
+      <excludedStates>INIT</excludedStates>
     </commands>
     <commands name="Start" description="Start an active monitoring." execMethod="start" displayLevel="OPERATOR" polledPeriod="0">
       <argin description="">
@@ -73,6 +81,11 @@
         <type xsi:type="pogoDsl:VoidType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+      <excludedStates>OFF</excludedStates>
+      <excludedStates>RUNNING</excludedStates>
+      <excludedStates>FAULT</excludedStates>
+      <excludedStates>INIT</excludedStates>
+      <excludedStates>STANDBY</excludedStates>
     </commands>
     <commands name="Stop" description="Stop the active monitoring." execMethod="stop" displayLevel="OPERATOR" polledPeriod="0">
       <argin description="">
@@ -82,8 +95,13 @@
         <type xsi:type="pogoDsl:VoidType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+      <excludedStates>OFF</excludedStates>
+      <excludedStates>ON</excludedStates>
+      <excludedStates>FAULT</excludedStates>
+      <excludedStates>INIT</excludedStates>
+      <excludedStates>STANDBY</excludedStates>
     </commands>
-    <commands name="On" description="Stablish communication with the instrument." execMethod="on" displayLevel="OPERATOR" polledPeriod="0">
+    <commands name="On" description="Allow communication with the instrument." execMethod="on" displayLevel="OPERATOR" polledPeriod="0">
       <argin description="">
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>
@@ -100,6 +118,9 @@
         <type xsi:type="pogoDsl:VoidType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+      <excludedStates>OFF</excludedStates>
+      <excludedStates>FAULT</excludedStates>
+      <excludedStates>INIT</excludedStates>
     </commands>
     <commands name="Exec" description="evaluate python code inside the device server. This command can be very helpful and dangerous." execMethod="exec" displayLevel="EXPERT" polledPeriod="0">
       <argin description="">
@@ -118,6 +139,9 @@
         <type xsi:type="pogoDsl:VoidType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+      <excludedStates>OFF</excludedStates>
+      <excludedStates>FAULT</excludedStates>
+      <excludedStates>INIT</excludedStates>
     </commands>
     <commands name="RemoveMonitoring" description="Remove an attribute from the list of monitored attributes" execMethod="remove_monitoring" displayLevel="OPERATOR" polledPeriod="0">
       <argin description="">
@@ -127,6 +151,9 @@
         <type xsi:type="pogoDsl:VoidType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+      <excludedStates>OFF</excludedStates>
+      <excludedStates>FAULT</excludedStates>
+      <excludedStates>INIT</excludedStates>
     </commands>
     <commands name="SetMonitoringPeriod" description="From the list of already monitored attributes, stablish (or change) the period that it is checked." execMethod="set_monitoring_period" displayLevel="OPERATOR" polledPeriod="0">
       <argin description="">
@@ -136,6 +163,9 @@
         <type xsi:type="pogoDsl:VoidType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+      <excludedStates>OFF</excludedStates>
+      <excludedStates>FAULT</excludedStates>
+      <excludedStates>INIT</excludedStates>
     </commands>
     <commands name="GetMonitoringPeriod" description="Get the period that is checked an attribute monitored." execMethod="get_monitoring_period" displayLevel="OPERATOR" polledPeriod="0">
       <argin description="">
@@ -145,6 +175,46 @@
         <type xsi:type="pogoDsl:FloatType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+      <excludedStates>OFF</excludedStates>
+      <excludedStates>FAULT</excludedStates>
+      <excludedStates>INIT</excludedStates>
+    </commands>
+    <commands name="CMD" description="Expert command for a direct send of a SCPI command and read the answer." execMethod="cmd" displayLevel="EXPERT" polledPeriod="0">
+      <argin description="">
+        <type xsi:type="pogoDsl:StringType"/>
+      </argin>
+      <argout description="">
+        <type xsi:type="pogoDsl:StringType"/>
+      </argout>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+      <excludedStates>OFF</excludedStates>
+      <excludedStates>FAULT</excludedStates>
+      <excludedStates>INIT</excludedStates>
+    </commands>
+    <commands name="CMDfloat" description="Expert command for a direct send of a SCPI command and read the answer converted to a float list." execMethod="cmdfloat" displayLevel="EXPERT" polledPeriod="0">
+      <argin description="">
+        <type xsi:type="pogoDsl:StringType"/>
+      </argin>
+      <argout description="">
+        <type xsi:type="pogoDsl:FloatArrayType"/>
+      </argout>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+      <excludedStates>OFF</excludedStates>
+      <excludedStates>FAULT</excludedStates>
+      <excludedStates>INIT</excludedStates>
+    </commands>
+    <commands name="Standby" description="Stablish communication with the instrument." execMethod="standby" displayLevel="OPERATOR" polledPeriod="0">
+      <argin description="">
+        <type xsi:type="pogoDsl:VoidType"/>
+      </argin>
+      <argout description="">
+        <type xsi:type="pogoDsl:VoidType"/>
+      </argout>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+      <excludedStates>RUNNING</excludedStates>
+      <excludedStates>FAULT</excludedStates>
+      <excludedStates>INIT</excludedStates>
+      <excludedStates>STANDBY</excludedStates>
     </commands>
     <attributes name="Idn" attType="Scalar" rwType="READ" displayLevel="OPERATOR" polledPeriod="0" maxX="" maxY="" allocReadMember="true" isDynamic="false">
       <dataType xsi:type="pogoDsl:StringType"/>
@@ -153,6 +223,9 @@
       <dataReadyEvent fire="false" libCheckCriteria="true"/>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
       <properties description="Instrument identification" label="" unit="" standardUnit="" displayUnit="" format="" maxValue="" minValue="" maxAlarm="" minAlarm="" maxWarning="" minWarning="" deltaTime="" deltaValue=""/>
+      <readExcludedStates>OFF</readExcludedStates>
+      <readExcludedStates>FAULT</readExcludedStates>
+      <readExcludedStates>INIT</readExcludedStates>
     </attributes>
     <attributes name="QueryWindow" attType="Scalar" rwType="READ_WRITE" displayLevel="EXPERT" polledPeriod="0" maxX="" maxY="" memorized="true" memorizedAtInit="true" allocReadMember="true" isDynamic="false">
       <dataType xsi:type="pogoDsl:UShortType"/>
@@ -186,6 +259,9 @@
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </states>
     <states name="INIT" description="Initialization stage.">
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+    </states>
+    <states name="STANDBY" description="">
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </states>
     <preferences docHome="./doc_html" makefileHome="$(TANGO_HOME)"/>
