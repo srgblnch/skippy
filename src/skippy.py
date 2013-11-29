@@ -133,7 +133,49 @@ class Skippy (PyTango.Device_4Impl):
     def __unbuilder(self):
         pass #TODO: remove all the dynamic attributes from the current builded.
     
-    def __filterAttributes(self,multiattr,data):
+    
+    def __read_attr_procedure(self,data,fromMonitor=False):
+        '''This method is the read_attr_hardware, but we had to distinguish 
+           between monitoring calls for events than the direct requests to the 
+           device. This is because, direct requests of monitored attributes 
+           should not do a real hardware read.
+           TODO: as all the readers (external or any of the monitors) will call
+           this method, here is the place to implement the priorities.
+        '''
+        self.debug_stream("In %s.__read_attr_procedure(%s)"%(self.get_name(),repr(data)))
+        try:
+            multiattr = self.get_device_attr()
+            scalarList,spectrumList,imageList = self.__filterAttributes(multiattr,data,fromMonitor)
+            if not len(scalarList) == 0:
+                indexes,queries = self.__preHardwareRead(scalarList,self.attr_QueryWindow_read)
+                answers = []
+                for query in queries:
+                    answers.append(self.__hardwareRead(query))
+                msg = ""
+                for answer in answers:
+                    if len(answer) > 100:
+                        msg = ''.join([msg,"%s(...)%s"%(repr(answer[:25]),
+                                    repr(answer[len(answer)-25:]))])
+                    else:
+                        msg = ''.join([msg,"%s"%(repr(answer))])
+                self.debug_stream("In %s.__read_attr_procedure() scalar answers: %s"\
+                                  %(self.get_name(),msg))
+                self.__postHardwareScalarRead(indexes,answers)
+            if not len(spectrumList) == 0:
+                indexes,queries = self.__preHardwareRead(spectrumList,1)
+                answers = []
+                for query in queries:
+                    answers.append(self.__hardwareRead(query))
+                self.debug_stream("In %s.__read_attr_procedure() spectrum answers number: %s"\
+                                  %(self.get_name(),len(answers)))
+                self.__postHardwareSpectrumRead(indexes,answers)
+            if not len(imageList) == 0:
+                self.error_stream("Excluding 2 dimensional attributes")
+        except Exception,e:
+            self.error_stream("In %s.__read_attr_procedure() Exception: %s"\
+                              %(self.get_name(),e))
+    
+    def __filterAttributes(self,multiattr,data,fromMonitor):
         '''Avoid hardware readings of:
            - attributes that are internals to the device
            - attributes that reading is recent
@@ -153,34 +195,42 @@ class Skippy (PyTango.Device_4Impl):
                                           "excluding %s: is not a hw attr."
                                           %(self.get_name(),attrName))
                 else:
-                    #TODO: discard if the channel or function is not open
-                    attrName = self.__checkChannelManager(attrName)
-                    if attrName != None:
-                        t_a = self.attributes[attrName]['timestamp']
-                        attrObj = multiattr.get_attr_by_name(attrName)
-                        if not attrIndex in self._monitoredAttributeIds and \
-                           not t_a == None and t - t_a < delta_t:
-                            self.debug_stream("In %s.__filterAttributes() "\
-                                              "excluding %s: t < delta_t"
-                                              %(self.get_name(),attrName))
-                        else:
-                            if attrObj.get_data_format() == PyTango.AttrDataFormat.SCALAR:
-                                scalar.append(attrName)
-                            elif attrObj.get_data_format() == PyTango.AttrDataFormat.SPECTRUM:
-                                spectrum.append(attrName)
-                                #when an spectrum are required, some reference attributes will be needed
-                                if self.attributes.has_key('WaveformDataFormat'):
-                                    scalar.append('WaveformDataFormat')
-                                if self.attributes.has_key('WaveformOrigin'):
-                                    scalar.append('WaveformOrigin')
-                                if self.attributes.has_key('WaveformIncrement'):
-                                    scalar.append('WaveformIncrement')
-                            elif attrObj.get_data_format() == PyTango.AttrDataFormat.IMAGE:
-                                image.append(attrName)
+                    #filter attributes depending if they are monitored
+                    if self.get_state() == PyTango.DevState.RUNNING and \
+                       (fromMonitor and not attrIndex in self._monitoredAttributeIds) or\
+                       (not fromMonitor and attrIndex in self._monitoredAttributeIds):
+                        self.debug_stream("In %s.__filterAttributes() excluding "\
+                                          "%s because the monitoring dependency"
+                                          %(self.get_name(),attrName))
+                    else:
+                        #discard if the channel or function is not open
+                        attrName = self.__checkChannelManager(attrName)
+                        if attrName != None:
+                            t_a = self.attributes[attrName]['timestamp']
+                            attrObj = multiattr.get_attr_by_name(attrName)
+                            if not attrIndex in self._monitoredAttributeIds and \
+                               not t_a == None and t - t_a < delta_t:
+                                self.debug_stream("In %s.__filterAttributes() "\
+                                                  "excluding %s: t < delta_t"
+                                                  %(self.get_name(),attrName))
                             else:
-                                self.error_stream("In %s.__filterAttributes() "\
-                                                  "unknown data format for "\
-                                                  "attribute %s"%(self.get_name(),attrName))
+                                if attrObj.get_data_format() == PyTango.AttrDataFormat.SCALAR:
+                                    scalar.append(attrName)
+                                elif attrObj.get_data_format() == PyTango.AttrDataFormat.SPECTRUM:
+                                    spectrum.append(attrName)
+                                    #when an spectrum are required, some reference attributes will be needed
+                                    if self.attributes.has_key('WaveformDataFormat'):
+                                        scalar.append('WaveformDataFormat')
+                                    if self.attributes.has_key('WaveformOrigin'):
+                                        scalar.append('WaveformOrigin')
+                                    if self.attributes.has_key('WaveformIncrement'):
+                                        scalar.append('WaveformIncrement')
+                                elif attrObj.get_data_format() == PyTango.AttrDataFormat.IMAGE:
+                                    image.append(attrName)
+                                else:
+                                    self.error_stream("In %s.__filterAttributes() "\
+                                                      "unknown data format for "\
+                                                      "attribute %s"%(self.get_name(),attrName))
             self.debug_stream("In %s.__filterAttributes() scalar list: %s; "\
                               "spectrum list: %s; image list: %s"
                               %(self.get_name(),scalar,spectrum,image))
@@ -713,7 +763,7 @@ class Skippy (PyTango.Device_4Impl):
                 monitorDict['Event'].set()
             else:
                 t0 = time.time()
-                self.read_attr_hardware(attrIds)
+                self.__read_attr_procedure(attrIds,fromMonitor=True)
                 tf = time.time()
                 delta_t = monitorDict['Period']-(tf-t0)
                 if delta_t <= 0:#it take longer than the period
@@ -824,7 +874,6 @@ class Skippy (PyTango.Device_4Impl):
         self.On()
         #TODO: flag to distinguish the minimal communications in STANDBY and
         #      the normal queries of the ON
-        self.__prepareMonitor()
         if not self.AutoStart:
             return
         self.Start()
@@ -921,45 +970,7 @@ class Skippy (PyTango.Device_4Impl):
     def read_attr_hardware(self, data):
         self.debug_stream("In " + self.get_name() + ".read_attr_hardware()")
         #----- PROTECTED REGION ID(Skippy.read_attr_hardware) ENABLED START -----#
-        try:
-            multiattr = self.get_device_attr()
-            scalarList,spectrumList,imageList = self.__filterAttributes(multiattr, data)
-            if not len(scalarList) == 0:
-                indexes,queries = self.__preHardwareRead(scalarList,self.attr_QueryWindow_read)
-                answers = []
-                for query in queries:
-                    answers.append(self.__hardwareRead(query))
-                msg = ""
-                for answer in answers:
-                    if len(answer) > 100:
-                        msg = ''.join([msg,"%s(...)%s"%(repr(answer[:25]),
-                                    repr(answer[len(answer)-25:]))])
-                    else:
-                        msg = ''.join([msg,"%s"%(repr(answer))])
-                self.debug_stream("In %s.read_attr_hardware() scalar answers: %s"\
-                                  %(self.get_name(),msg))
-                self.__postHardwareScalarRead(indexes,answers)
-            if not len(spectrumList) == 0:
-                indexes,queries = self.__preHardwareRead(spectrumList,1)
-                answers = []
-                for query in queries:
-                    answers.append(self.__hardwareRead(query))
-                self.debug_stream("In %s.read_attr_hardware() spectrum answers number: %s"\
-                                  %(self.get_name(),len(answers)))
-                self.__postHardwareSpectrumRead(indexes,answers)
-            if not len(imageList) == 0:
-                self.error_stream("Excluding 2 dimensional attributes")
-        except Exception,e:
-            self.error_stream("In %s.read_attr_hardware() Exception: %s"\
-                              %(self.get_name(),e))
-#             try:
-#                 self._instrument.disconnect()
-#             except Excpetion,e:
-#                 self.error_stream("In %s.read_attr_hardware() Cannot disconnect: %s"\
-#                                   %(self.get_name(),e))
-#             if self.AutoOn:
-#                 self.__buildInstrumentObj()
-#                 self.__connectInstrumentObj()
+        self.__read_attr_procedure(data)
         #----- PROTECTED REGION END -----#	//	Skippy.read_attr_hardware
 
 
@@ -1061,6 +1072,7 @@ class Skippy (PyTango.Device_4Impl):
         self.debug_stream("In " + self.get_name() +  ".On()")
         #----- PROTECTED REGION ID(Skippy.On) ENABLED START -----#
         if self.__builder():
+            self.__prepareMonitor()
             self.change_state(PyTango.DevState.ON)
         #----- PROTECTED REGION END -----#	//	Skippy.On
         
