@@ -37,27 +37,28 @@ def identifier(idn,deviceObj):
         if model.upper().startswith('DSO'):
             #This is a series of scopes and this has been tested with 
             #the DSO80204B Agilent scope
-            attrList = AttributeBuilder(deviceObj)
+            attrBuilder = AttributeBuilder(deviceObj)
             file = "instructions/scope/agilentDSO.py"
         else:
             raise EnvironmentError("Agilent %s model not supported"%(model))
     elif company.lower() == 'tektronix':
         if model.upper().startswith('DPO'):
-            attrList = AttributeBuilder(deviceObj)
+            attrBuilder = AttributeBuilder(deviceObj)
             file = "instructions/scope/tektronixDPO.py"
         elif model.upper().startswith('AFG'):
-            attrList = AttributeBuilder(deviceObj)
+            attrBuilder = AttributeBuilder(deviceObj)
             file = "instructions/arbitraryFunctionGenerator/tektronicsAFG.py"
         raise EnvironmentError("Tektronix %s model not supported"%(model))
     elif company.lower() == 'rohde&schwarz':
         if model.lower() == 'sma100a':
-            attrList = AttributeBuilder(deviceObj)
+            attrBuilder = AttributeBuilder(deviceObj)
             file = "instructions/radioFrequencyGenerator/rohdeSchwarzRFG.py"
         else:
             raise EnvironmentError("Rohde&Schwarz %s model not supported"%(model))
     else:
         raise EnvironmentError("instrument not supported")
-    attrList.parseFile(file)
+    attrBuilder.parseFile(file)
+    return attrBuilder
 
 def AttrExc(function):
     '''Decorates commands so that the exception is logged and also raised.
@@ -83,7 +84,7 @@ class AttributeBuilder:
            
         '''
         self.__device = parent
-        self.__attributeList = list()
+        self._attributeList = list()
         self.locals_ = { }
 
         self.globals_ = globals()
@@ -212,7 +213,7 @@ class AttributeBuilder:
         attr.set_default_properties(aprop)
         
         self.__device.add_attribute(attr, r_meth=readmethod, w_meth=writemethod)
-        self.__attributeList.append(attr)
+        self._attributeList.append(attrName)
         self.__device.attributes[attrName] = {'lastReadValue':None,
                                               'timestamp':None,
                                               'quality':PyTango.AttrQuality.ATTR_INVALID}
@@ -239,7 +240,7 @@ class AttributeBuilder:
             step = PyTango.Attr(attrName+"Step",definition['type'],PyTango.READ_WRITE)
             step.set_memorized_init(True)
             self.__device.add_attribute(step, r_meth=readmethod, w_meth=writemethod)
-            self.__attributeList.append(step)
+            self._attributeList.append(attrName+"Step")
             try:
                 self.__device.attributes[attrName]['rampStep'] = float(db.get_device_attribute_property(self.__device.get_name(),attrName+"Step")[attrName+"Step"]['__value'][0])
             except:
@@ -247,7 +248,7 @@ class AttributeBuilder:
             stepspeed = PyTango.Attr(attrName+"StepSpeed",PyTango.CmdArgType.DevDouble,PyTango.READ_WRITE)
             stepspeed.set_memorized_init(True)
             self.__device.add_attribute(stepspeed, r_meth=readmethod, w_meth=writemethod)
-            self.__attributeList.append(stepspeed)
+            self._attributeList.append(attrName+"StepSpeed")
             try:
                 self.__device.attributes[attrName]['rampStepSpeed'] = float(db.get_device_attribute_property(self.__device.get_name(),attrName+"StepSpeed")[attrName+"StepSpeed"]['__value'][0])
             except:
@@ -269,7 +270,30 @@ class AttributeBuilder:
         self.__device.debug_stream("New attribute build: %s:%s"
                                    %(attrName,self.__device.attributes[attrName]))
         return attr
-        
-    #TODO: remove dynamic attributes
+
+    #remove dynamic attributes
+    def remove_attribute(self,attrName):
+        if self.__device:
+            if attrName in self._attributeList:
+                try:
+                    self.__device.remove_attribute(attrName)
+                except Exception,e:
+                    self.__device.error_stream("In %s.remove_attribute(%s) "\
+                                               "Exception: %s"
+                                               %(self.__device.get_name(),attrName,e))
+                else:
+                    self._attributeList.pop(self._attributeList.index(attrName))
+                    #self.__device.debug_stream("In %s.remove_attribute(%s): done"
+                    #                           %(self.__device.get_name(),attrName))
+            else:
+                self.__device.warn_stream("In %s.remove_attribute(%s): it wasn't in the list"
+                                            %(self.__device.get_name(),attrName))
+        else:
+            print "!"*20
+            print attrName
+    
+    def remove_alldynAttrs(self):
+        while len(self._attributeList) > 0:
+            self.remove_attribute(self._attributeList[0])
     #      remember to clean the self.__device.attributes 
-    #      and the self.__attributeList
+    #      and the self._attributeList

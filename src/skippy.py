@@ -65,6 +65,7 @@ class Skippy (PyTango.Device_4Impl):
     #----- section to resolve instrument property
     def __buildInstrumentObj(self):
         try:
+            self._instrument = None
             self._instrument = communicator.buildCommunicator(self.Instrument,
                                                               self.Port,
                                                               self)
@@ -79,6 +80,7 @@ class Skippy (PyTango.Device_4Impl):
             self.addStatusMsg("initialisation exception: %s"%(e))
             return False
         self.change_state(PyTango.DevState.OFF)
+        self.rebuildStatus()
         return True
 
     def __connectInstrumentObj(self):
@@ -90,11 +92,14 @@ class Skippy (PyTango.Device_4Impl):
             self._instrument.connect()
             self._idn = self._instrument.ask("*IDN?")
         except Exception,e:
-            self.error_stream("Cannot connect to the instrument due to: %s"%e)
+            self.error_stream("In %s.__connectInstrumentObj() Cannot connect "\
+                              "to the instrument due to: %s"%(self.get_name(),e))
+            traceback.print_exc()
             return False
         else:
-            self.info_stream("Connected to the instrument and "\
-                             "identified as: %s"%(repr(self._idn)))
+            self.info_stream("In %s.__connectInstrumentObj() Connected to "\
+                             "the instrument and "\
+                             "identified as: %s"%(self.get_name(),repr(self._idn)))
             return True
     
     def __reconnectInstrumentObj(self):
@@ -105,13 +110,19 @@ class Skippy (PyTango.Device_4Impl):
         try:
             self._instrument.disconnect()
             self.change_state(PyTango.DevState.DISABLE)
+            self.rebuildStatus()
         except Exception,e:
             self.error_stream("In %s.__reconnectInstrumentObj(): disconnect "\
                               "exception: %s"%(self.get_name(),e))
+            traceback.print_exc()
             self.change_state(PyTango.DevState.FAULT)
-        self._instrument = None
-        self.__buildInstrumentObj()#OFF
-        self.__connectInstrumentObj()#STANDBY
+            self.rebuildStatus()
+        else:
+            time.sleep(self.attr_TimeStampsThreshold_read)
+            #FIXME: give some rest time to the instrument before reconnect
+            self._instrument = None
+            self.__buildInstrumentObj()#OFF
+            self.__connectInstrumentObj()#STANDBY
         
     #----- done section to resolve instrument property
     ######
@@ -120,7 +131,7 @@ class Skippy (PyTango.Device_4Impl):
     #----- dynamic attributes builder section
     def __builder(self):
         try:
-            instructionSet.identifier(self._idn,self)
+            self._builder = instructionSet.identifier(self._idn,self)
         except Exception,e:
             msg = "identification error: %s (*IDN?:%s)"%(e,repr(self._idn))
             self.error_stream("%s %s"%(self.get_name(),msg))
@@ -131,8 +142,11 @@ class Skippy (PyTango.Device_4Impl):
             return True
         
     def __unbuilder(self):
-        pass #TODO: remove all the dynamic attributes from the current builded.
-    
+        try:
+            self._builder.remove_alldynAttrs()
+            return True
+        except:
+            return False
     
     def __read_attr_procedure(self,data,fromMonitor=False):
         '''This method is the read_attr_hardware, but we had to distinguish 
@@ -153,7 +167,11 @@ class Skippy (PyTango.Device_4Impl):
                     answers.append(self.__hardwareRead(query))
                 msg = ""
                 for answer in answers:
-                    if len(answer) > 100:
+                    if answer == None:
+                        self.error_stream("In %s.__read_attr_procedure() "\
+                                          "Uou, we've got a null answer!"
+                                          %(self.get_name()))
+                    elif len(answer) > 100:
                         msg = ''.join([msg,"%s(...)%s"%(repr(answer[:25]),
                                     repr(answer[len(answer)-25:]))])
                     else:
@@ -174,6 +192,7 @@ class Skippy (PyTango.Device_4Impl):
         except Exception,e:
             self.error_stream("In %s.__read_attr_procedure() Exception: %s"\
                               %(self.get_name(),e))
+            traceback.print_exc()
     
     def __filterAttributes(self,multiattr,data,fromMonitor):
         '''Avoid hardware readings of:
@@ -249,7 +268,7 @@ class Skippy (PyTango.Device_4Impl):
             self.error_stream("In %s.__filterAttributes(%s) Exception: %s"
                               %(self.get_name(),data,e))
             traceback.print_exc()
-            return None
+            return [],[],[]
         
     def __checkChannelManager(self,attrName):
         if attrName[-3:-1] in ['Ch','Fn']:
@@ -582,6 +601,7 @@ class Skippy (PyTango.Device_4Impl):
         #prepare
         backup_state = self.get_state()
         self.change_state(PyTango.DevState.MOVING)
+        self.rebuildStatus()
         attrReadCmd = self.attributes[attrName]['readStr']
         #move
         self.attributes[attrName]['lastReadValue'] = float(self._instrument.ask(attrReadCmd))
@@ -605,6 +625,7 @@ class Skippy (PyTango.Device_4Impl):
                          %(self.get_name(),current_pos))
         #close
         self.change_state(backup_state)
+        self.rebuildStatus()
         self.attributes[attrName]['rampThread'] = None
 
     #----- done dynamic attributes builder section
@@ -646,10 +667,12 @@ class Skippy (PyTango.Device_4Impl):
             self._important_logs.append(newStatusLine)
     def rebuildStatus(self):
         self.cleanAllImportantLogs()
-        self.addStatusMsg("Attributes monitored: %s"
-                          %(repr(self.MonitoredAttributes)),important=True)
-        self.addStatusMsg("Attributes %s required too much time to be read"
-                          %(repr(self._alarmDueToMonitoring)), important=True)
+        if len(self.MonitoredAttributes) > 0:
+            self.addStatusMsg("Attributes monitored: %s"
+                              %(repr(self.MonitoredAttributes)),important=True)
+        if hasattr(self,'_alarmDueToMonitoring') and len(self._alarmDueToMonitoring)>0:
+            self.addStatusMsg("Attributes %s required too much time to be read"
+                              %(repr(self._alarmDueToMonitoring)), important=True)
     #----- done event manager section
     ######
     
@@ -725,6 +748,7 @@ class Skippy (PyTango.Device_4Impl):
                     self.set_change_event(attrName,True,False)
                 self._monitorThreads[monitorTag]['Thread'].start()
             self.change_state(PyTango.DevState.RUNNING)
+            self.rebuildStatus()
         except Exception,e:
             self.error_stream("In %s.__startMonitoring() Exception: %s"%(self.get_name(),e))
             
@@ -735,6 +759,7 @@ class Skippy (PyTango.Device_4Impl):
             self.info_stream("In %s.__endMonitoring() waiting for %d"%(self.get_name(),len(self._monitorThreads.keys())))
             time.sleep(0.5)
         self.change_state(PyTango.DevState.ON)
+        self.rebuildStatus()
         self.__prepareMonitor()
 
     def __buildIdList(self,attrList):
@@ -865,6 +890,7 @@ class Skippy (PyTango.Device_4Impl):
         self.get_device_properties(self.get_device_class())
         #---- once initialized, begin the process to connect with the instrument
         self._instrument = None
+        self._builder = None
         self.__buildInstrumentObj()
         if not self.AutoStandby:
             return
@@ -1015,12 +1041,15 @@ class Skippy (PyTango.Device_4Impl):
         :param : 
         :type: PyTango.DevVoid
         :return: 
-        :rtype: PyTango.DevVoid """
+        :rtype: PyTango.DevBoolean """
         self.debug_stream("In " + self.get_name() +  ".Start()")
+        argout = False
         #----- PROTECTED REGION ID(Skippy.Start) ENABLED START -----#
-        if self.get_state() == PyTango.DevState.ON:
+        if self.get_state() == PyTango.DevState.ON and len(self.MonitoredAttributes)>0:
             self.__startMonitoring()
+            argout = True
         #----- PROTECTED REGION END -----#	//	Skippy.Start
+        return argout
         
 #------------------------------------------------------------------
 #    Is Start command allowed
@@ -1041,13 +1070,19 @@ class Skippy (PyTango.Device_4Impl):
         :param : 
         :type: PyTango.DevVoid
         :return: 
-        :rtype: PyTango.DevVoid """
+        :rtype: PyTango.DevBoolean """
         self.debug_stream("In " + self.get_name() +  ".Stop()")
+        argout = False
         #----- PROTECTED REGION ID(Skippy.Stop) ENABLED START -----#
-        stopper = threading.Thread(target=self.__endMonitoring)
-        stopper.setDaemon(True)
-        stopper.start()
+        try:
+            stopper = threading.Thread(target=self.__endMonitoring)
+            stopper.setDaemon(True)
+            stopper.start()
+            argout = True
+        except:
+            pass
         #----- PROTECTED REGION END -----#	//	Skippy.Stop
+        return argout
         
 #------------------------------------------------------------------
 #    Is Stop command allowed
@@ -1068,14 +1103,29 @@ class Skippy (PyTango.Device_4Impl):
         :param : 
         :type: PyTango.DevVoid
         :return: 
-        :rtype: PyTango.DevVoid """
+        :rtype: PyTango.DevBoolean """
         self.debug_stream("In " + self.get_name() +  ".On()")
+        argout = False
         #----- PROTECTED REGION ID(Skippy.On) ENABLED START -----#
+        if self.get_state() == PyTango.DevState.OFF:
+            self.Standby()
         if self.__builder():
             self.__prepareMonitor()
             self.change_state(PyTango.DevState.ON)
+            self.rebuildStatus()
+            argout = True
         #----- PROTECTED REGION END -----#	//	Skippy.On
+        return argout
         
+#------------------------------------------------------------------
+#    Is On command allowed
+#------------------------------------------------------------------
+    def is_On_allowed(self):
+        self.debug_stream("In " + self.get_name() + ".is_On_allowed()")
+        return not(self.get_state() in [PyTango.DevState.ON,
+            PyTango.DevState.RUNNING,
+            PyTango.DevState.FAULT,
+            PyTango.DevState.INIT])
 #------------------------------------------------------------------
 #    Off command:
 #------------------------------------------------------------------
@@ -1085,9 +1135,12 @@ class Skippy (PyTango.Device_4Impl):
         :param : 
         :type: PyTango.DevVoid
         :return: 
-        :rtype: PyTango.DevVoid """
+        :rtype: PyTango.DevBoolean """
         self.debug_stream("In " + self.get_name() +  ".Off()")
+        argout = False
         #----- PROTECTED REGION ID(Skippy.Off) ENABLED START -----#
+        if self.get_state() == PyTango.DevState.ON:
+            self.Standby()
         try:
             self._instrument.close()
         except:
@@ -1098,9 +1151,12 @@ class Skippy (PyTango.Device_4Impl):
             self._idn = ""
             self.info_stream("disconnected to the instrument %s"
                              %(self.Instrument))
-            self.change_state(PyTango.DevState.OFF)
-            self.unbuilder()
+            if self.__unbuilder():
+                self.change_state(PyTango.DevState.OFF)
+                self.rebuildStatus()
+                argout = True
         #----- PROTECTED REGION END -----#	//	Skippy.Off
+        return argout
         
 #------------------------------------------------------------------
 #    Is Off command allowed
@@ -1108,6 +1164,7 @@ class Skippy (PyTango.Device_4Impl):
     def is_Off_allowed(self):
         self.debug_stream("In " + self.get_name() + ".is_Off_allowed()")
         return not(self.get_state() in [PyTango.DevState.OFF,
+            PyTango.DevState.RUNNING,
             PyTango.DevState.FAULT,
             PyTango.DevState.INIT])
 #------------------------------------------------------------------
@@ -1157,8 +1214,9 @@ class Skippy (PyTango.Device_4Impl):
         :param argin: 
         :type: PyTango.DevString
         :return: 
-        :rtype: PyTango.DevVoid """
+        :rtype: PyTango.DevBoolean """
         self.debug_stream("In " + self.get_name() +  ".AddMonitoring()")
+        argout = False
         #----- PROTECTED REGION ID(Skippy.AddMonitoring) ENABLED START -----#
         try:
             attrName = argin
@@ -1187,12 +1245,14 @@ class Skippy (PyTango.Device_4Impl):
                     self._monitoredAttributeIds.append(attrId)
                     self._monitorThreads[monitoringType]['AttrList'].append(attrName)
                     self.set_change_event(attrName,True,False)
+                    argout = True
                 self.rebuildStatus()
         except Exception,e:
             self.error_stream("In %s.AddMonitoring(%s) exception: %s"%
                               (self.get_name(),argin,e))
             raise e
         #----- PROTECTED REGION END -----#	//	Skippy.AddMonitoring
+        return argout
         
 #------------------------------------------------------------------
 #    Is AddMonitoring command allowed
@@ -1211,8 +1271,9 @@ class Skippy (PyTango.Device_4Impl):
         :param argin: 
         :type: PyTango.DevString
         :return: 
-        :rtype: PyTango.DevVoid """
+        :rtype: PyTango.DevBoolean """
         self.debug_stream("In " + self.get_name() +  ".RemoveMonitoring()")
+        argout = False
         #----- PROTECTED REGION ID(Skippy.RemoveMonitoring) ENABLED START -----#
         try:
             multiattr = self.get_device_attr()
@@ -1234,6 +1295,7 @@ class Skippy (PyTango.Device_4Impl):
                 #manage the property
                 try:
                     self.MonitoredAttributes = self.__popPropertyElement('MonitoredAttributes',argin)
+                    argout = True
                 except Exception,e:
                     self.error_stream("In %s.RemoveMonitoring(%s) cannot remove "\
                                       "from the property: %s"%
@@ -1245,6 +1307,7 @@ class Skippy (PyTango.Device_4Impl):
                               (self.get_name(),argin,e))
             raise e
         #----- PROTECTED REGION END -----#	//	Skippy.RemoveMonitoring
+        return argout
         
 #------------------------------------------------------------------
 #    Is RemoveMonitoring command allowed
@@ -1263,8 +1326,9 @@ class Skippy (PyTango.Device_4Impl):
         :param argin: 
         :type: PyTango.DevVarStringArray
         :return: 
-        :rtype: PyTango.DevVoid """
+        :rtype: PyTango.DevBoolean """
         self.debug_stream("In " + self.get_name() +  ".SetMonitoringPeriod()")
+        argout = False
         #----- PROTECTED REGION ID(Skippy.SetMonitoringPeriod) ENABLED START -----#
         try:
             if not len(argin) == 2:
@@ -1317,11 +1381,13 @@ class Skippy (PyTango.Device_4Impl):
                 else:
                     self.MonitoredAttributes = self.__appendPropertyElement(\
                         'MonitoredAttributes',"%s:%6.3f"%(attrName,attrPeriod))
+                argout = True
         except Exception,e:
             self.error_stream("In %s.SetMonitoringPeriod(%s) exception: %s"%
                               (self.get_name(),argin,e))
             raise e
         #----- PROTECTED REGION END -----#	//	Skippy.SetMonitoringPeriod
+        return argout
         
 #------------------------------------------------------------------
 #    Is SetMonitoringPeriod command allowed
@@ -1456,25 +1522,23 @@ class Skippy (PyTango.Device_4Impl):
         :param : 
         :type: PyTango.DevVoid
         :return: 
-        :rtype: PyTango.DevVoid """
+        :rtype: PyTango.DevBoolean """
         self.debug_stream("In " + self.get_name() +  ".Standby()")
+        argout = False
         #----- PROTECTED REGION ID(Skippy.Standby) ENABLED START -----#
         if self.get_state() == PyTango.DevState.OFF:
-            if self.__connectInstrumentObj():
+            if self.__buildInstrumentObj() and self.__connectInstrumentObj():
                 self.change_state(PyTango.DevState.STANDBY)
+                self.rebuildStatus()
+                argout = True
         elif self.get_state() == PyTango.DevState.ON:
-            self.__unbuilder()
+            if self.__unbuilder():
+                self.change_state(PyTango.DevState.STANDBY)
+                self.rebuildStatus()
+                argout = True
         #----- PROTECTED REGION END -----#	//	Skippy.Standby
+        return argout
         
-#------------------------------------------------------------------
-#    Is Standby command allowed
-#------------------------------------------------------------------
-    def is_Standby_allowed(self):
-        self.debug_stream("In " + self.get_name() + ".is_Standby_allowed()")
-        return not(self.get_state() in [PyTango.DevState.RUNNING,
-            PyTango.DevState.FAULT,
-            PyTango.DevState.INIT,
-            PyTango.DevState.STANDBY])
 
 #==================================================================
 #
@@ -1532,16 +1596,16 @@ class SkippyClass(PyTango.DeviceClass):
             [PyTango.DevString, "none"]],
         'Start':
             [[PyTango.DevVoid, "none"],
-            [PyTango.DevVoid, "none"]],
+            [PyTango.DevBoolean, "none"]],
         'Stop':
             [[PyTango.DevVoid, "none"],
-            [PyTango.DevVoid, "none"]],
+            [PyTango.DevBoolean, "none"]],
         'On':
             [[PyTango.DevVoid, "none"],
-            [PyTango.DevVoid, "none"]],
+            [PyTango.DevBoolean, "none"]],
         'Off':
             [[PyTango.DevVoid, "none"],
-            [PyTango.DevVoid, "none"]],
+            [PyTango.DevBoolean, "none"]],
         'Exec':
             [[PyTango.DevString, "none"],
             [PyTango.DevString, "none"],
@@ -1550,13 +1614,13 @@ class SkippyClass(PyTango.DeviceClass):
             } ],
         'AddMonitoring':
             [[PyTango.DevString, "none"],
-            [PyTango.DevVoid, "none"]],
+            [PyTango.DevBoolean, "none"]],
         'RemoveMonitoring':
             [[PyTango.DevString, "none"],
-            [PyTango.DevVoid, "none"]],
+            [PyTango.DevBoolean, "none"]],
         'SetMonitoringPeriod':
             [[PyTango.DevVarStringArray, "none"],
-            [PyTango.DevVoid, "none"]],
+            [PyTango.DevBoolean, "none"]],
         'GetMonitoringPeriod':
             [[PyTango.DevString, "none"],
             [PyTango.DevFloat, "none"]],
@@ -1574,7 +1638,7 @@ class SkippyClass(PyTango.DeviceClass):
             } ],
         'Standby':
             [[PyTango.DevVoid, "none"],
-            [PyTango.DevVoid, "none"]],
+            [PyTango.DevBoolean, "none"]],
         }
 
 

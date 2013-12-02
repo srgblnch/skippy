@@ -232,28 +232,28 @@
 	<tr>
 		<td> <a href="CmdStart.html"> Start </a> </td>
 		<td> DEV_VOID </td>
-		<td> DEV_VOID </td>
+		<td> DEV_BOOLEAN </td>
 		<td> OPERATOR </td>
 		<td> Start an active monitoring. </td>
 	</tr>
 	<tr>
 		<td> <a href="CmdStop.html"> Stop </a> </td>
 		<td> DEV_VOID </td>
-		<td> DEV_VOID </td>
+		<td> DEV_BOOLEAN </td>
 		<td> OPERATOR </td>
 		<td> Stop the active monitoring. </td>
 	</tr>
 	<tr>
 		<td> <a href="CmdOn.html"> On </a> </td>
 		<td> DEV_VOID </td>
-		<td> DEV_VOID </td>
+		<td> DEV_BOOLEAN </td>
 		<td> OPERATOR </td>
 		<td> Allow communication with the instrument. </td>
 	</tr>
 	<tr>
 		<td> <a href="CmdOff.html"> Off </a> </td>
 		<td> DEV_VOID </td>
-		<td> DEV_VOID </td>
+		<td> DEV_BOOLEAN </td>
 		<td> OPERATOR </td>
 		<td> Release the communication with the instrument. </td>
 	</tr>
@@ -267,21 +267,21 @@
 	<tr>
 		<td> <a href="CmdAddMonitoring.html"> AddMonitoring </a> </td>
 		<td> DEV_STRING </td>
-		<td> DEV_VOID </td>
+		<td> DEV_BOOLEAN </td>
 		<td> OPERATOR </td>
 		<td> Add an attribute to the list of monitored attributes </td>
 	</tr>
 	<tr>
 		<td> <a href="CmdRemoveMonitoring.html"> RemoveMonitoring </a> </td>
 		<td> DEV_STRING </td>
-		<td> DEV_VOID </td>
+		<td> DEV_BOOLEAN </td>
 		<td> OPERATOR </td>
 		<td> Remove an attribute from the list of monitored attributes </td>
 	</tr>
 	<tr>
 		<td> <a href="CmdSetMonitoringPeriod.html"> SetMonitoringPeriod </a> </td>
 		<td> DEVVAR_STRINGARRAY </td>
-		<td> DEV_VOID </td>
+		<td> DEV_BOOLEAN </td>
 		<td> OPERATOR </td>
 		<td> From the list of already monitored attributes, stablish (or change) the period that it is checked. </td>
 	</tr>
@@ -309,7 +309,7 @@
 	<tr>
 		<td> <a href="CmdStandby.html"> Standby </a> </td>
 		<td> DEV_VOID </td>
-		<td> DEV_VOID </td>
+		<td> DEV_BOOLEAN </td>
 		<td> OPERATOR </td>
 		<td> Stablish communication with the instrument. </td>
 	</tr>
@@ -480,7 +480,7 @@
 	</tr>
 	<tr>
 		<td> Output Argument </td>
-		<td> Tango::DEV_VOID </td>
+		<td> Tango::DEV_BOOLEAN </td>
 		<td>  </td>
 	</tr>
 	<tr>
@@ -529,7 +529,7 @@
 	</tr>
 	<tr>
 		<td> Output Argument </td>
-		<td> Tango::DEV_VOID </td>
+		<td> Tango::DEV_BOOLEAN </td>
 		<td>  </td>
 	</tr>
 	<tr>
@@ -578,56 +578,7 @@
 	</tr>
 	<tr>
 		<td> Output Argument </td>
-		<td> Tango::DEV_VOID </td>
-		<td>  </td>
-	</tr>
-	<tr>
-		<td> DisplayLevel </td>
-		<td> OPERATOR </td>
-		<td> .. </td>
-	</tr>
-	<tr>
-		<td> Inherited </td>
-		<td> false </td>
-		<td> .. </td>
-	</tr>
-	<tr>
-		<td> Abstract </td>
-		<td> false </td>
-		<td> .. </td>
-	</tr>
-	<tr>
-		<td> Polling Period </td>
-		<td> Not polled </td>
-		<td> .. </td>
-	</tr>
-<Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
-	<tr>
-		<td> Command allowed for </td>
-		<td> All states </td>
-		<td> .. </td>
-	</tr>
-</table>
-<br><br><hr>
-<a name="cmdOff"> </a>
-<br><br><br>
-<font size="+1"><u><b> Command Off : </b></u></font>
-<ul>
-	Release the communication with the instrument.
-</ul>
-<br><br><br>
-<Table Border=2 Cellpadding=3 CELLSPACING=0>
-	<tr bgcolor="#CCCCFF" class="TableHeadingColor">
-	<td colspan=0> <font size=+1> <center><b> Off Definition </b></font></center></td>
-	</tr>
-	<tr>
-		<td> Input Argument </td>
-		<td> Tango::DEV_VOID </td>
-		<td>  </td>
-	</tr>
-	<tr>
-		<td> Output Argument </td>
-		<td> Tango::DEV_VOID </td>
+		<td> Tango::DEV_BOOLEAN </td>
 		<td>  </td>
 	</tr>
 	<tr>
@@ -653,7 +604,56 @@
 <Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
 	<tr>
 		<td> Command NOT allowed for </td>
-		<td> <font size="-1">  <li> OFF </li>  <li> FAULT </li>  <li> INIT </li> </font> </td>
+		<td> <font size="-1">  <li> ON </li>  <li> RUNNING </li>  <li> FAULT </li>  <li> INIT </li> </font> </td>
+		<td> .. </td>
+	</tr>
+</table>
+<br><br><hr>
+<a name="cmdOff"> </a>
+<br><br><br>
+<font size="+1"><u><b> Command Off : </b></u></font>
+<ul>
+	Release the communication with the instrument.
+</ul>
+<br><br><br>
+<Table Border=2 Cellpadding=3 CELLSPACING=0>
+	<tr bgcolor="#CCCCFF" class="TableHeadingColor">
+	<td colspan=0> <font size=+1> <center><b> Off Definition </b></font></center></td>
+	</tr>
+	<tr>
+		<td> Input Argument </td>
+		<td> Tango::DEV_VOID </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> Output Argument </td>
+		<td> Tango::DEV_BOOLEAN </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> DisplayLevel </td>
+		<td> OPERATOR </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Inherited </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Abstract </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Polling Period </td>
+		<td> Not polled </td>
+		<td> .. </td>
+	</tr>
+<Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
+	<tr>
+		<td> Command NOT allowed for </td>
+		<td> <font size="-1">  <li> OFF </li>  <li> RUNNING </li>  <li> FAULT </li>  <li> INIT </li> </font> </td>
 		<td> .. </td>
 	</tr>
 </table>
@@ -725,7 +725,7 @@
 	</tr>
 	<tr>
 		<td> Output Argument </td>
-		<td> Tango::DEV_VOID </td>
+		<td> Tango::DEV_BOOLEAN </td>
 		<td>  </td>
 	</tr>
 	<tr>
@@ -774,7 +774,7 @@
 	</tr>
 	<tr>
 		<td> Output Argument </td>
-		<td> Tango::DEV_VOID </td>
+		<td> Tango::DEV_BOOLEAN </td>
 		<td>  </td>
 	</tr>
 	<tr>
@@ -823,7 +823,7 @@
 	</tr>
 	<tr>
 		<td> Output Argument </td>
-		<td> Tango::DEV_VOID </td>
+		<td> Tango::DEV_BOOLEAN </td>
 		<td>  </td>
 	</tr>
 	<tr>
@@ -1019,7 +1019,7 @@
 	</tr>
 	<tr>
 		<td> Output Argument </td>
-		<td> Tango::DEV_VOID </td>
+		<td> Tango::DEV_BOOLEAN </td>
 		<td>  </td>
 	</tr>
 	<tr>
@@ -1044,8 +1044,8 @@
 	</tr>
 <Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
 	<tr>
-		<td> Command NOT allowed for </td>
-		<td> <font size="-1">  <li> RUNNING </li>  <li> FAULT </li>  <li> INIT </li>  <li> STANDBY </li> </font> </td>
+		<td> Command allowed for </td>
+		<td> All states </td>
 		<td> .. </td>
 	</tr>
 </table>
