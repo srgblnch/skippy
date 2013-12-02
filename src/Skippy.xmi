@@ -78,7 +78,7 @@
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>
       <argout description="">
-        <type xsi:type="pogoDsl:VoidType"/>
+        <type xsi:type="pogoDsl:BooleanType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
       <excludedStates>OFF</excludedStates>
@@ -92,7 +92,7 @@
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>
       <argout description="">
-        <type xsi:type="pogoDsl:VoidType"/>
+        <type xsi:type="pogoDsl:BooleanType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
       <excludedStates>OFF</excludedStates>
@@ -106,19 +106,24 @@
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>
       <argout description="">
-        <type xsi:type="pogoDsl:VoidType"/>
+        <type xsi:type="pogoDsl:BooleanType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+      <excludedStates>ON</excludedStates>
+      <excludedStates>RUNNING</excludedStates>
+      <excludedStates>FAULT</excludedStates>
+      <excludedStates>INIT</excludedStates>
     </commands>
     <commands name="Off" description="Release the communication with the instrument." execMethod="off" displayLevel="OPERATOR" polledPeriod="0">
       <argin description="">
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>
       <argout description="">
-        <type xsi:type="pogoDsl:VoidType"/>
+        <type xsi:type="pogoDsl:BooleanType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
       <excludedStates>OFF</excludedStates>
+      <excludedStates>RUNNING</excludedStates>
       <excludedStates>FAULT</excludedStates>
       <excludedStates>INIT</excludedStates>
     </commands>
@@ -136,7 +141,7 @@
         <type xsi:type="pogoDsl:StringType"/>
       </argin>
       <argout description="">
-        <type xsi:type="pogoDsl:VoidType"/>
+        <type xsi:type="pogoDsl:BooleanType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
       <excludedStates>OFF</excludedStates>
@@ -148,7 +153,7 @@
         <type xsi:type="pogoDsl:StringType"/>
       </argin>
       <argout description="">
-        <type xsi:type="pogoDsl:VoidType"/>
+        <type xsi:type="pogoDsl:BooleanType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
       <excludedStates>OFF</excludedStates>
@@ -160,7 +165,7 @@
         <type xsi:type="pogoDsl:StringArrayType"/>
       </argin>
       <argout description="">
-        <type xsi:type="pogoDsl:VoidType"/>
+        <type xsi:type="pogoDsl:BooleanType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
       <excludedStates>OFF</excludedStates>
@@ -208,13 +213,9 @@
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>
       <argout description="">
-        <type xsi:type="pogoDsl:VoidType"/>
+        <type xsi:type="pogoDsl:BooleanType"/>
       </argout>
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
-      <excludedStates>RUNNING</excludedStates>
-      <excludedStates>FAULT</excludedStates>
-      <excludedStates>INIT</excludedStates>
-      <excludedStates>STANDBY</excludedStates>
     </commands>
     <attributes name="Idn" attType="Scalar" rwType="READ" displayLevel="OPERATOR" polledPeriod="0" maxX="" maxY="" allocReadMember="true" isDynamic="false">
       <dataType xsi:type="pogoDsl:StringType"/>
