@@ -278,16 +278,16 @@ class AttributeBuilder:
                 try:
                     self.__device.remove_attribute(attrName)
                 except Exception,e:
-                    self.__device.error_stream("In %s.remove_attribute(%s) "\
+                    self.__device.error_stream("In remove_attribute(%s) "\
                                                "Exception: %s"
-                                               %(self.__device.get_name(),attrName,e))
+                                               %(attrName,e.desc))
                 else:
                     self._attributeList.pop(self._attributeList.index(attrName))
-                    #self.__device.debug_stream("In %s.remove_attribute(%s): done"
-                    #                           %(self.__device.get_name(),attrName))
+                    #self.__device.debug_stream("In remove_attribute(%s): done"
+                    #                           %(attrName))
             else:
-                self.__device.warn_stream("In %s.remove_attribute(%s): it wasn't in the list"
-                                            %(self.__device.get_name(),attrName))
+                self.__device.warn_stream("In remove_attribute(%s): it "\
+                                          "wasn't in the list"%(attrName))
         else:
             print "!"*20
             print attrName
