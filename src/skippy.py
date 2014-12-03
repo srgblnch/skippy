@@ -211,7 +211,7 @@ class Skippy (PyTango.Device_4Impl):
                 time.sleep(self._recoveryDelay*i)
             self.error_stream("In __doReconnect() no more retries")
             return False
-        except DevFailed,e:
+        except PyTango.DevFailed,e:
             try:
                 self.error_stream("In __doReconnect() DevFailed Exception: %s"%(e))
                 self.change_state(PyTango.DevState.FAULT)
@@ -236,11 +236,13 @@ class Skippy (PyTango.Device_4Impl):
             if each <= now-mseconds:
                 nErrors += 1
             else:
-                self.info_stream("In __communicationErrors(%6.3f) remove %6.3f "\
-                                 "from the list of communication errors "\
-                                 "because it is too old."%(mseconds,each))
+                self.info_stream("In __communicationErrors(%6.3f) remove "\
+                                 "%6.3f from the list of communication "\
+                                 "errors because it is too old."
+                                 %(mseconds,each))
                 self._commLost.pop(self._commLost.index(each))
-        self.info_stream("In __communicationErrors(%6.3f) found %d errors"%(mseconds,nErrors))
+        self.info_stream("In __communicationErrors(%6.3f) found %d errors"
+                         %(mseconds,nErrors))
         return nErrors
 
     def __appendToCommunicationLost(self,now):
