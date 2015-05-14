@@ -122,27 +122,40 @@ class bySocket(Communicator):
         self.mutex = threading.Lock()
         self.debug_stream("building a communication to %s by socket "\
                           "using port %d"%(self.__hostName,self.__port))
-        self.__sock = None
+        self._socket = None
         self.build()
 
     def build(self):
-        self.__sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
     def connect(self):
-        if self.__sock == None:
+        if self._socket == None:
             self.build()
-        self.__sock.settimeout(1)
-        self.__sock.connect((self.__hostName, self.__port))
+        self._socket.settimeout(1)
+        self._socket.connect((self.__hostName, self.__port))
+
     def disconnect(self):
-        self.__sock = None
-        #self.build()
+        self._socket = None
+        if not self.mutex.acquire(False):
+            self.debug_stream("Disconnecting: forcing to release mutex")
+            self.mutex.release()
+
+    def close(self):
+        self.disconnect()#self._socket.close()
+
+    def isConnected(self):
+        return hasattr(self,'_socket') and not self._socket == None
 
     def _send(self,msg):
         #self.debug_stream("Sending to %s:%d %s"%(self.__hostName,self.__port,repr(msg)))
-        self.__sock.send(msg)
+        if self.isConnected():
+            self._socket.send(msg)
 
     def _recv(self,bufsize=10240):
+        if not self.isConnected():
+            return ''
         completeMsg = ''
-        buffer = self.__sock.recv(bufsize)
+        buffer = self._socket.recv(bufsize)
         completeMsg = ''.join([completeMsg,buffer])
         if completeMsg.startswith('#'):
             try:
@@ -151,9 +164,10 @@ class bySocket(Communicator):
                 #self.debug_stream("From the beginning %s, understood a %d "\
                 #                  "characters header with further %d "\
                 #                  "elements to be read."
-                #                  %(repr(completeMsg[:10]),nBytesHeaderLength,nBytesWaveElement))
+                #                  %(repr(completeMsg[:10]),
+                #                    nBytesHeaderLength,nBytesWaveElement))
                 while len(completeMsg) < nBytesWaveElement:
-                    buffer = self.__sock.recv(bufsize)
+                    buffer = self._socket.recv(bufsize)
                     completeMsg = ''.join([completeMsg,buffer])
             except Exception,e:
                 self.error_stream("Exception in %s:%d array data "\
@@ -162,7 +176,7 @@ class bySocket(Communicator):
         else:
             try:
                 while not completeMsg[len(completeMsg)-1] == '\n':
-                    buffer = self.__sock.recv(bufsize)
+                    buffer = self._socket.recv(bufsize)
                     completeMsg = ''.join([completeMsg,buffer])
             except Exception,e:
                 self.error_stream("Exception in %s:%d string data "\
@@ -171,7 +185,8 @@ class bySocket(Communicator):
         if len(completeMsg) > 50:
             pass#self.debug_stream("Received from %s:%d %s(...)%s (len %d)"
             #                  %(self.__hostName,self.__port,
-            #                    repr(completeMsg[:25]),repr(completeMsg[len(completeMsg)-25:]),
+            #                    repr(completeMsg[:25]),
+            #                    repr(completeMsg[len(completeMsg)-25:]),
             #                    len(completeMsg)))
         else:
             pass#self.debug_stream("Received from %s:%d %s"
@@ -179,8 +194,7 @@ class bySocket(Communicator):
             #                    repr(completeMsg)))
         return completeMsg
 
-    def close(self):
-        self.__sock.close()
+
 
     def ask_for_values(self, commandList):
         '''
