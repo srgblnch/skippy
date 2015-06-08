@@ -10,6 +10,22 @@
 ## 
 ## Project :     SCPI
 ##
+## This file is part of Tango device class.
+## 
+## Tango is free software: you can redistribute it and/or modify
+## it under the terms of the GNU General Public License as published by
+## the Free Software Foundation, either version 3 of the License, or
+## (at your option) any later version.
+## 
+## Tango is distributed in the hope that it will be useful,
+## but WITHOUT ANY WARRANTY; without even the implied warranty of
+## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+## GNU General Public License for more details.
+## 
+## You should have received a copy of the GNU General Public License
+## along with Tango.  If not, see <http://www.gnu.org/licenses/>.
+## 
+##
 ## $Author :      sblanch$
 ##
 ## $Revision :    $
@@ -50,9 +66,7 @@ DEFAULT_RECOVERY_DELAY = 600.0
 DEFAULT_ERRORS_THRESHOLD = 1
 #----- PROTECTED REGION END -----#	//	Skippy.additionnal_import
 
-##############################################################################
 ## Device States Description
-##
 ## OFF : No connection stablished with the instrument.
 ## ON : Connection stablished with the instrument.
 ## RUNNING : Connection stablished and active monitoring.
@@ -60,12 +74,11 @@ DEFAULT_ERRORS_THRESHOLD = 1
 ## FAULT : Communication error with the instrument.
 ## INIT : Initialization stage.
 ## STANDBY : 
-##############################################################################
 
 class Skippy (PyTango.Device_4Impl):
 
-#--------- Add you global variables here --------------------------
-#----- PROTECTED REGION ID(Skippy.global_variables) ENABLED START -----#
+    #--------- Add you global variables here --------------------------
+    #----- PROTECTED REGION ID(Skippy.global_variables) ENABLED START -----#
 
     ######
     #----- section to resolve instrument property
@@ -1269,28 +1282,23 @@ class Skippy (PyTango.Device_4Impl):
     ######
 
 #----- PROTECTED REGION END -----#	//	Skippy.global_variables
-#------------------------------------------------------------------
-#    Device constructor
-#------------------------------------------------------------------
+
     def __init__(self,cl, name):
         PyTango.Device_4Impl.__init__(self,cl,name)
-        self.debug_stream("In " + self.get_name() + ".__init__()")
+        self.debug_stream("In __init__()")
         Skippy.init_device(self)
-
-#------------------------------------------------------------------
-#    Device destructor
-#------------------------------------------------------------------
+        #----- PROTECTED REGION ID(Skippy.__init__) ENABLED START -----#
+        
+        #----- PROTECTED REGION END -----#	//	Skippy.__init__
+        
     def delete_device(self):
-        self.debug_stream("In " + self.get_name() + ".delete_device()")
+        self.debug_stream("In delete_device()")
         #----- PROTECTED REGION ID(Skippy.delete_device) ENABLED START -----#
         
         #----- PROTECTED REGION END -----#	//	Skippy.delete_device
 
-#------------------------------------------------------------------
-#    Device initialization
-#------------------------------------------------------------------
     def init_device(self):
-        self.debug_stream("In " + self.get_name() + ".init_device()")
+        self.debug_stream("In init_device()")
         self.get_device_properties(self.get_device_class())
         self.attr_Idn_read = ''
         self.attr_QueryWindow_read = 0
@@ -1345,26 +1353,18 @@ class Skippy (PyTango.Device_4Impl):
         self.Start()
         #----- PROTECTED REGION END -----#	//	Skippy.init_device
 
-#------------------------------------------------------------------
-#    Always excuted hook method
-#------------------------------------------------------------------
     def always_executed_hook(self):
-        self.debug_stream("In " + self.get_name() + ".always_excuted_hook()")
+        self.debug_stream("In always_excuted_hook()")
         #----- PROTECTED REGION ID(Skippy.always_executed_hook) ENABLED START -----#
         
         #----- PROTECTED REGION END -----#	//	Skippy.always_executed_hook
 
-#==================================================================
-#
-#    Skippy read/write attribute methods
-#
-#==================================================================
-
-#------------------------------------------------------------------
-#    Read Idn attribute
-#------------------------------------------------------------------
+    #-----------------------------------------------------------------------------
+    #    Skippy read/write attribute methods
+    #-----------------------------------------------------------------------------
+    
     def read_Idn(self, attr):
-        self.debug_stream("In " + self.get_name() + ".read_Idn()")
+        self.debug_stream("In read_Idn()")
         #----- PROTECTED REGION ID(Skippy.Idn_read) ENABLED START -----#
         try:
             self.attr_Idn_read = self._idn
@@ -1373,55 +1373,42 @@ class Skippy (PyTango.Device_4Impl):
                                         PyTango.AttrQuality.ATTR_INVALID)
             return
         #----- PROTECTED REGION END -----#	//	Skippy.Idn_read
-        attr.set_value(self.attr_Idn_read)
         
-#------------------------------------------------------------------
-#    Is Idn attribute allowed
-#------------------------------------------------------------------
     def is_Idn_allowed(self, attr):
-        self.debug_stream("In " + self.get_name() + ".is_Idn_allowed()")
-        return not(self.get_state() in [PyTango.DevState.OFF,
-            PyTango.DevState.FAULT,
-            PyTango.DevState.INIT])
+        self.debug_stream("In is_Idn_allowed()")
+        if attr==PyTango.AttReqType.READ_REQ:
+            state_ok = not(self.get_state() in [PyTango.DevState.OFF,
+                PyTango.DevState.FAULT,
+                PyTango.DevState.INIT])
+        else:
+            state_ok = not(self.get_state() in [])
+        #----- PROTECTED REGION ID(Skippy.is_Idn_allowed) ENABLED START -----#
         
-#------------------------------------------------------------------
-#    Read QueryWindow attribute
-#------------------------------------------------------------------
+        #----- PROTECTED REGION END -----#	//	Skippy.is_Idn_allowed
+        return state_ok
+        
     def read_QueryWindow(self, attr):
-        self.debug_stream("In " + self.get_name() + ".read_QueryWindow()")
+        self.debug_stream("In read_QueryWindow()")
         #----- PROTECTED REGION ID(Skippy.QueryWindow_read) ENABLED START -----#
         
         #----- PROTECTED REGION END -----#	//	Skippy.QueryWindow_read
-        attr.set_value(self.attr_QueryWindow_read)
         
-#------------------------------------------------------------------
-#    Write QueryWindow attribute
-#------------------------------------------------------------------
     def write_QueryWindow(self, attr):
-        self.debug_stream("In " + self.get_name() + ".write_QueryWindow()")
+        self.debug_stream("In write_QueryWindow()")
         data=attr.get_write_value()
-        self.debug_stream("Attribute value = " + str(data))
         #----- PROTECTED REGION ID(Skippy.QueryWindow_write) ENABLED START -----#
         self.attr_QueryWindow_read = int(data)
         #----- PROTECTED REGION END -----#	//	Skippy.QueryWindow_write
         
-#------------------------------------------------------------------
-#    Read TimeStampsThreshold attribute
-#------------------------------------------------------------------
     def read_TimeStampsThreshold(self, attr):
-        self.debug_stream("In " + self.get_name() + ".read_TimeStampsThreshold()")
+        self.debug_stream("In read_TimeStampsThreshold()")
         #----- PROTECTED REGION ID(Skippy.TimeStampsThreshold_read) ENABLED START -----#
         
         #----- PROTECTED REGION END -----#	//	Skippy.TimeStampsThreshold_read
-        attr.set_value(self.attr_TimeStampsThreshold_read)
         
-#------------------------------------------------------------------
-#    Write TimeStampsThreshold attribute
-#------------------------------------------------------------------
     def write_TimeStampsThreshold(self, attr):
-        self.debug_stream("In " + self.get_name() + ".write_TimeStampsThreshold()")
+        self.debug_stream("In write_TimeStampsThreshold()")
         data=attr.get_write_value()
-        self.debug_stream("Attribute value = " + str(data))
         #----- PROTECTED REGION ID(Skippy.TimeStampsThreshold_write) ENABLED START -----#
         self.attr_TimeStampsThreshold_read = float(data)
         if hasattr(self,'_monitorThreads') and \
@@ -1430,28 +1417,23 @@ class Skippy (PyTango.Device_4Impl):
                                              self.attr_TimeStampsThreshold_read
         #----- PROTECTED REGION END -----#	//	Skippy.TimeStampsThreshold_write
         
-
-
-
-#------------------------------------------------------------------
-#    Read Attribute Hardware
-#------------------------------------------------------------------
+    
+    
+        #----- PROTECTED REGION ID(Skippy.initialize_dynamic_attributes) ENABLED START -----#
+        
+        #----- PROTECTED REGION END -----#	//	Skippy.initialize_dynamic_attributes
+            
     def read_attr_hardware(self, data):
-        self.debug_stream("In " + self.get_name() + ".read_attr_hardware()")
+        self.debug_stream("In read_attr_hardware()")
         #----- PROTECTED REGION ID(Skippy.read_attr_hardware) ENABLED START -----#
         self.__read_attr_procedure(data)
         #----- PROTECTED REGION END -----#	//	Skippy.read_attr_hardware
 
 
-#==================================================================
-#
-#    Skippy command methods
-#
-#==================================================================
-
-#------------------------------------------------------------------
-#    IDN command:
-#------------------------------------------------------------------
+    #-----------------------------------------------------------------------------
+    #    Skippy command methods
+    #-----------------------------------------------------------------------------
+    
     def IDN(self):
         """ Request identification to the instrument.
         
@@ -1459,7 +1441,7 @@ class Skippy (PyTango.Device_4Impl):
         :type: PyTango.DevVoid
         :return: 
         :rtype: PyTango.DevString """
-        self.debug_stream("In " + self.get_name() +  ".IDN()")
+        self.debug_stream("In IDN()")
         argout = ''
         #----- PROTECTED REGION ID(Skippy.IDN) ENABLED START -----#
         #self._idn = self._instrument.ask("*IDN?")
@@ -1468,17 +1450,16 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION END -----#	//	Skippy.IDN
         return argout
         
-#------------------------------------------------------------------
-#    Is IDN command allowed
-#------------------------------------------------------------------
     def is_IDN_allowed(self):
-        self.debug_stream("In " + self.get_name() + ".is_IDN_allowed()")
-        return not(self.get_state() in [PyTango.DevState.OFF,
+        self.debug_stream("In is_IDN_allowed()")
+        state_ok = not(self.get_state() in [PyTango.DevState.OFF,
             PyTango.DevState.FAULT,
             PyTango.DevState.INIT])
-#------------------------------------------------------------------
-#    Start command:
-#------------------------------------------------------------------
+        #----- PROTECTED REGION ID(Skippy.is_IDN_allowed) ENABLED START -----#
+        
+        #----- PROTECTED REGION END -----#	//	Skippy.is_IDN_allowed
+        return state_ok
+        
     def Start(self):
         """ Start an active monitoring.
         
@@ -1486,7 +1467,7 @@ class Skippy (PyTango.Device_4Impl):
         :type: PyTango.DevVoid
         :return: 
         :rtype: PyTango.DevBoolean """
-        self.debug_stream("In " + self.get_name() +  ".Start()")
+        self.debug_stream("In Start()")
         argout = False
         #----- PROTECTED REGION ID(Skippy.Start) ENABLED START -----#
         if self.get_state() == PyTango.DevState.ON and \
@@ -1496,19 +1477,18 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION END -----#	//	Skippy.Start
         return argout
         
-#------------------------------------------------------------------
-#    Is Start command allowed
-#------------------------------------------------------------------
     def is_Start_allowed(self):
-        self.debug_stream("In " + self.get_name() + ".is_Start_allowed()")
-        return not(self.get_state() in [PyTango.DevState.OFF,
+        self.debug_stream("In is_Start_allowed()")
+        state_ok = not(self.get_state() in [PyTango.DevState.OFF,
             PyTango.DevState.RUNNING,
             PyTango.DevState.FAULT,
             PyTango.DevState.INIT,
             PyTango.DevState.STANDBY])
-#------------------------------------------------------------------
-#    Stop command:
-#------------------------------------------------------------------
+        #----- PROTECTED REGION ID(Skippy.is_Start_allowed) ENABLED START -----#
+        
+        #----- PROTECTED REGION END -----#	//	Skippy.is_Start_allowed
+        return state_ok
+        
     def Stop(self):
         """ Stop the active monitoring.
         
@@ -1516,7 +1496,7 @@ class Skippy (PyTango.Device_4Impl):
         :type: PyTango.DevVoid
         :return: 
         :rtype: PyTango.DevBoolean """
-        self.debug_stream("In " + self.get_name() +  ".Stop()")
+        self.debug_stream("In Stop()")
         argout = False
         #----- PROTECTED REGION ID(Skippy.Stop) ENABLED START -----#
         try:
@@ -1529,19 +1509,18 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION END -----#	//	Skippy.Stop
         return argout
         
-#------------------------------------------------------------------
-#    Is Stop command allowed
-#------------------------------------------------------------------
     def is_Stop_allowed(self):
-        self.debug_stream("In " + self.get_name() + ".is_Stop_allowed()")
-        return not(self.get_state() in [PyTango.DevState.OFF,
+        self.debug_stream("In is_Stop_allowed()")
+        state_ok = not(self.get_state() in [PyTango.DevState.OFF,
             PyTango.DevState.ON,
             PyTango.DevState.FAULT,
             PyTango.DevState.INIT,
             PyTango.DevState.STANDBY])
-#------------------------------------------------------------------
-#    On command:
-#------------------------------------------------------------------
+        #----- PROTECTED REGION ID(Skippy.is_Stop_allowed) ENABLED START -----#
+        
+        #----- PROTECTED REGION END -----#	//	Skippy.is_Stop_allowed
+        return state_ok
+        
     def On(self):
         """ Allow communication with the instrument.
         
@@ -1549,7 +1528,7 @@ class Skippy (PyTango.Device_4Impl):
         :type: PyTango.DevVoid
         :return: 
         :rtype: PyTango.DevBoolean """
-        self.debug_stream("In " + self.get_name() +  ".On()")
+        self.debug_stream("In On()")
         argout = False
         #----- PROTECTED REGION ID(Skippy.On) ENABLED START -----#
         if self.get_state() == PyTango.DevState.OFF:
@@ -1562,18 +1541,17 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION END -----#	//	Skippy.On
         return argout
         
-#------------------------------------------------------------------
-#    Is On command allowed
-#------------------------------------------------------------------
     def is_On_allowed(self):
-        self.debug_stream("In " + self.get_name() + ".is_On_allowed()")
-        return not(self.get_state() in [PyTango.DevState.ON,
+        self.debug_stream("In is_On_allowed()")
+        state_ok = not(self.get_state() in [PyTango.DevState.ON,
             PyTango.DevState.RUNNING,
             PyTango.DevState.FAULT,
             PyTango.DevState.INIT])
-#------------------------------------------------------------------
-#    Off command:
-#------------------------------------------------------------------
+        #----- PROTECTED REGION ID(Skippy.is_On_allowed) ENABLED START -----#
+        
+        #----- PROTECTED REGION END -----#	//	Skippy.is_On_allowed
+        return state_ok
+        
     def Off(self):
         """ Release the communication with the instrument.
         
@@ -1581,7 +1559,7 @@ class Skippy (PyTango.Device_4Impl):
         :type: PyTango.DevVoid
         :return: 
         :rtype: PyTango.DevBoolean """
-        self.debug_stream("In " + self.get_name() +  ".Off()")
+        self.debug_stream("In Off()")
         argout = False
         #----- PROTECTED REGION ID(Skippy.Off) ENABLED START -----#
         if self.get_state() == PyTango.DevState.ON:
@@ -1603,18 +1581,17 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION END -----#	//	Skippy.Off
         return argout
         
-#------------------------------------------------------------------
-#    Is Off command allowed
-#------------------------------------------------------------------
     def is_Off_allowed(self):
-        self.debug_stream("In " + self.get_name() + ".is_Off_allowed()")
-        return not(self.get_state() in [PyTango.DevState.OFF,
+        self.debug_stream("In is_Off_allowed()")
+        state_ok = not(self.get_state() in [PyTango.DevState.OFF,
             PyTango.DevState.RUNNING,
             PyTango.DevState.FAULT,
             PyTango.DevState.INIT])
-#------------------------------------------------------------------
-#    Exec command:
-#------------------------------------------------------------------
+        #----- PROTECTED REGION ID(Skippy.is_Off_allowed) ENABLED START -----#
+        
+        #----- PROTECTED REGION END -----#	//	Skippy.is_Off_allowed
+        return state_ok
+        
     def Exec(self, argin):
         """ evaluate python code inside the device server. This command can be very helpful and dangerous.
         
@@ -1622,7 +1599,7 @@ class Skippy (PyTango.Device_4Impl):
         :type: PyTango.DevString
         :return: 
         :rtype: PyTango.DevString """
-        self.debug_stream("In " + self.get_name() +  ".Exec()")
+        self.debug_stream("In Exec()")
         argout = ''
         #----- PROTECTED REGION ID(Skippy.Exec) ENABLED START -----#
         try:
@@ -1650,9 +1627,6 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION END -----#	//	Skippy.Exec
         return argout
         
-#------------------------------------------------------------------
-#    AddMonitoring command:
-#------------------------------------------------------------------
     def AddMonitoring(self, argin):
         """ Add an attribute to the list of monitored attributes
         
@@ -1660,7 +1634,7 @@ class Skippy (PyTango.Device_4Impl):
         :type: PyTango.DevString
         :return: 
         :rtype: PyTango.DevBoolean """
-        self.debug_stream("In " + self.get_name() +  ".AddMonitoring()")
+        self.debug_stream("In AddMonitoring()")
         argout = False
         #----- PROTECTED REGION ID(Skippy.AddMonitoring) ENABLED START -----#
         try:
@@ -1699,17 +1673,16 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION END -----#	//	Skippy.AddMonitoring
         return argout
         
-#------------------------------------------------------------------
-#    Is AddMonitoring command allowed
-#------------------------------------------------------------------
     def is_AddMonitoring_allowed(self):
-        self.debug_stream("In " + self.get_name() + ".is_AddMonitoring_allowed()")
-        return not(self.get_state() in [PyTango.DevState.OFF,
+        self.debug_stream("In is_AddMonitoring_allowed()")
+        state_ok = not(self.get_state() in [PyTango.DevState.OFF,
             PyTango.DevState.FAULT,
             PyTango.DevState.INIT])
-#------------------------------------------------------------------
-#    RemoveMonitoring command:
-#------------------------------------------------------------------
+        #----- PROTECTED REGION ID(Skippy.is_AddMonitoring_allowed) ENABLED START -----#
+        
+        #----- PROTECTED REGION END -----#	//	Skippy.is_AddMonitoring_allowed
+        return state_ok
+        
     def RemoveMonitoring(self, argin):
         """ Remove an attribute from the list of monitored attributes
         
@@ -1717,7 +1690,7 @@ class Skippy (PyTango.Device_4Impl):
         :type: PyTango.DevString
         :return: 
         :rtype: PyTango.DevBoolean """
-        self.debug_stream("In " + self.get_name() +  ".RemoveMonitoring()")
+        self.debug_stream("In RemoveMonitoring()")
         argout = False
         #----- PROTECTED REGION ID(Skippy.RemoveMonitoring) ENABLED START -----#
         try:
@@ -1754,17 +1727,16 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION END -----#	//	Skippy.RemoveMonitoring
         return argout
         
-#------------------------------------------------------------------
-#    Is RemoveMonitoring command allowed
-#------------------------------------------------------------------
     def is_RemoveMonitoring_allowed(self):
-        self.debug_stream("In " + self.get_name() + ".is_RemoveMonitoring_allowed()")
-        return not(self.get_state() in [PyTango.DevState.OFF,
+        self.debug_stream("In is_RemoveMonitoring_allowed()")
+        state_ok = not(self.get_state() in [PyTango.DevState.OFF,
             PyTango.DevState.FAULT,
             PyTango.DevState.INIT])
-#------------------------------------------------------------------
-#    SetMonitoringPeriod command:
-#------------------------------------------------------------------
+        #----- PROTECTED REGION ID(Skippy.is_RemoveMonitoring_allowed) ENABLED START -----#
+        
+        #----- PROTECTED REGION END -----#	//	Skippy.is_RemoveMonitoring_allowed
+        return state_ok
+        
     def SetMonitoringPeriod(self, argin):
         """ From the list of already monitored attributes, stablish (or change) the period that it is checked.
         
@@ -1772,7 +1744,7 @@ class Skippy (PyTango.Device_4Impl):
         :type: PyTango.DevVarStringArray
         :return: 
         :rtype: PyTango.DevBoolean """
-        self.debug_stream("In " + self.get_name() +  ".SetMonitoringPeriod()")
+        self.debug_stream("In SetMonitoringPeriod()")
         argout = False
         #----- PROTECTED REGION ID(Skippy.SetMonitoringPeriod) ENABLED START -----#
         try:
@@ -1834,17 +1806,16 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION END -----#	//	Skippy.SetMonitoringPeriod
         return argout
         
-#------------------------------------------------------------------
-#    Is SetMonitoringPeriod command allowed
-#------------------------------------------------------------------
     def is_SetMonitoringPeriod_allowed(self):
-        self.debug_stream("In " + self.get_name() + ".is_SetMonitoringPeriod_allowed()")
-        return not(self.get_state() in [PyTango.DevState.OFF,
+        self.debug_stream("In is_SetMonitoringPeriod_allowed()")
+        state_ok = not(self.get_state() in [PyTango.DevState.OFF,
             PyTango.DevState.FAULT,
             PyTango.DevState.INIT])
-#------------------------------------------------------------------
-#    GetMonitoringPeriod command:
-#------------------------------------------------------------------
+        #----- PROTECTED REGION ID(Skippy.is_SetMonitoringPeriod_allowed) ENABLED START -----#
+        
+        #----- PROTECTED REGION END -----#	//	Skippy.is_SetMonitoringPeriod_allowed
+        return state_ok
+        
     def GetMonitoringPeriod(self, argin):
         """ Get the period that is checked an attribute monitored.
         
@@ -1852,7 +1823,7 @@ class Skippy (PyTango.Device_4Impl):
         :type: PyTango.DevString
         :return: 
         :rtype: PyTango.DevFloat """
-        self.debug_stream("In " + self.get_name() +  ".GetMonitoringPeriod()")
+        self.debug_stream("In GetMonitoringPeriod()")
         argout = 0.0
         #----- PROTECTED REGION ID(Skippy.GetMonitoringPeriod) ENABLED START -----#
         try:
@@ -1876,17 +1847,16 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION END -----#	//	Skippy.GetMonitoringPeriod
         return argout
         
-#------------------------------------------------------------------
-#    Is GetMonitoringPeriod command allowed
-#------------------------------------------------------------------
     def is_GetMonitoringPeriod_allowed(self):
-        self.debug_stream("In " + self.get_name() + ".is_GetMonitoringPeriod_allowed()")
-        return not(self.get_state() in [PyTango.DevState.OFF,
+        self.debug_stream("In is_GetMonitoringPeriod_allowed()")
+        state_ok = not(self.get_state() in [PyTango.DevState.OFF,
             PyTango.DevState.FAULT,
             PyTango.DevState.INIT])
-#------------------------------------------------------------------
-#    CMD command:
-#------------------------------------------------------------------
+        #----- PROTECTED REGION ID(Skippy.is_GetMonitoringPeriod_allowed) ENABLED START -----#
+        
+        #----- PROTECTED REGION END -----#	//	Skippy.is_GetMonitoringPeriod_allowed
+        return state_ok
+        
     def CMD(self, argin):
         """ Expert command for a direct send of a SCPI command and read the answer.
         
@@ -1894,7 +1864,7 @@ class Skippy (PyTango.Device_4Impl):
         :type: PyTango.DevString
         :return: 
         :rtype: PyTango.DevString """
-        self.debug_stream("In " + self.get_name() +  ".CMD()")
+        self.debug_stream("In CMD()")
         argout = ''
         #----- PROTECTED REGION ID(Skippy.CMD) ENABLED START -----#
         argin = str(argin)
@@ -1917,17 +1887,16 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION END -----#	//	Skippy.CMD
         return argout
         
-#------------------------------------------------------------------
-#    Is CMD command allowed
-#------------------------------------------------------------------
     def is_CMD_allowed(self):
-        self.debug_stream("In " + self.get_name() + ".is_CMD_allowed()")
-        return not(self.get_state() in [PyTango.DevState.OFF,
+        self.debug_stream("In is_CMD_allowed()")
+        state_ok = not(self.get_state() in [PyTango.DevState.OFF,
             PyTango.DevState.FAULT,
             PyTango.DevState.INIT])
-#------------------------------------------------------------------
-#    CMDfloat command:
-#------------------------------------------------------------------
+        #----- PROTECTED REGION ID(Skippy.is_CMD_allowed) ENABLED START -----#
+        
+        #----- PROTECTED REGION END -----#	//	Skippy.is_CMD_allowed
+        return state_ok
+        
     def CMDfloat(self, argin):
         """ Expert command for a direct send of a SCPI command and read the answer converted to a float list.
         
@@ -1935,7 +1904,7 @@ class Skippy (PyTango.Device_4Impl):
         :type: PyTango.DevString
         :return: 
         :rtype: PyTango.DevVarFloatArray """
-        self.debug_stream("In " + self.get_name() +  ".CMDfloat()")
+        self.debug_stream("In CMDfloat()")
         argout = [0.0]
         #----- PROTECTED REGION ID(Skippy.CMDfloat) ENABLED START -----#
         argin = str(argin)
@@ -1958,17 +1927,16 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION END -----#	//	Skippy.CMDfloat
         return argout
         
-#------------------------------------------------------------------
-#    Is CMDfloat command allowed
-#------------------------------------------------------------------
     def is_CMDfloat_allowed(self):
-        self.debug_stream("In " + self.get_name() + ".is_CMDfloat_allowed()")
-        return not(self.get_state() in [PyTango.DevState.OFF,
+        self.debug_stream("In is_CMDfloat_allowed()")
+        state_ok = not(self.get_state() in [PyTango.DevState.OFF,
             PyTango.DevState.FAULT,
             PyTango.DevState.INIT])
-#------------------------------------------------------------------
-#    Standby command:
-#------------------------------------------------------------------
+        #----- PROTECTED REGION ID(Skippy.is_CMDfloat_allowed) ENABLED START -----#
+        
+        #----- PROTECTED REGION END -----#	//	Skippy.is_CMDfloat_allowed
+        return state_ok
+        
     def Standby(self):
         """ Stablish communication with the instrument.
         
@@ -1976,7 +1944,7 @@ class Skippy (PyTango.Device_4Impl):
         :type: PyTango.DevVoid
         :return: 
         :rtype: PyTango.DevBoolean """
-        self.debug_stream("In " + self.get_name() +  ".Standby()")
+        self.debug_stream("In Standby()")
         argout = False
         #----- PROTECTED REGION ID(Skippy.Standby) ENABLED START -----#
         if self.get_state() == PyTango.DevState.OFF:
@@ -1993,12 +1961,34 @@ class Skippy (PyTango.Device_4Impl):
         return argout
         
 
-#==================================================================
-#
-#    SkippyClass class definition
-#
-#==================================================================
+    #----- PROTECTED REGION ID(Skippy.programmer_methods) ENABLED START -----#
+    
+    #----- PROTECTED REGION END -----#	//	Skippy.programmer_methods
+
 class SkippyClass(PyTango.DeviceClass):
+    #--------- Add you global class variables here --------------------------
+    #----- PROTECTED REGION ID(Skippy.global_class_variables) ENABLED START -----#
+    
+    #----- PROTECTED REGION END -----#	//	Skippy.global_class_variables
+
+    def dyn_attr(self, dev_list):
+        """Invoked to create dynamic attributes for the given devices.
+        Default implementation calls
+        :meth:`Skippy.initialize_dynamic_attributes` for each device
+    
+        :param dev_list: list of devices
+        :type dev_list: :class:`PyTango.DeviceImpl`"""
+    
+        for dev in dev_list:
+            try:
+                dev.initialize_dynamic_attributes()
+            except:
+                import traceback
+                dev.warn_stream("Failed to initialize dynamic attributes")
+                dev.debug_stream("Details: " + traceback.format_exc())
+        #----- PROTECTED REGION ID(Skippy.dyn_attr) ENABLED START -----#
+        
+        #----- PROTECTED REGION END -----#	//	Skippy.dyn_attr
 
     #    Class Properties
     class_property_list = {
@@ -2135,23 +2125,13 @@ class SkippyClass(PyTango.DeviceClass):
         }
 
 
-#------------------------------------------------------------------
-#    SkippyClass Constructor
-#------------------------------------------------------------------
-    def __init__(self, name):
-        PyTango.DeviceClass.__init__(self, name)
-        self.set_type(name);
-        print "In Skippy Class  constructor"
-
-#==================================================================
-#
-#    Skippy class main method
-#
-#==================================================================
 def main():
     try:
         py = PyTango.Util(sys.argv)
         py.add_class(SkippyClass,Skippy,'Skippy')
+        #----- PROTECTED REGION ID(Skippy.add_classes) ENABLED START -----#
+        
+        #----- PROTECTED REGION END -----#	//	Skippy.add_classes
 
         U = PyTango.Util.instance()
         U.server_init()
