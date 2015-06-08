@@ -61,7 +61,7 @@ import time
 import traceback
 from types import StringType
 
-MINIMUM_RECOVERY_DELAY = 60.0
+MINIMUM_RECOVERY_DELAY = 30.0
 DEFAULT_RECOVERY_DELAY = 600.0
 DEFAULT_ERRORS_THRESHOLD = 1
 #----- PROTECTED REGION END -----#	//	Skippy.additionnal_import
@@ -187,18 +187,33 @@ class Skippy (PyTango.Device_4Impl):
         '''
         try:
             self.warn_stream("Starting a reconnect procedure.")
-            if self._reconnectThread == None or \
-                                           not self._reconnectThread.isAlive():
+            if self._reconnectThread != None and \
+                                               self._reconnectThread.isAlive():
+                self.warn_stream("Past reconnection thread is still alive...")
+                self._reconnectThread.join(1)
+                while self._reconnectThread.isAlive():
+                    self.warn_stream("Waiting the past reconnection thread "\
+                                     "to finish")
+                    self._reconnectThread.join(1)
+                self.info_stream("Past reconnection thread finish")
+                #how to check if a the past reconnection was active and has 
+                #already fixed the issue?
+                if self._instrument.isConnected():
+                    self.info_stream("Communication recovered by "\
+                                     "past reconnection thread")
+                    return
+            if self._reconnectThread == None:
+                self.info_stream("Creating a reconnection thread")
                 self._reconnectThread = \
                                     threading.Thread(target=self.__doReconnect)
+            if not self._reconnectThread.isAlive():
+                self.info_stream("Launching the reconnection thread")
                 self._reconnectThread.start()
-            return True
-        except:
-            self.error_stream("Reconnect procedure cannto be started.")
+        except Exception,e:
+            self.error_stream("Reconnect procedure cannot be started: %s"%(e))
             self.change_state(PyTango.DevState.FAULT)
             self.addStatusMsg("Fatal error and communications lost with "\
                               "the instrument!", important=True)
-            return False
     def __doReconnect(self):
         '''To reconnect to the instrument, and this often happens due to the 
            drowning in the instrument response, after disconnect delay the 
@@ -209,11 +224,10 @@ class Skippy (PyTango.Device_4Impl):
                then double the S time.
         '''
         try:
-            self.change_state(PyTango.DevState.DISABLE)
-            self.cleanAllImportantLogs()
-            self.addStatusMsg("Reconnection procedure on going",important=True)
-        #try:
             self.info_stream("Reconnection thread started")
+#            self.change_state(PyTango.DevState.DISABLE)
+#            self.cleanAllImportantLogs()
+#            self.addStatusMsg("Reconnection procedure on going",important=True)
             now = time.time()
             # 1.- if more than N errors during the last M seconds: 
             #     then delay the recovery by S seconds.
@@ -275,6 +289,7 @@ class Skippy (PyTango.Device_4Impl):
                 return False
             except:#!!we've seen an exception in this lines
                 traceback.print_exc()
+        self.info_stream("Reconnection procedure End")
         
     def __communicationErrors(self,now,mseconds):
         '''This collects information about transitory communication errors.
@@ -604,9 +619,7 @@ class Skippy (PyTango.Device_4Impl):
         except Exception,e:
             self.error_stream("In __hardwareRead() Exception: %s"%(e))
             traceback.print_exc()
-            if not self.__reconnectProcedure():
-                self.change_state(PyTango.DevState.FAULT)
-                self.addStatusMsg("Cannot connect to the instrument!")
+            self.__reconnectProcedure()
             return None
 
     #@hardwareMutex
@@ -626,9 +639,7 @@ class Skippy (PyTango.Device_4Impl):
         except Exception,e:
             self.error_stream("In __hardwareWrite() Exception: %s"%(e))
             traceback.print_exc()
-            if not self.__reconnectProcedure():
-                self.change_state(PyTango.DevState.FAULT)
-                self.addStatusMsg("Cannot connect to the instrument!")
+            self.__reconnectProcedure()
 
     def __postHardwareScalarRead(self,indexes,answers):
         '''Given the answers organise them in the self.attributes dictionary.
@@ -1118,9 +1129,9 @@ class Skippy (PyTango.Device_4Impl):
             attribute name to be monitored (with an optional tag of an 
             special period):
                 attrName[:period]
-            - The attributes must be stored in an Id way in a list, to simplify 
-            the filter when 'self.read_attr_hardware()' is called by a 
-            PyTango.DeviceProxy.read_attributes([]) or 
+            - The attributes must be stored in an Id way in a list, to 
+            simplify the filter when 'self.read_attr_hardware()' is called by 
+            a PyTango.DeviceProxy.read_attributes([]) or 
             PyTango.DeviceProxy.read_attribute()
             - There is a thread for generic monitoring, the period of it
             is the 'TimeStampsThreashold' to have it as updated as possible.
@@ -1390,7 +1401,7 @@ class Skippy (PyTango.Device_4Impl):
     def read_QueryWindow(self, attr):
         self.debug_stream("In read_QueryWindow()")
         #----- PROTECTED REGION ID(Skippy.QueryWindow_read) ENABLED START -----#
-        
+        attr.set_value(self.attr_QueryWindow_read)
         #----- PROTECTED REGION END -----#	//	Skippy.QueryWindow_read
         
     def write_QueryWindow(self, attr):
@@ -1403,7 +1414,7 @@ class Skippy (PyTango.Device_4Impl):
     def read_TimeStampsThreshold(self, attr):
         self.debug_stream("In read_TimeStampsThreshold()")
         #----- PROTECTED REGION ID(Skippy.TimeStampsThreshold_read) ENABLED START -----#
-        
+        attr.set_value(self.attr_TimeStampsThreshold_read)
         #----- PROTECTED REGION END -----#	//	Skippy.TimeStampsThreshold_read
         
     def write_TimeStampsThreshold(self, attr):
@@ -1420,7 +1431,8 @@ class Skippy (PyTango.Device_4Impl):
     
     
         #----- PROTECTED REGION ID(Skippy.initialize_dynamic_attributes) ENABLED START -----#
-        
+    def initialize_dynamic_attributes(self):
+        pass
         #----- PROTECTED REGION END -----#	//	Skippy.initialize_dynamic_attributes
             
     def read_attr_hardware(self, data):
@@ -1644,13 +1656,15 @@ class Skippy (PyTango.Device_4Impl):
             if not attrName in self.attributes.keys():
                 raise AttributeError("No attribute named %s"%(attrName))
             elif attrId in self._monitoredAttributeIds:
-                raise AttributeError("Attribute %s already monitored"%(attrName))
+                raise AttributeError("Attribute %s already monitored"
+                                     %(attrName))
             else:
                 self.info_stream("In AddMonitoring(): Adding %s attribute "\
                                  "to monitoring."%(attrName))
                 #manage the property
                 try:
-                    self.MonitoredAttributes = self.__appendPropertyElement('MonitoredAttributes',argin)
+                    self.MonitoredAttributes = \
+                      self.__appendPropertyElement('MonitoredAttributes',argin)
                 except Exception,e:
                     self.error_stream("In AddMonitoring(%s) cannot append "\
                                       "to the property: %s"
@@ -1662,7 +1676,8 @@ class Skippy (PyTango.Device_4Impl):
                     self.debug_stream("Adding %s to generic monitoring thread"
                                       %(attrName))
                     self._monitoredAttributeIds.append(attrId)
-                    self._monitorThreads[monitoringType]['AttrList'].append(attrName)
+                    self._monitorThreads[monitoringType]['AttrList'].\
+                                                               append(attrName)
                     self.set_change_event(attrName,True,False)
                     argout = True
                 self.rebuildStatus()
@@ -1706,13 +1721,18 @@ class Skippy (PyTango.Device_4Impl):
                                  "attribute from monitoring"
                                  %(argin))
                 for monitorKey in self._monitorThreads.keys():
-                    if self._monitorThreads[monitorKey]['AttrList'].count(argin):
-                        self._monitorThreads[monitorKey]['AttrList'].pop(self._monitorThreads[monitorKey]['AttrList'].index(argin))
+                    if self._monitorThreads[monitorKey]['AttrList'].\
+                                                                  count(argin):
+                        self._monitorThreads[monitorKey]['AttrList'].\
+                             pop(self._monitorThreads[monitorKey]['AttrList'].\
+                                                                  index(argin))
                         self.set_change_event(argin,False,False)
-                self._monitoredAttributeIds.pop(self._monitoredAttributeIds.index(attrId))
+                self._monitoredAttributeIds.pop(\
+                                     self._monitoredAttributeIds.index(attrId))
                 #manage the property
                 try:
-                    self.MonitoredAttributes = self.__popPropertyElement('MonitoredAttributes',argin)
+                    self.MonitoredAttributes = \
+                         self.__popPropertyElement('MonitoredAttributes',argin)
                     argout = True
                 except Exception,e:
                     self.error_stream("In RemoveMonitoring(%s) cannot remove "\
@@ -1749,7 +1769,8 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION ID(Skippy.SetMonitoringPeriod) ENABLED START -----#
         try:
             if not len(argin) == 2:
-                raise AttributeError("Invalid arguments, use [attrName,AttrPeriod]")
+                raise AttributeError("Invalid arguments, "\
+                                     "use [attrName,AttrPeriod]")
             else:
                 if argin[0].count("'") == 2:
                     attrName = str(argin[0].split("'")[1])
@@ -1766,31 +1787,42 @@ class Skippy (PyTango.Device_4Impl):
             if not attrName in self.attributes.keys():
                 raise AttributeError("No attribute named %s"%(attrName))
             elif not attrId in self._monitoredAttributeIds:
-                raise AttributeError("Attribute %s is not monitored"%(attrName))
+                raise AttributeError("Attribute %s is not monitored"
+                                     %(attrName))
             elif attrPeriod < 0:
                 raise AttributeError("Invalid period %f"%(attrPeriod))
             else:
                 #Remove from the monitor where it already is:
                 for monitorKey in self._monitorThreads.keys():
-                    if self._monitorThreads[monitorKey]['AttrList'].count(attrName):
-                        self._monitorThreads[monitorKey]['AttrList'].pop(self._monitorThreads[monitorKey]['AttrList'].index(attrName))
-                        self.MonitoredAttributes = self.__popPropertyElement('MonitoredAttributes',attrName)
+                    if self._monitorThreads[monitorKey]['AttrList'].\
+                                                               count(attrName):
+                        self._monitorThreads[monitorKey]['AttrList'].\
+                             pop(self._monitorThreads[monitorKey]['AttrList'].\
+                                                               index(attrName))
+                        self.MonitoredAttributes = \
+                               self.__popPropertyElement('MonitoredAttributes',
+                                                                      attrName)
                 #distinguish if the command should send it to the generic or not
                 monitorTag = str(attrPeriod)
                 if attrPeriod == 0: monitorTag = 'Generic'
                 else: monitorTag = str(attrPeriod)
                 #if there is a thread with this tag use it
                 if self._monitorThreads.has_key(str(attrPeriod)):
-                    self._monitorThreads[monitorTag]['AttrList'].append(attrName)
+                    self._monitorThreads[monitorTag]['AttrList'].\
+                                                               append(attrName)
                 #if not, then build it and start it.
                 else:
-                    self._monitorThreads[monitorTag] = self.__builtMonitorThread(monitorTag,attrPeriod)
-                    self._monitorThreads[monitorTag]['AttrList'].append(attrName)
+                    self._monitorThreads[monitorTag] = \
+                               self.__builtMonitorThread(monitorTag,attrPeriod)
+                    self._monitorThreads[monitorTag]['AttrList'].\
+                                                               append(attrName)
                     if self.get_state() == PyTango.DevState.RUNNING:
-                        self._monitorThreads[monitorTag]['Thread'] = threading.Thread(target=self.__monitor,
-                                                                                      args=([self._monitorThreads[monitorTag]]))
+                        self._monitorThreads[monitorTag]['Thread'] = \
+                                        threading.Thread(target=self.__monitor,
+                                     args=([self._monitorThreads[monitorTag]]))
                         self._monitorThreads[monitorTag]['Event'].clear()
-                        self._monitorThreads[monitorTag]['Thread'].setDaemon(True)
+                        self._monitorThreads[monitorTag]['Thread'].\
+                                                                setDaemon(True)
                         self._monitorThreads[monitorTag]['Thread'].start()
                 if attrPeriod == 0:
                     self.MonitoredAttributes = self.__appendPropertyElement(\
@@ -1833,7 +1865,8 @@ class Skippy (PyTango.Device_4Impl):
             if not attrName in self.attributes.keys():
                 raise AttributeError("No attribute named %s"%(attrName))
             elif not attrId in self._monitoredAttributeIds:
-                raise AttributeError("Attribute %s is not monitored"%(attrName))
+                raise AttributeError("Attribute %s is not monitored"
+                                     %(attrName))
             for monitorKey in self._monitorThreads.keys():
                 if self._monitorThreads[monitorKey]['AttrList'].count(argin):
                     if monitorKey == 'Generic':

@@ -21,10 +21,13 @@
 ##        (c) - Controls Software Section - ALBA/CELLS
 ##############################################################################
 
+import array
 import PyTango
 import socket
-import array
+from time import sleep
 import threading
+
+TIME_BETWEEN_SENDANDRECEIVE = 0.05
 
 def buildCommunicator(instrumentName,port=None,parent=None):
     if __isHostName(instrumentName):
@@ -81,6 +84,7 @@ class Communicator:
         self.mutex.acquire()
         command = self.prepareCommand(commandList)
         self._send(command)
+        sleep(TIME_BETWEEN_SENDANDRECEIVE)
         answer = self._recv()
         self.mutex.release()
         return answer
@@ -113,9 +117,12 @@ class Communicator:
         else: 
             raise Exception('Exception: Wrong type! Command should be a str or list of commands')
 
+SOCKET_TIMEOUT = 2
+DEFAULT_PORT = 5025
+DEFAULT_BUFFERSIZE = 10240
 
 class bySocket(Communicator):
-    def __init__(self,hostName,port=5025,parent=None):
+    def __init__(self,hostName,port=DEFAULT_PORT,parent=None):
         self.__hostName = hostName
         self.__port = port
         self._parent = parent
@@ -131,7 +138,7 @@ class bySocket(Communicator):
     def connect(self):
         if self._socket == None:
             self.build()
-        self._socket.settimeout(1)
+        self._socket.settimeout(SOCKET_TIMEOUT)
         self._socket.connect((self.__hostName, self.__port))
 
     def disconnect(self):
@@ -151,11 +158,15 @@ class bySocket(Communicator):
         if self.isConnected():
             self._socket.send(msg)
 
-    def _recv(self,bufsize=10240):
+    def _recv(self,bufsize=DEFAULT_BUFFERSIZE):
         if not self.isConnected():
             return ''
         completeMsg = ''
-        buffer = self._socket.recv(bufsize)
+        try:
+            buffer = self._socket.recv(bufsize)
+        except socket.timeout:
+            self.error_stream("Exception in %s: time out!"%(self.__hostName))
+            return ''
         completeMsg = ''.join([completeMsg,buffer])
         if completeMsg.startswith('#'):
             try:
