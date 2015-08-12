@@ -901,9 +901,9 @@ class Skippy (PyTango.Device_4Impl):
                                                 timestamp,quality,len(value))
         elif attrName.endswith("Step"):
             parentAttrName = attrName.split('Step')[0]
-            print parentAttrName
+            #print parentAttrName
             value = self.attributes[parentAttrName]['rampStep']
-            print self.attributes[parentAttrName]
+            #print self.attributes[parentAttrName]
             if value == None:
                 attr.set_value_date_quality(0,time.time(),
                                             PyTango.AttrQuality.ATTR_INVALID)
@@ -911,9 +911,9 @@ class Skippy (PyTango.Device_4Impl):
                 attr.set_value(value)
         elif attrName.endswith("StepSpeed"):
             parentAttrName = attrName.split('StepSpeed')[0]
-            print parentAttrName
+            #print parentAttrName
             value = self.attributes[parentAttrName]['rampStepSpeed']
-            print self.attributes[parentAttrName]
+            #print self.attributes[parentAttrName]
             if value == None:
                 attr.set_value_date_quality(0,time.time(),
                                               PyTango.AttrQuality.ATTR_INVALID)

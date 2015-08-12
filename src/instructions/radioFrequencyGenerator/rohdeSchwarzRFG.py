@@ -91,15 +91,27 @@ Attribute('PhaseContinuousFrequencyNarrow',
            'readCmd':":FREQ:PHAS:CONT:MODE?",
          })
 
-# Attribute('ExtOscSrc',
-#           {'type':PyTango.CmdArgType.DevBoolean,
-#            'dim':[0],
-#            'readCmd':":ROSCillator:SOURce?",
-#            'writeCmd':lambda value:":ROSCillator:SOURce %s"%(str(value)),
-#          })
-# 
-# Attribute('Errors',
-#           {'type':PyTango.CmdArgType.DevString,
-#            'dim':[1,100],
-#            'readCmd':":SYST:SERROR?",
-#          })
+Attribute('OscillatorSource',
+          {'type':PyTango.CmdArgType.DevString,
+           'dim':[0],
+           'readCmd':":ROSCillator:SOURce?",
+           #'writeCmd':lambda value:":ROSCillator:SOURce %s"%(str(value)),
+         })
+
+Attribute('OscillatorExternalLostRFoff',
+          {'type':PyTango.CmdArgType.DevBoolean,
+           'dim':[0],
+           'readCmd':":ROSCillator:EXTernal:RFOff?",
+           #'writeCmd':":ROSCillator:EXTernal:RFOff %s"%(str(value))
+           })
+
+Attribute('OscillatorExternalFrequency',
+          {'type':PyTango.CmdArgType.DevString,
+           'dim':[0],
+           'readCmd':":ROSCillator:EXTernal:Frequency?"})
+
+#Attribute('Errors',
+#          {'type':PyTango.CmdArgType.DevString,
+#           'dim':[1,100],
+#           'readCmd':":SYST:SERROR?",
+#         })
