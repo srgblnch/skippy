@@ -682,6 +682,13 @@ class Skippy (PyTango.Device_4Impl):
                             self.attributes[attrName]['timestamp'] = t
                             multiattr = self.get_device_attr()
                             attrId = multiattr.get_attr_ind_by_name(attrName)
+                            if self.__isRamping(attrName):
+                                self.attributes[attrName]['quality'] = \
+                                PyTango.AttrQuality.ATTR_CHANGING
+                            elif self.attributes[attrName]['quality'] != \
+                            PyTango.AttrQuality.ATTR_VALID:
+                                self.attributes[attrName]['quality'] = \
+                                PyTango.AttrQuality.ATTR_VALID
                             if attrId in self._monitoredAttributeIds:
                                 #self.debug_stream("Append %s to fire events"
                                 #                  %(attrName))
@@ -745,6 +752,17 @@ class Skippy (PyTango.Device_4Impl):
             return True
         else:
             return False
+        
+    def __isRamping(self,attrName):
+        isRamping = False
+        try:
+            if self.attributes[attrName].has_key('rampThread') and \
+            self.attributes[attrName]['rampThread'] != None and \
+            self.attributes[attrName]['rampThread'].isAlive():
+                isRamping = True
+        except Exception,e:
+            self.warn_stream("%s ramping question exception: %s"%(attrName,e))
+        return isRamping
     
     def __postHardwareSpectrumRead(self,indexes,answers):
         '''Given the answers organise them in the self.attributes dictionary.
@@ -943,32 +961,45 @@ class Skippy (PyTango.Device_4Impl):
                 raise AttributeError("Invalid write value %s of the "\
                                      "attribute %s"%(repr(data[0]),attrName))
             else:
-                self.debug_stream("In __write_instrument_attr() sending: %s"
-                                  %(cmd))
+                self.info_stream("In __write_instrument_attr() sending: %s "\
+                                 "= %r"%(attrName,cmd))
                 self.__hardwareWrite(cmd)#self._instrument.write(cmd)
         else:
             #rampeable but invalid ramp
-            if not self.attributes[attrName]['rampStep'] in [None,0.0] or \
-               not self.attributes[attrName]['rampStepSpeed'] in [None,0.0]:
+            if self.attributes[attrName]['rampStep'] in [None,0.0] or \
+               self.attributes[attrName]['rampStepSpeed'] in [None,0.0]:
+                self.warn_stream("In __write_instrument_attr() No ramp "\
+                                 "parameters defined, direct setpoint for %s"
+                                 %(attrName))
                 cmd = self.attributes[attrName]['writeStr'](data[0])
-                self.debug_stream("In __write_instrument_attr() sending: %s"
+                self.info_stream("In __write_instrument_attr() sending: %s"
                                   %(cmd))
                 self.__hardwareWrite(cmd)#self._instrument.write(cmd)
             else:
                 #rampeable and create a thread, if it doesn't exist
                 if self.attributes[attrName]['rampThread'] == None:
+                    self.info_stream("In __write_instrument_attr() launching "\
+                                     "ramp procedure for %s to setpoint %g"
+                                     %(attrName,
+                                  self.attributes[attrName]['lastWriteValue']))
                     self.attributes[attrName]['rampThread'] = \
                                      threading.Thread(target=self._rampStepper,
                                                              args=([attrName]))
                     self.attributes[attrName]['rampThread'].setDaemon(True)
                     self.attributes[attrName]['rampThread'].start()
+                else:
+                    self.info_stream("In __write_instrument_attr(), attribute"\
+                                     "%s already with an ongoing ramp. Final "\
+                                     "setpoint changed to %g."
+                                     %(attrName,
+                                  self.attributes[attrName]['lastWriteValue']))
                 #no else need because during the ramp the it goes to 
                 #'lastWriteValue' and it has been already updated.
 
     def _rampStepper(self,attrName):
         #Remember the arguments when this is called as thread target, is a 
         #tuple and the content of this tuple is a list with one string element.
-        self.debug_stream("In _rampStepper(%s)"%(attrName))
+        self.info_stream("In _rampStepper(%s)"%(attrName))
         #prepare
         backup_state = self.get_state()
         self.change_state(PyTango.DevState.MOVING)
@@ -995,8 +1026,8 @@ class Skippy (PyTango.Device_4Impl):
                     current_pos = self.attributes[attrName]['lastWriteValue']
                 else: current_pos += self.attributes[attrName]['rampStep']
             attrWriteCmd = self.attributes[attrName]['writeStr'](current_pos)
-            #self.debug_stream("In write_attr() sending: %s"%(attrWriteCmd))
-            self.__hardwareWrite(cmd)#self._instrument.write(attrWriteCmd)
+            self.info_stream("In write_attr() sending: %s"%(attrWriteCmd))
+            self.__hardwareWrite(attrWriteCmd)#self._instrument.write(attrWriteCmd)
             time.sleep(self.attributes[attrName]['rampStepSpeed'])
         self.info_stream("In _rampSteeper(): finished the movement at %f"
                          %(current_pos))
