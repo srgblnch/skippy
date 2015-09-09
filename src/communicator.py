@@ -81,29 +81,26 @@ class Communicator:
     def ask(self, commandList):
         '''Prepare the command list and do a combination of send(msg) and recv()
         '''
-        self.mutex.acquire()
-        command = self.prepareCommand(commandList)
-        self._send(command)
-        sleep(TIME_BETWEEN_SENDANDRECEIVE)
-        answer = self._recv()
-        self.mutex.release()
-        return answer
+        with self.mutex:
+            command = self.prepareCommand(commandList)
+            self._send(command)
+            sleep(TIME_BETWEEN_SENDANDRECEIVE)
+            answer = self._recv()
+            return answer
     
     def write(self,commandList):
         '''Do a write operation to the remote
         '''
-        self.mutex.acquire()
-        command = self.prepareCommand(commandList)
-        self._send(command)
-        self.mutex.release()
+        with self.mutex:
+            command = self.prepareCommand(commandList)
+            self._send(command)
         
     def read(self):
         '''Read if the remote have said something
         '''
-        self.mutex.acquire()
-        answer = self._recv()
-        self.mutex.release()
-        return answer
+        with self.mutex:
+            answer = self._recv()
+            return answer
 
     def prepareCommand(self,commands):
         '''Structure the command to the remote. If it's already an string, be
@@ -210,12 +207,11 @@ class bySocket(Communicator):
     def ask_for_values(self, commandList):
         '''
         '''
-        self.mutex.acquire()
-        command = self.prepareCommand(commandList)
-        self._send(command)
-        answer = self._recv()
-        self.mutex.release()
-        return answer
+        with self.mutex: 
+            command = self.prepareCommand(commandList)
+            self._send(command)
+            answer = self._recv()
+            return answer
 
 
 class byVisa(Communicator):
@@ -249,9 +245,9 @@ class byVisa(Communicator):
         return array.array('B',self.__device.Ask(array.array('B',commandList).tolist())).tostring()
 
     def ask_for_values(self, commandList):
-        self.mutex.acquire()
-        answer = self.__device.AskValues(array.array('B',commandList).tolist())
-        #self.debug_stream("byVisa.ask_for_values(): %s"%answer)
-        self.mutex.release()
-        return answer
+        with self.mutex:
+            answer = self.__device.AskValues(array.array('B',commandList).tolist())
+            #self.debug_stream("byVisa.ask_for_values(): %s"%answer)
+            self.mutex.release()
+            return answer
 

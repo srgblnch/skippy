@@ -1085,7 +1085,7 @@ class Skippy (PyTango.Device_4Impl):
     @stateMutex
     def change_status(self,newstatus):
         try:
-            self.info_stream("In change_status(): \n%s\n"%(str(newstatus)))
+            self.info_stream("In change_status(): %r"%(str(newstatus)))
             if newstatus != self.get_status():
                 try:
                     self.push_change_event('Status',newstatus)
