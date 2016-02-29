@@ -30,7 +30,13 @@ def identifier(idn,deviceObj):
        instrument to the '*IDN?' command, what is the correct object that
        contains the set of commands for this instrument.
     '''
-    company,model,serial,firmware = idn.split('\n')[0].split(',')
+    company = ''
+    for separator in (',',' '):
+        try:
+            company,model,serial,firmware = idn.split('\n')[0].split(separator)[:4]
+        except:
+            continue
+    print company,model,serial,firmware
     #TODO: builder pattern to create the object with the instructions set
     #      for this instrument.
     if company.lower() == 'agilent technologies':
@@ -55,6 +61,12 @@ def identifier(idn,deviceObj):
             file = "instructions/radioFrequencyGenerator/rohdeSchwarzRFG.py"
         else:
             raise EnvironmentError("Rohde&Schwarz %s model not supported"%(model))
+    elif company.lower() == 'arroyo':
+        if model.lower() == '5300':
+            attrBuilder = AttributeBuilder(deviceObj)
+            file = "instructions/temperatureController/arroyo5300.py"
+        else:
+            raise EnvironmentError("Arroyo %s model not supported"%(model))
     else:
         raise EnvironmentError("instrument not supported")
     attrBuilder.parseFile(file)

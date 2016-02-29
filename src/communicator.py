@@ -23,20 +23,23 @@
 
 import array
 import PyTango
+import serial
 import socket
 from time import sleep
 import threading
 
 TIME_BETWEEN_SENDANDRECEIVE = 0.05
 
-def buildCommunicator(instrumentName,port=None,parent=None):
+def buildCommunicator(instrumentName,port=None,parent=None, extra_args=None):
     if __isHostName(instrumentName):
         return bySocket(instrumentName,port=port,parent=parent)
-    elif __isTangoName(instrumentName):
-        if __isVisaDevice(instrumentName):
-            return byVisa(instrumentName,parent=parent)
-        raise SyntaxError("Instrument device type not identified")
-    raise SyntaxError("Instrument name not identified")
+    elif __isVisaDevice(instrumentName):
+        return byVisa(instrumentName,parent=parent)
+    elif __isSerialDevice(instrumentName):
+        return bySerialDevice(instumentName,parent=parent)
+    elif __isSerial(instrumentName):
+        return bySerial(instrumentName,parent=parent,serial_args=extra_args)
+    raise SyntaxError("Instrument name invalid or instrument unreachable")
 
 def __isHostName(name):
     try:
@@ -45,9 +48,19 @@ def __isHostName(name):
     except:
         return False
 
-def __isTangoName(name):
+def __isSerialDevice(name):
     try:
-        PyTango.DeviceProxy(name)
+        devClass = PyTango.DeviceProxy(devName).info().dev_class
+        if devClass in ('Serial', 'PySerial'):
+            return True
+        else:
+            return False
+    except:
+        return False
+
+def __isSerial(name):
+    try:
+        serial.Serial(name)
         return True
     except:
         return False
@@ -61,6 +74,7 @@ def __isVisaDevice(devName):
             return False
     except:
         return False
+
 
 class Communicator:
     def __init__(self):
@@ -224,9 +238,10 @@ class byVisa(Communicator):
     def connect(self):
         if not self.__device.State() == PyTango.DevState.ON:
             self.__device.Open()
+
     def disconnect(self):
         self.__device.Close()
-    
+
     def _send(self,msg):
         #self.debug_stream("Sending to %s %s"%(self.__device.get_name(),repr(msg)))
         self.__device.Write(array.array('B',msg).tolist())
@@ -251,3 +266,31 @@ class byVisa(Communicator):
             self.mutex.release()
             return answer
 
+
+class bySerial(Communicator):
+    def __init__(self,name,parent=None,serial_args=None):
+        serial_args['port'] = name
+        self.__device = serial.Serial(**serial_args)
+        print self.__device
+        self._parent = parent
+        self.mutex = threading.Lock()
+        self.debug_stream("building a communication to %s by direct serial connection" % (name))
+
+    def connect(self):
+        self.__device.open()
+        self.__device.readlines()
+        self.__device.flush()
+
+    def disconnect(self):
+        self.__device.close()
+
+    def _send(self,msg):
+        self.__device.write(msg+'\n')
+
+    def _recv(self):
+        msg = self.__device.readline()
+        return msg
+
+
+class bySerialDevice(Communicator):
+    pass
