@@ -36,7 +36,6 @@ def identifier(idn,deviceObj):
             company,model,serial,firmware = idn.split('\n')[0].split(separator)[:4]
         except:
             continue
-    print company,model,serial,firmware
     #TODO: builder pattern to create the object with the instructions set
     #      for this instrument.
     if company.lower() == 'agilent technologies':
