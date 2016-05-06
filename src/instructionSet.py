@@ -280,6 +280,7 @@ class AttributeBuilder:
             db = PyTango.Database()
             step = PyTango.Attr(attrName+"Step", definition['type'],
                                 PyTango.READ_WRITE)
+            step.set_memorized()
             step.set_memorized_init(True)
             self.__device.add_attribute(step, r_meth=readmethod,
                                         w_meth=writemethod)
@@ -297,6 +298,7 @@ class AttributeBuilder:
             stepspeed = PyTango.Attr(attrName+"StepSpeed",
                                      PyTango.CmdArgType.DevDouble,
                                      PyTango.READ_WRITE)
+            stepspeed.set_memorized()
             stepspeed.set_memorized_init(True)
             self.__device.add_attribute(stepspeed, r_meth=readmethod,
                                         w_meth=writemethod)
