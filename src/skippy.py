@@ -60,6 +60,7 @@ import threading
 import time
 import traceback
 from types import StringType
+from version import version
 
 MINIMUM_RECOVERY_DELAY = 3.0
 DEFAULT_RECOVERY_DELAY = 600.0
