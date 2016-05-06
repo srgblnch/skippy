@@ -327,9 +327,9 @@ class AttributeBuilder:
             attr.set_default_properties(aprop)
         self.__device.attributes[attrName]['type'] = definition['type']
         self.__device.attributes[attrName]['dim'] = definition['dim'][0]
-        self.__device.debug_stream("New attribute build: %s:%s"
-                                   % (attrName,
-                                      self.__device.attributes[attrName]))
+#         self.__device.debug_stream("New attribute build: %s:%r"
+#                                    % (attrName,
+#                                       self.__device.attributes[attrName]))
         return attr
 
     # remove dynamic attributes
