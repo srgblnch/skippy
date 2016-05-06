@@ -16,17 +16,24 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-__author__ = "Sergi Blanch-Torne, Jairo Moldes"
-__maintainer__ = "Sergi Blanch-Torne"
+__author__ = "Sergi Blanch-Torne"
 __email__ = "sblanch@cells.es"
 __copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
-__status__ = "Production"
 
-import PyTango
+# Look at https://en.wikipedia.org/wiki/Software_versioning
 
-Attribute('Temperature',
-          {'type':PyTango.CmdArgType.DevDouble,
-           'dim':[0],
-           'readCmd':"TEC:T?",
-         })
+__MAJOR_VERSION = 1
+__MINOR_VERSION = 2
+__BUILD_VERSION = 8
+__REVISION_VERSION = 1
+__RELEASE_CANDIDATE = None
+
+
+def version():
+    if __RELEASE_CANDIDATE:
+        return "%d.%d-rc%d" % (__MAJOR_VERSION, __MINOR_VERSION,
+                               __RELEASE_CANDIDATE)
+    else:
+        return "%d.%d.%d-%d" % (__MAJOR_VERSION, __MINOR_VERSION,
+                                __BUILD_VERSION, __REVISION_VERSION)
