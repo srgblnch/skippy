@@ -62,6 +62,9 @@ def identifier(idn, deviceObj):
         if model.lower() == 'sma100a':
             attrBuilder = AttributeBuilder(deviceObj)
             file = "instructions/radioFrequencyGenerator/rohdeSchwarzRFG.py"
+        elif model.lower() == 'fsp-3':
+            attrBuilder = AttributeBuilder(deviceObj)
+            file = "instructions/spectrumAnalyzer/rohdeSchwarzFSP.py"
         else:
             raise EnvironmentError("Rohde&Schwarz %s model not supported"
                                    % (model))
