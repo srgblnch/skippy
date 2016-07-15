@@ -16,7 +16,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-__author__ = "Sergi Blanch-Torne, Jairo Moldes"
+__author__ = "Jairo Moldes"
 __maintainer__ = "Sergi Blanch-Torne"
 __email__ = "sblanch@cells.es"
 __copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
@@ -26,7 +26,7 @@ __status__ = "Production"
 import PyTango
 
 Attribute('Temperature',
-          {'type':PyTango.CmdArgType.DevDouble,
-           'dim':[0],
-           'readCmd':"TEC:T?",
-         })
+          {'type': PyTango.CmdArgType.DevDouble,
+           'dim': [0],
+           'readCmd': "TEC:T?",
+           })
