@@ -25,7 +25,10 @@ __status__ = "Production"
 
 import array
 import PyTango
-import serial
+try:
+    import serial
+except:
+    serial = None
 
 import socket
 from time import sleep
@@ -67,8 +70,10 @@ def __isSerialDevice(name):
 
 def __isSerial(name):
     try:
-        serial.Serial(name)
-        return True
+        if serial is not None:
+            serial.Serial(name)
+            return True
+        return False
     except:
         return False
 
