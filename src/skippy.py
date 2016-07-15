@@ -804,9 +804,7 @@ class Skippy (PyTango.Device_4Impl):
             attrWithEvents = []
             for i, answer in enumerate(answers):
                 attrName = indexes[i][0]
-                if 'WaveformDataFormat' in self.attributes and \
-                        'WaveformOrigin' in self.attributes and \
-                        'WaveformIncrement' in self.attributes:
+                if 'WaveformDataFormat' in self.attributes:
                     dataFormat = self.attributes\
                         ['WaveformDataFormat']['lastReadValue']
                     if dataFormat.startswith('ASC'):
@@ -824,15 +822,16 @@ class Skippy (PyTango.Device_4Impl):
                             return
                         # save values for debugging
                         self.attributes[attrName]['lastReadRaw'] = answer
-                        # review the header
-                        nBytesLengthBlock = int(answer[1])
-                        nBytesWaveBlock = int(answer[2:nBytesLengthBlock+2])
-                        waveBytes = answer[nBytesLengthBlock+2:nBytesWaveBlock]
+                        # review the header, in answer[0] there is the '#' tag
+                        headerSize = int(answer[1])
+                        bodySize = int(answer[2:2+headerSize])
+                        bodyBlock = answer[2+headerSize:\
+                                           2+headerSize+bodySize]
                         self.debug_stream("In __postHardwareSpectrumRead() "
                                           "waveform data: header size %d "
-                                          "bytes, wave size %d bytes"
-                                          % (nBytesLengthBlock,
-                                             nBytesWaveBlock))
+                                          "bytes, wave size %d bytes (%d)"
+                                          % (2+headerSize, bodySize,
+                                             len(bodyBlock)))
                         # prepare interpretation of the raw data
                         if dataFormat.startswith('BYT'):
                             format = 'b'  # signed char, 1byte
@@ -840,6 +839,9 @@ class Skippy (PyTango.Device_4Impl):
                         elif dataFormat.startswith('WORD'):
                             format = 'h'  # signed short, 2byte
                             divisor = 2
+                        elif dataFormat.lower() == 'real,32':
+                            format = 'I'
+                            divisor = 4
                         else:
                             self.error_stream("Cannot decodify data receiver "
                                               "for the attribute %s"
@@ -848,27 +850,40 @@ class Skippy (PyTango.Device_4Impl):
                             self.attributes[attrName]['timestamp'] = t
                             self.attributes[attrName]['quality'] = \
                                 PyTango.AttrQuality.ATTR_INVALID
-                        nCompletBytes = len(waveBytes) -\
-                            (len(waveBytes)%divisor)
-                        if not len(waveBytes) % 4 == 0:
-                            self.debug_stream("nIncompleteBytes = %d"
-                                              % (len(waveBytes) % divisor))
+                        nIncompleteBytes = (len(bodyBlock)%divisor)
+                        nCompletBytes = len(bodyBlock) - nIncompleteBytes
+                        completBytes = bodyBlock[:nCompletBytes]
+                        self.debug_stream("With %d bytes, found %d "
+                                          "complete packs and %d "
+                                          "incomplete. (Expected %d "
+                                          "single values)"
+                                          % (len(bodyBlock), nCompletBytes,
+                                             nIncompleteBytes,
+                                             nCompletBytes/divisor))
                         # convert the received input to integers
-                        unpackInt = struct.unpack(
-                            format*(nCompletBytes/divisor),
-                            waveBytes[:nCompletBytes])
-                        # expand the input when each float is codified in less 
-                        # than 4 bytes
-                        floats = numpy.array(unpackInt, dtype=float)
-                        waveorigin = self.attributes\
-                            ['WaveformOrigin']['lastReadValue']
-                        waveincrement = self.attributes\
-                            ['WaveformIncrement']['lastReadValue']
-                        self.attributes[attrName]['lastReadValue'] = \
-                            (waveorigin + (waveincrement * floats))
-                        self.attributes[attrName]['timestamp'] = t
-                        self.attributes[attrName]['quality'] = \
-                            PyTango.AttrQuality.ATTR_VALID
+                        self.debug_stream("completBytes: %r" % completBytes)
+                        try:
+                            unpackInt = struct.unpack(
+                                format*(nCompletBytes/divisor), completBytes)
+                            self.debug_stream("Unpacked: %s" % unpackInt)
+                        except Exception as e:
+                            self.error_stream("Data cannot be unpacked: %s"
+                                              % (e))
+                        else:
+                            # expand the input when each float is codified in
+                            # less than 4 bytes
+                            floats = numpy.array(unpackInt, dtype=float)
+                            if 'WaveformOrigin' in self.attributes and \
+                                    'WaveformIncrement' in self.attributes:
+                                waveorigin = self.attributes\
+                                    ['WaveformOrigin']['lastReadValue']
+                                waveincrement = self.attributes\
+                                    ['WaveformIncrement']['lastReadValue']
+                                self.attributes[attrName]['lastReadValue'] = \
+                                    (waveorigin + (waveincrement * floats))
+                                self.attributes[attrName]['timestamp'] = t
+                                self.attributes[attrName]['quality'] = \
+                                    PyTango.AttrQuality.ATTR_VALID
                 else:
                     self.warn_stream("In __postHardwareSpectrumRead() "
                                      "Unrecognised spectrum attribute, "
@@ -887,6 +902,7 @@ class Skippy (PyTango.Device_4Impl):
         except Exception as e:
             self.error_stream("In __postHardwareSpectrumRead() Exception: %s"
                               % (e))
+            traceback.print_exc()
 
     @instructionSet.AttrExc
     def read_attr(self, attr):
@@ -908,6 +924,9 @@ class Skippy (PyTango.Device_4Impl):
                 else:
                     attr.set_value_date_quality(value, timestamp, quality,
                                                 len(value))
+            if 'lastWriteValue' in self.attributes[attrName]:
+                attr.set_write_value(value)
+                # when there has been no read (yet) avoid the Non-initialised.
         elif attrName.endswith("Step"):
             parentAttrName = attrName.split('Step')[0]
             value = self.attributes[parentAttrName]['rampStep']
@@ -1458,8 +1477,11 @@ class Skippy (PyTango.Device_4Impl):
         self._lastRecovery = None
         # conversion of the MonitoredAttributes property, 
         # from string list to list
-        attrLst = str(self.MonitoredAttributes[0])
-        self.MonitoredAttributes = self.__str2listProperty(attrLst)
+        try:
+            attrLst = str(self.MonitoredAttributes[0])
+            self.MonitoredAttributes = self.__str2listProperty(attrLst)
+        except:
+            self.info_stream("No monitored attributes defined")
         #---- once initialized, begin the process to connect with the instrument
         self._instrument = None
         self._builder = None
@@ -1541,6 +1563,8 @@ class Skippy (PyTango.Device_4Impl):
                 'Generic' in self._monitorThreads:
             self._monitorThreads['Generic']['Period'] = \
                 self.attr_TimeStampsThreshold_read
+        ## TODO: function of an instrument attribute ---
+        #        for a lower limit or to force as unique possibility.
         #----- PROTECTED REGION END -----#  //  Skippy.TimeStampsThreshold_write
         
     
@@ -2045,7 +2069,7 @@ class Skippy (PyTango.Device_4Impl):
         try:
             if argin.find('?') >= 0:
                 # argout = self._instrument.ask(argin)
-                argout = self.__hardwareRead(argin)
+                argout = self.__hardwareRead(argin) or ''
             else:
                 # self._instrument.write(argin)
                 self.__hardwareWrite(argin)
