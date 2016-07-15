@@ -50,7 +50,7 @@ Attribute('Attenuation',
           {'type': PyTango.CmdArgType.DevUShort,
            'dim': [0],
            'readCmd': ":input:attenuation?",
-           'writeCmd': lambda value: ":input:attenuation %d" % value,
+           'writeCmd': lambda value: ":input:attenuation %s" % value,
            'unit': 'dB', 'min': 0, 'max': 75
            })
 
@@ -98,7 +98,7 @@ Attribute('Impedance',
           {'type': PyTango.CmdArgType.DevUShort,
            'dim': [0],
            'readCmd': ":input:impedance?",
-           'writeCmd': lambda value: ":input:impedance %d" % value
+           'writeCmd': lambda value: ":input:impedance %s" % value
            })  # 50 | 75
 
 Attribute('ResolutionBandWidth',  # RBW
@@ -107,7 +107,7 @@ Attribute('ResolutionBandWidth',  # RBW
            'format': '%9.6f',
            'dim': [0],
            'readCmd': ":BAND:RES?",
-           'writeCmd': lambda value: ":BAND:RES %d" % value,
+           'writeCmd': lambda value: ":BAND:RES %s" % value,
            'unit': 'Hz', 'min': 10, 'max': 10000000,  # between 10Hz to 10MHz
            })
 
@@ -127,7 +127,7 @@ Attribute('VideoBandWidth',  # VBW
            'format': '%9.6f',
            'dim': [0],
            'readCmd': ":BAND:VID?",
-           'writeCmd': lambda value: ":BAND:VID %d" % value,
+           'writeCmd': lambda value: ":BAND:VID %s" % value,
            'unit': 'Hz', 'min': 1, 'max': 10000000,  # between 1Hz to 10MHz
            })
 
