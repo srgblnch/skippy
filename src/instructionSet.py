@@ -101,9 +101,231 @@ def latin1(x):
         replace(u'\u03bc', u'\u00b5').encode('latin1')
 
 
+###############################
+# Attribute functionalities ---
+
+class RampObj(object):
+    def __init__(self, name, *args, **kwargs):
+        super(RampObj, self).__init__(*args, **kwargs)
+        self._rampStep = None
+        self._rampStepSpeep = None
+        self._rampThread = None
+
+    @property
+    def rampStep(self):
+        return self._rampStep
+
+    @rampStep.setter
+    def rampStep(self, value):
+        self._rampStep = value
+
+    @property
+    def rampStepSpeep(self):
+        return self._rampStepSpeep
+
+    @rampStepSpeep.setter
+    def rampStepSpeep(self, value):
+        self._rampStepSpeep = value
+
+    @property
+    def rampThread(self):
+        return self._rampThread
+
+    @rampThread.setter
+    def rampThread(self, value):
+        self._rampThread = value
+
+
+class RawDataObj(object):
+    def __init__(self, *args, **kwargs):
+        super(RawDataObj, self).__init__(*args, **kwargs)
+        self._lastReadRaw = None
+
+    @property
+    def lastReadRaw(self):
+        return self._lastReadRaw
+
+    @lastReadRaw.setter
+    def lastReadRaw(self, value):
+        self._lastReadRaw = value
+
+
+###############################
+# Attribute Objects ---
+
+
 class AttributeObj(object):
-    def __init__(self, *xargs, **kwargs):
+    def __init__(self, name, type, dim, readCmd, withRawData=False,
+                 *args, **kwargs):
         super(AttributeObj, self).__init__(*args, **kwargs)
+        self._name = name
+        self._type = type
+        self._dim = dim
+        self._readCmd = readCmd
+        self._lastReadValue = None
+        self._timestamp = None
+        self._quality = PyTango.AttrQuality.ATTR_INVALID
+        if withRawData:
+            self._raw = RawDataObj()
+        else:
+            self._raw = None
+
+    def __str__(self):
+        return "%s {lastReadValue: %s, timestamp: %s, quality: %s, dim: %s}"\
+               % (self.name, self.lastReadValue, self.timestamp, self.quality,
+                  self.dim)
+
+    def __repr__(self):
+        return "%s, readCmd: %s}"\
+               % (self.__str__()[:-1], self.readCmd)
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def type(self):
+        return self._type
+
+    @property
+    def dim(self):
+        return self._dim
+
+    def isWritable(self):
+        return False
+
+    def isRampeable(self):
+        return False
+
+    def hasWriteValues(self):
+        return False
+
+    def hasRawData(self):
+        if self._raw is None:
+            return False
+        return True
+
+    @property
+    def readCmd(self):
+        return self._readCmd
+
+    @property
+    def lastReadValue(self):
+        return self._lastReadValue
+
+    @lastReadValue.setter
+    def lastReadValue(self, value):
+        self._lastReadValue = value
+
+    @property
+    def timestamp(self):
+        return self._timestamp
+
+    @timestamp.setter
+    def timestamp(self, value):
+        self._timestamp = value
+
+    @property
+    def quality(self):
+        return self._quality
+
+    @quality.setter
+    def quality(self, value):
+        self._quality = value
+
+    def _makeRawDataProperties(self):
+        setattr(self, 'lastReadRaw', self._makeLastReadRawProperty())
+
+    def _makeLastReadRawProperty(self):
+        def getter(self):
+            return self._raw.lastReadRaw
+
+        def setter(self, value):
+            self._raw.lastReadRaw = value
+
+        return property(getter, setter)
+
+
+class WAttributeObj(AttributeObj):
+    def __init__(self, writeCmd=None, rampeable=False, writeValues=None,
+                 *args, **kwargs):
+        super(WAttributeObj, self).__init__(*args, **kwargs)
+        self._writeCmd = writeCmd
+        self._lastWriteValue = None
+        self._ramp = None
+        if rampeable:
+            self.makeRampeable()
+        self._writeValues = writeValues
+
+    def __str__(self):
+        return "%s {lastReadValue: %s, lastWriteValue: %s, timestamp: %s, "\
+               "quality: %s, dim: %s}"\
+               % (self.name, self.lastReadValue, self.lastWriteValue,
+                  self.timestamp, self.quality, self.dim)
+
+    def __repr__(self):
+        return "%s, readCmd: %s, writeCmd: %s}"\
+               % (self.__str__()[:-1], self.readCmd, self.writeCmd)
+
+    def isWritable(self):
+        return True
+
+    def isRampeable(self):
+        if self._ramp is None:
+            return False
+        return True
+
+    def hasWriteValues(self):
+        return self._writeValues is not None
+
+    @property
+    def writeCmd(self):
+        return self._writeCmd
+
+    @property
+    def lastWriteValue(self):
+        return self._lastWriteValue
+
+    @lastWriteValue.setter
+    def lastWriteValue(self, value):
+        self._lastWriteValue = value
+
+    def makeRampeable(self):
+        if self._ramp is None:
+            self._ramp = RampObj()
+            setattr(self, 'rampStep', self._makeRampStepProperty())
+            setattr(self, 'rampStepSpeed', self._makeRampStepSpeedProperty())
+            setattr(self, 'rampThread', self._makeRampThreadProperty())
+
+    def _makeRampStepProperty(self):
+        def getter(self):
+            return self._ramp.rampStep
+
+        def setter(self, value):
+            self._ramp.rampStep = value
+
+        return property(getter, setter)
+
+    def _makeRampStepSpeedProperty(self):
+        def getter(self):
+            return self._ramp.rampStepSpeed
+
+        def setter(self, value):
+            self._ramp.rampStepSpeed = value
+
+        return property(getter, setter)
+
+    def _makeRampThreadProperty(self):
+        def getter(self):
+            return self._ramp.rampThread
+
+        def setter(self, value):
+            self._ramp.rampThread = value
+
+        return property(getter, setter)
+
+    def setWriteValues(self, writeValues):
+        self._writeValues = writeValues
 
 
 class AttributeBuilder:
@@ -266,18 +488,11 @@ class AttributeBuilder:
         self.__device.add_attribute(attr, r_meth=readmethod,
                                     w_meth=writemethod)
         self._attributeList.append(attrName)
-        self.__device.attributes[attrName] = {'lastReadValue': None,
-                                              'timestamp': None,
-                                              'quality':
-                                              PyTango.AttrQuality.ATTR_INVALID}
-        if 'writeCmd' in definition:
-            self.__device.attributes[attrName]['lastWriteValue'] = None
+        # prepare internal structure ---
         if channel:
             readCmd = definition['readCmd']("CHAN", channel)
-            self.__device.attributes[attrName]['readStr'] = readCmd
             if 'writeCmd' in definition:
                 writeCmd = definition['writeCmd']("CHAN", channel)
-                self.__device.attributes[attrName]['writeStr'] = writeCmd
             if 'manager' in definition and definition['manager'] is True:
                 self.__device.attributesFlags["Ch%d" % channel] = attrName
         elif function:
@@ -285,72 +500,84 @@ class AttributeBuilder:
             self.__device.attributes[attrName]['readStr'] = readCmd
             if 'writeCmd' in definition:
                 writeCmd = definition['writeCmd']("FUNC", function)
-                self.__device.attributes[attrName]['writeStr'] = writeCmd
             if 'manager' in definition and definition['manager'] is True:
                 self.__device.attributesFlags["Fn%d" % function] = attrName
         else:
             readCmd = definition['readCmd']
-            self.__device.attributes[attrName]['readStr'] = readCmd
             if 'writeCmd' in definition:
                 writeCmd = definition['writeCmd']
-                self.__device.attributes[attrName]['writeStr'] = writeCmd
-        if 'rampeable' in definition:
-            db = PyTango.Database()
-            step = PyTango.Attr(attrName+"Step", definition['type'],
-                                PyTango.READ_WRITE)
-            step.set_memorized()
-            step.set_memorized_init(True)
-            self.__device.add_attribute(step, r_meth=readmethod,
-                                        w_meth=writemethod)
-            self._attributeList.append(attrName+"Step")
-            try:
-                devName = self.__device.get_name()
-                stepAttrName = attrName+"Step"
-                attrProp = db.get_device_attribute_property(devName,
-                                                            stepAttrName)
-                propertyValueStr = attrProp[stepAttrName]['__value'][0]
-                value = float(propertyValueStr)
-                self.__device.attributes[attrName]['rampStep'] = value
-            except:
-                self.__device.attributes[attrName]['rampStep'] = None
-            stepspeed = PyTango.Attr(attrName+"StepSpeed",
-                                     PyTango.CmdArgType.DevDouble,
-                                     PyTango.READ_WRITE)
-            stepspeed.set_memorized()
-            stepspeed.set_memorized_init(True)
-            self.__device.add_attribute(stepspeed, r_meth=readmethod,
-                                        w_meth=writemethod)
-            self._attributeList.append(attrName+"StepSpeed")
-            try:
-                devName = self.__device.get_name()
-                stepSpeedAttrName = attrName+"StepSpeed"
-                attrProp = db.get_device_attribute_property(devName,
-                                                            stepSpeedAttrName)
-                propertyValueStr = attrProp[attrName+"StepSpeed"]['__value'][0]
-                value = float(propertyValueStr)
-                self.__device.attributes[attrName]['rampStepSpeed'] = value
-            except:
-                self.__device.attributes[attrName]['rampStepSpeed'] = None
-            self.__device.attributes[attrName]['rampThread'] = None
-        if 'writeValues' in definition:
-            self.__device.attributes[attrName]['writeValues'] = \
-                definition['writeValues']
-            # this is a very important information to have
-            # in the attr descrition
-            if 'description' in definition:
-                prefix = definition['description']+". "
+        # build internal structure ---
+        if 'writeCmd' not in definition:
+            self.__device.attributes[attrName] =\
+                AttributeObj(name=attrName, type=definition['type'],
+                             dim=definition['dim'][0], readCmd=readCmd)
+        else:
+            if 'rampeable' not in definition:
+                self.__device.attributes[attrName] =\
+                    WAttributeObj(name=attrName, type=definition['type'],
+                                  dim=definition['dim'][0],
+                                  readCmd=readCmd, writeCmd=writeCmd)
+                self.configureRamping(attrName, definition,
+                                      readmethod, writemethod)
             else:
-                prefix = ""
-            descr = "%sAllowed values: %s" % (prefix,
-                                              repr(definition['writeValues']))
-            aprop.set_description(descr)
-            attr.set_default_properties(aprop)
-        self.__device.attributes[attrName]['type'] = definition['type']
-        self.__device.attributes[attrName]['dim'] = definition['dim'][0]
-#         self.__device.debug_stream("New attribute build: %s:%r"
-#                                    % (attrName,
-#                                       self.__device.attributes[attrName]))
+                self.__device.attributes[attrName] =\
+                    WAttributeObj(name=attrName, type=definition['type'],
+                                  dim=definition['dim'][0],
+                                  readCmd=readCmd, writeCmd=writeCmd,
+                                  rampeable=True)
+            if 'writeValues' in definition:
+                self.__device.attributes[attrName].\
+                    setWriteValues(definition['writeValues'])
+                # this is a very important information to have
+                # in the attr descrition
+                if 'description' in definition:
+                    prefix = definition['description']+". "
+                else:
+                    prefix = ""
+                descr = "%sAllowed values: %s"\
+                        % (prefix, repr(definition['writeValues']))
+                aprop.set_description(descr)
+                attr.set_default_properties(aprop)
         return attr
+
+    def configureRamping(self, attrName, definition, readmethod, writemethod):
+        db = PyTango.Database()
+        step = PyTango.Attr(attrName+"Step", definition['type'],
+                            PyTango.READ_WRITE)
+        step.set_memorized()
+        step.set_memorized_init(True)
+        self.__device.add_attribute(step, r_meth=readmethod,
+                                    w_meth=writemethod)
+        self._attributeList.append(attrName+"Step")
+        try:
+            devName = self.__device.get_name()
+            stepAttrName = attrName+"Step"
+            attrProp = db.get_device_attribute_property(devName,
+                                                        stepAttrName)
+            propertyValueStr = attrProp[stepAttrName]['__value'][0]
+            value = float(propertyValueStr)
+            self.__device.attributes[attrName].rampStep = value
+        except:
+            self.__device.attributes[attrName].rampStep = None
+        stepspeed = PyTango.Attr(attrName+"StepSpeed",
+                                 PyTango.CmdArgType.DevDouble,
+                                 PyTango.READ_WRITE)
+        stepspeed.set_memorized()
+        stepspeed.set_memorized_init(True)
+        self.__device.add_attribute(stepspeed, r_meth=readmethod,
+                                    w_meth=writemethod)
+        self._attributeList.append(attrName+"StepSpeed")
+        try:
+            devName = self.__device.get_name()
+            stepSpeedAttrName = attrName+"StepSpeed"
+            attrProp = db.get_device_attribute_property(devName,
+                                                        stepSpeedAttrName)
+            propertyValueStr = attrProp[attrName+"StepSpeed"]['__value'][0]
+            value = float(propertyValueStr)
+            self.__device.attributes[attrName].rampStepSpeed = value
+        except:
+            self.__device.attributes[attrName].rampStepSpeed = None
+        self.__device.attributes[attrName].rampThread = None
 
     # remove dynamic attributes
     def remove_attribute(self, attrName):

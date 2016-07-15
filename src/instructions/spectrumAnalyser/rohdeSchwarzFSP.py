@@ -43,8 +43,7 @@ import PyTango
 #              'memorized' -> attribute property
 #              'writeValues' -> list of accepted values to write
 #              'manager'  -> to flag if a channel is close to avoid reads there
-#             }
-#            )
+#              })
 #
 
 Attribute('Attenuation',

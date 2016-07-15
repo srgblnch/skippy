@@ -82,7 +82,7 @@ class Skippy (PyTango.Device_4Impl):
     #----- PROTECTED REGION ID(Skippy.global_variables) ENABLED START -----#
 
     ######
-    #----- section to resolve instrument property
+    # section to resolve instrument property ---
     def __buildInstrumentObj(self):
         '''Builder of object that will manage the communications with the
            specified instrument in the properties.
@@ -126,7 +126,7 @@ class Skippy (PyTango.Device_4Impl):
         '''With this method a communication channel is opened to the instrument
            and the identification string is requested to it.
         '''
-        if not hasattr(self,'_instrument') or self._instrument == None:
+        if not hasattr(self, '_instrument') or self._instrument is None:
             self.error_stream("In __connectInstrumentObj(): instrument "
                               "object not build yet")
             return False
@@ -142,7 +142,7 @@ class Skippy (PyTango.Device_4Impl):
                              "the instrument and identified as: %r"
                              % (self._idn))
             return True
-    
+
     def __reconnectInstrumentObj(self):
         '''This method contains a procedure to reconnect to the instrument, if
            it is possible. It uses the state DISABLE to report that it is
@@ -152,15 +152,15 @@ class Skippy (PyTango.Device_4Impl):
            Else, in case the communication cannot be restablished by itself,
            then the state changes to FAULT to report the malfunction.
         '''
-        if not hasattr(self,'_instrument') or self._instrument == None:
-            self.error_stream("In __reconnectInstrumentObj(): instrument "\
+        if not hasattr(self, '_instrument') or self._instrument is None:
+            self.error_stream("In __reconnectInstrumentObj(): instrument "
                               "object not build yet")
             return False
         try:
             self._instrument.disconnect()
             self.change_state(PyTango.DevState.DISABLE)
             self.rebuildStatus()
-        except Exception,e:
+        except Exception as e:
             self.error_stream("In __reconnectInstrumentObj(): disconnect "
                               "exception: %s" % (e))
             self.change_state(PyTango.DevState.FAULT)
@@ -198,7 +198,7 @@ class Skippy (PyTango.Device_4Impl):
         '''
         try:
             self.warn_stream("Starting a reconnect procedure.")
-            if self._reconnectThread != None and \
+            if self._reconnectThread is not None and \
                     self._reconnectThread.isAlive():
                 self.warn_stream("Past reconnection thread is still alive...")
                 self._reconnectAwaker.set()
@@ -208,13 +208,13 @@ class Skippy (PyTango.Device_4Impl):
                                      "to finish")
                     self._reconnectThread.join(1)
                 self.info_stream("Past reconnection thread finish")
-                # how to check if a the past reconnection was active and has 
+                # how to check if a the past reconnection was active and has
                 # already fixed the issue?
                 if self._instrument.isConnected():
                     self.info_stream("Communication recovered by "
                                      "past reconnection thread")
                     return
-            if self._reconnectThread == None:
+            if self._reconnectThread is None:
                 self.info_stream("Creating a reconnection thread")
                 self._reconnectThread = \
                     threading.Thread(target=self.__doReconnect)
@@ -227,6 +227,7 @@ class Skippy (PyTango.Device_4Impl):
             self.change_state(PyTango.DevState.FAULT)
             self.addStatusMsg("Fatal error and communications lost with "
                               "the instrument!", important=True)
+
     def __doReconnect(self):
         '''To reconnect to the instrument, and this often happens due to the
            drowning in the instrument response, after disconnect delay the
@@ -239,23 +240,23 @@ class Skippy (PyTango.Device_4Impl):
         try:
             self.info_stream("Reconnection thread started")
             now = time.time()
-            # 1.- if more than N errors during the last M seconds: 
+            # 1.- if more than N errors during the last M seconds:
             #     then delay the recovery by S seconds.
-            if self.__communicationErrors(now,self._lastMSeconds) > \
+            if self.__communicationErrors(now, self._lastMSeconds) > \
                     self._lastNErrorsThreshold:
                 self.info_stream("In __doReconnect() found more than "
                                  "%d errors" % (self._lastNErrorsThreshold))
                 # 2.- if last delayed recovery comes from less than R seconds:
                 #     then double the S time.
-                if not self._lastRecovery == None and \
+                if self._lastRecovery is not None and \
                         now-self._lastRecovery < \
                         self._recoverThreshold + self._recoveryDelay:
                     self.warn_stream("In __doReconnect() doubling the "
                                      "time to recover because the error "
                                      "happened less than %6.3f seconds after "
                                      "the previous recover delay of %6.3f "
-                                     "seconds" %(self._recoverThreshold,
-                                                 self._recoveryDelay))
+                                     "seconds" % (self._recoverThreshold,
+                                                  self._recoveryDelay))
                     if self._recoveryDelay <= self._lastMSeconds:
                         # maximum delay
                         self._recoveryDelay = self._recoveryDelay * 2
@@ -310,7 +311,7 @@ class Skippy (PyTango.Device_4Impl):
                 traceback.print_exc()
         self.info_stream("Reconnection procedure End")
 
-    def __reconnectLoop(self,tries,fixTime2retry=None,starttry=None):
+    def __reconnectLoop(self, tries, fixTime2retry=None, starttry=None):
         i = starttry or 1
         self.debug_stream("Start a reconnection loop between %d and %d"
                           % (i, tries))
@@ -325,7 +326,7 @@ class Skippy (PyTango.Device_4Impl):
             if fixTime2retry is None:
                 time2retry = self._recoveryDelay * i
             msg = "Reconnection try didn't work (%dth), "\
-                    "retry in %6.3f seconds" % (i, time2retry)
+                "retry in %6.3f seconds" % (i, time2retry)
             self.warn_stream(msg)
             self.addStatusMsg(msg)
             self._reconnectAwaker.wait(time2retry)
@@ -352,15 +353,15 @@ class Skippy (PyTango.Device_4Impl):
                          % (mseconds, nErrors))
         return nErrors
 
-    def __appendToCommunicationLost(self,now):
+    def __appendToCommunicationLost(self, now):
         self._commLost.append(now)
 
     def prepareMutex(self):
-        '''If needed create all the mutex requested (first execution) and if 
-           any already exist free all the threads waiting in order to clean up 
+        '''If needed create all the mutex requested (first execution) and if
+           any already exist free all the threads waiting in order to clean up
            them (like a restart).
         '''
-        if not hasattr(self,'_stateMutex'):
+        if not hasattr(self, '_stateMutex'):
             self._stateMutex = threading.Semaphore()
         else:
             while not self._stateMutex.acquire(False):
@@ -368,32 +369,32 @@ class Skippy (PyTango.Device_4Impl):
 
     def stateMutex(decoratedMethod):
         def magic(self, methodVble):
-            if hasattr(self,'_stateMutex'):
+            if hasattr(self, '_stateMutex'):
                 self.debug_stream("stateMutex() request to acquire")
                 self._stateMutex.acquire()
                 self.debug_stream("stateMutex() acquire")
             try:
                 decoratedMethod(self, methodVble)
-            except Exception,e:
+            except Exception as e:
                 self.error_stream("In StateMutex() exception: %s" % (e))
-            if hasattr(self,'_stateMutex'):
+            if hasattr(self, '_stateMutex'):
                 self._stateMutex.release()
                 self.debug_stream("stateMutex() release")
         return magic
 
-    #----- done section to resolve instrument property
+    # done section to resolve instrument property ---
     ######
 
     ######
-    #----- dynamic attributes builder section
+    # dynamic attributes builder section ---
     def __builder(self):
         try:
-            if hasattr(self,'_idn') and not self._idn in [None,""]:
-                self._builder = instructionSet.identifier(self._idn,self)
+            if hasattr(self, '_idn') and self._idn not in [None, ""]:
+                self._builder = instructionSet.identifier(self._idn, self)
             else:
                 raise Exception("*IDN? not available")
         except Exception as e:
-            if hasattr(self,'_idn'):
+            if hasattr(self, '_idn'):
                 msg = "identification error: %s (*IDN?:%r)" % (e, self._idn)
             else:
                 msg = "identification error: %s" % (e)
@@ -403,14 +404,14 @@ class Skippy (PyTango.Device_4Impl):
             return False
         else:
             return True
-        
+
     def __unbuilder(self):
         try:
             self._builder.remove_alldynAttrs()
             return True
         except:
             return False
-    
+
     def __read_attr_procedure(self, data, fromMonitor=False):
         '''This method is the read_attr_hardware, but we had to distinguish
            between monitoring calls for events than the direct requests to the
@@ -422,29 +423,29 @@ class Skippy (PyTango.Device_4Impl):
         self.debug_stream("In __read_attr_procedure(%r)" % (data))
         try:
             multiattr = self.get_device_attr()
-            scalarList,spectrumList,imageList = \
+            scalarList, spectrumList, imageList = \
                 self.__filterAttributes(multiattr, data, fromMonitor)
             if not len(scalarList) == 0:
-                indexes,queries = \
+                indexes, queries = \
                     self.__preHardwareRead(scalarList,
                                            self.attr_QueryWindow_read)
                 answers = []
                 for query in queries:
                     answer = self.__hardwareRead(query)
-                    if answer != None:
+                    if answer is not None:
                         answers.append(answer)
                 msg = ""
                 for answer in answers:
-                    if answer == None:
+                    if answer is None:
                         self.error_stream("In __read_attr_procedure() "
                                           "Uou, we've got a null answer!")
                         return
                     elif len(answer) > 100:
-                        msg = ''.join([msg,"%r(...)%r"
+                        msg = ''.join([msg, "%r(...)%r"
                                        % (answer[:25],
                                           answer[len(answer)-25:])])
                     else:
-                        msg = ''.join([msg, "%r"%(answer)])
+                        msg = ''.join([msg, "%r" % (answer)])
                 self.debug_stream("In __read_attr_procedure() scalar answers:"
                                   " %s" % (msg))
                 self.__postHardwareScalarRead(indexes, answers)
@@ -453,7 +454,7 @@ class Skippy (PyTango.Device_4Impl):
                 answers = []
                 for query in queries:
                     answer = self.__hardwareRead(query)
-                    if answer != None:
+                    if answer is not None:
                         answers.append(answer)
                 self.debug_stream("In __read_attr_procedure() spectrum "
                                   "answers number: %s" % (len(answers)))
@@ -488,9 +489,9 @@ class Skippy (PyTango.Device_4Impl):
                 else:
                     # filter attributes depending if they are monitored
                     if self.get_state() == PyTango.DevState.RUNNING and \
-                            (fromMonitor and \
-                             not attrIndex in self._monitoredAttributeIds) or\
-                            (not fromMonitor and \
+                            (fromMonitor and
+                             attrIndex not in self._monitoredAttributeIds) or\
+                            (not fromMonitor and
                              attrIndex in self._monitoredAttributeIds):
                         self.debug_stream("In __filterAttributes() excluding "
                                           "%s because the monitoring "
@@ -498,13 +499,13 @@ class Skippy (PyTango.Device_4Impl):
                     else:
                         # discard if the channel or function is not open
                         attrName = self.__checkChannelManager(attrName)
-                        if attrName != None:
+                        if attrName is not None:
                             try:
-                                t_a = self.attributes[attrName]['timestamp']
+                                t_a = self.attributes[attrName].timestamp
                                 attrObj = multiattr.get_attr_by_name(attrName)
-                                if not attrIndex in \
+                                if attrIndex not in \
                                         self._monitoredAttributeIds and \
-                                        not t_a == None and t - t_a < delta_t:
+                                        t_a is not None and t - t_a < delta_t:
                                     self.debug_stream("In __filterAttributes"
                                                       "() excluding %s: "
                                                       "t < delta_t"
@@ -566,10 +567,10 @@ class Skippy (PyTango.Device_4Impl):
     def __checkChannelManager(self, attrName):
         if attrName[-3:-1] in ['Ch', 'Fn']:
             managerName = self.attributesFlags[attrName[-3:]]
-            managerValue = self.attributes[managerName]['lastReadValue']
-            if managerValue == None:
+            managerValue = self.attributes[managerName].lastReadValue
+            if managerValue is None:
                 return managerName
-            elif managerValue == False:
+            elif not managerValue:
                 self.debug_stream("In __checkChannelManager() "
                                   "excluding %s from filter: channel or "
                                   "function is close" % (attrName))
@@ -578,7 +579,7 @@ class Skippy (PyTango.Device_4Impl):
                 return attrName
         else:  # non channel or function no sub-filter
             return attrName
-    
+
     def __preHardwareRead(self, attrList, window=1):
         '''Given a list of attributes to be read, prepare it.
            - Divide the attributes to be read in subsets of QueryWindow size.
@@ -600,16 +601,16 @@ class Skippy (PyTango.Device_4Impl):
                 subsetsQueries.append("")
                 for j in range(len(subsetsIndexes[len(subsetsIndexes)-1])):
                     attrName = subsetsIndexes[len(subsetsIndexes)-1][j]
-                    attrCmd = self.attributes[attrName]['readStr']
+                    attrCmd = self.attributes[attrName].readCmd
                     subsetsQueries[len(subsetsQueries)-1] = \
                         "%s%s;" % (subsetsQueries[len(subsetsQueries)-1],
                                    attrCmd)
             return subsetsIndexes, subsetsQueries
         except Exception as e:
             self.error_stream("In __preHardwareRead() Exception: %s" % (e))
-            return None,None
+            return None, None
 
-    #@hardwareMutex
+    # @hardwareMutex
     def __hardwareRead(self, query, ask_for_values=False):
         '''Given a string with a ';' separated list of scpi commands 'ask'
            to the instrument and return what the instrument responds.
@@ -637,8 +638,8 @@ class Skippy (PyTango.Device_4Impl):
             self.__reconnectProcedure()
             return None
 
-    #@hardwareMutex
-    def __hardwareWrite(self,cmd):
+    # @hardwareMutex
+    def __hardwareWrite(self, cmd):
         '''
         '''
         try:
@@ -670,7 +671,7 @@ class Skippy (PyTango.Device_4Impl):
         try:
             attrWithEvents = []
             for i, answer in enumerate(answers):
-                if answer != None:
+                if answer is not None:
                     for j, value in enumerate(answer.split('\n')[0]
                                               .split(';')):
                         attrName = indexes[i][j]
@@ -687,31 +688,33 @@ class Skippy (PyTango.Device_4Impl):
                                 self.warn_stream("In __postHardwareScalarRead"
                                                  "() Unrecognized data type "
                                                  "for %s" % (attrName))
-                                self.attributes[attrName]['lastReadValue'] = \
+                                self.attributes[attrName].lastReadValue = \
                                     value
                         except Exception as e:
                             self.error_stream("In __postHardwareScalarRead() "
                                               "Exception of attribute %s: %s"
                                               % (attrName, e))
-                            self.attributes[attrName]['lastReadValue'] = None
-                            self.attributes[attrName]['quality'] = \
+                            self.attributes[attrName].lastReadValue = None
+                            self.attributes[attrName].quality = \
                                 PyTango.AttrQuality.ATTR_INVALID
                         finally:
-                            self.attributes[attrName]['timestamp'] = t
+                            self.attributes[attrName].timestamp = t
                             multiattr = self.get_device_attr()
                             attrId = multiattr.get_attr_ind_by_name(attrName)
                             if self.__isRamping(attrName):
-                                self.attributes[attrName]['quality'] = \
+                                self.attributes[attrName].quality = \
                                     PyTango.AttrQuality.ATTR_CHANGING
-                            elif self.attributes[attrName]['quality'] != \
+                            elif self.attributes[attrName].quality != \
                                     PyTango.AttrQuality.ATTR_VALID:
-                                self.attributes[attrName]['quality'] = \
+                                self.attributes[attrName].quality = \
                                     PyTango.AttrQuality.ATTR_VALID
                             if attrId in self._monitoredAttributeIds:
-                                attrWithEvents.append([attrName,
-                                    self.attributes[attrName]['lastReadValue'],
-                                    self.attributes[attrName]['quality']
-                                    ])
+                                attrWithEvents.\
+                                    append([attrName,
+                                            self.attributes[attrName].
+                                            lastReadValue,
+                                            self.attributes[attrName].quality
+                                            ])
                 else:
                     self.error_stream("In __postHardwareScalarRead() "
                                       "answer %s is None" % (i))
@@ -721,50 +724,50 @@ class Skippy (PyTango.Device_4Impl):
                               % (e))
 
     def __isScalarBoolean(self, attrName, attrValue):
-        if self.attributes[attrName]['type'] in \
+        if self.attributes[attrName].type in \
                 [PyTango.CmdArgType.DevBoolean]:
-            self.attributes[attrName]['lastReadValue'] = bool(int(attrValue))
-            self.attributes[attrName]['quality'] = \
+            self.attributes[attrName].lastReadValue = bool(int(attrValue))
+            self.attributes[attrName].quality = \
                 PyTango.AttrQuality.ATTR_VALID
             return True
         else:
             return False
 
     def __isScalarInteger(self, attrName, attrValue):
-        if self.attributes[attrName]['type'] in [PyTango.CmdArgType.DevUChar,
-                                                 PyTango.CmdArgType.DevUShort,
-                                                 PyTango.CmdArgType.DevShort,
-                                                 PyTango.CmdArgType.DevULong,
-                                                 PyTango.CmdArgType.DevLong,
-                                                 PyTango.CmdArgType.DevULong64,
-                                                 PyTango.CmdArgType.DevLong64]:
-            self.attributes[attrName]['lastReadValue'] = int(attrValue)
-            self.attributes[attrName]['quality'] = \
+        if self.attributes[attrName].type in [PyTango.CmdArgType.DevUChar,
+                                              PyTango.CmdArgType.DevUShort,
+                                              PyTango.CmdArgType.DevShort,
+                                              PyTango.CmdArgType.DevULong,
+                                              PyTango.CmdArgType.DevLong,
+                                              PyTango.CmdArgType.DevULong64,
+                                              PyTango.CmdArgType.DevLong64]:
+            self.attributes[attrName].lastReadValue = int(attrValue)
+            self.attributes[attrName].quality = \
                 PyTango.AttrQuality.ATTR_VALID
             return True
         else:
             return False
 
     def __isScalarFloat(self, attrName, attrValue):
-        if self.attributes[attrName]['type'] in [PyTango.CmdArgType.DevFloat,
-                                                 PyTango.CmdArgType.DevDouble]:
+        if self.attributes[attrName].type in [PyTango.CmdArgType.DevFloat,
+                                              PyTango.CmdArgType.DevDouble]:
             if attrValue == '9.99999E+37':
                 # this is the instrument tag for non measurable
-                self.attributes[attrName]['lastReadValue'] = float('NaN')
-                self.attributes[attrName]['quality'] = \
+                self.attributes[attrName].lastReadValue = float('NaN')
+                self.attributes[attrName].quality = \
                     PyTango.AttrQuality.ATTR_WARNING
             else:
-                self.attributes[attrName]['lastReadValue'] = float(attrValue)
-                self.attributes[attrName]['quality'] = \
+                self.attributes[attrName].lastReadValue = float(attrValue)
+                self.attributes[attrName].quality = \
                     PyTango.AttrQuality.ATTR_VALID
             return True
         else:
             return False
 
     def __isScalarString(self, attrName, attrValue):
-        if self.attributes[attrName]['type'] in [PyTango.CmdArgType.DevString]:
-            self.attributes[attrName]['lastReadValue'] = str(attrValue)
-            self.attributes[attrName]['quality'] = \
+        if self.attributes[attrName].type in [PyTango.CmdArgType.DevString]:
+            self.attributes[attrName].lastReadValue = str(attrValue)
+            self.attributes[attrName].quality = \
                 PyTango.AttrQuality.ATTR_VALID
             return True
         else:
@@ -773,9 +776,9 @@ class Skippy (PyTango.Device_4Impl):
     def __isRamping(self, attrName):
         isRamping = False
         try:
-            if 'rampThread' in self.attributes[attrName] and \
-                    self.attributes[attrName]['rampThread'] != None and \
-                    self.attributes[attrName]['rampThread'].isAlive():
+            if self.attributes[attrName].isRampeable() and \
+                    self.attributes[attrName].rampThread is not None and \
+                    self.attributes[attrName].rampThread.isAlive():
                 isRamping = True
         except Exception as e:
             self.warn_stream("%s ramping question exception: %s"
@@ -805,14 +808,15 @@ class Skippy (PyTango.Device_4Impl):
             for i, answer in enumerate(answers):
                 attrName = indexes[i][0]
                 if 'WaveformDataFormat' in self.attributes:
-                    dataFormat = self.attributes\
-                        ['WaveformDataFormat']['lastReadValue']
+                    dataFormat =\
+                        self.attributes['WaveformDataFormat'].lastReadValue
                     if dataFormat.startswith('ASC'):
-                        self.attributes[attrName]['lastReadRaw'] = answer
-                        self.attributes[attrName]['lastReadValue'] = \
+                        if self.attributes[attrName].hasRawData():
+                            self.attributes[attrName].lastReadRaw = answer
+                        self.attributes[attrName].lastReadValue = \
                             numpy.fromstring(answer, dtype=float, sep=',')
-                        self.attributes[attrName]['timestamp'] = t
-                        self.attributes[attrName]['quality'] = \
+                        self.attributes[attrName].timestamp = t
+                        self.attributes[attrName].quality = \
                             PyTango.AttrQuality.ATTR_VALID
                     else:
                         # process the header
@@ -821,11 +825,11 @@ class Skippy (PyTango.Device_4Impl):
                                               "attribute %s" % (attrName))
                             return
                         # save values for debugging
-                        self.attributes[attrName]['lastReadRaw'] = answer
+                        self.attributes[attrName].lastReadRaw = answer
                         # review the header, in answer[0] there is the '#' tag
                         headerSize = int(answer[1])
                         bodySize = int(answer[2:2+headerSize])
-                        bodyBlock = answer[2+headerSize:\
+                        bodyBlock = answer[2+headerSize:
                                            2+headerSize+bodySize]
                         self.debug_stream("In __postHardwareSpectrumRead() "
                                           "waveform data: header size %d "
@@ -846,11 +850,11 @@ class Skippy (PyTango.Device_4Impl):
                             self.error_stream("Cannot decodify data receiver "
                                               "for the attribute %s"
                                               % (attrName))
-                            self.attributes[attrName]['lastReadValue'] = []
-                            self.attributes[attrName]['timestamp'] = t
-                            self.attributes[attrName]['quality'] = \
+                            self.attributes[attrName].lastReadValue = []
+                            self.attributes[attrName].timestamp = t
+                            self.attributes[attrName].quality = \
                                 PyTango.AttrQuality.ATTR_INVALID
-                        nIncompleteBytes = (len(bodyBlock)%divisor)
+                        nIncompleteBytes = (len(bodyBlock) % divisor)
                         nCompletBytes = len(bodyBlock) - nIncompleteBytes
                         completBytes = bodyBlock[:nCompletBytes]
                         self.debug_stream("With %d bytes, found %d "
@@ -875,29 +879,31 @@ class Skippy (PyTango.Device_4Impl):
                             floats = numpy.array(unpackInt, dtype=float)
                             if 'WaveformOrigin' in self.attributes and \
                                     'WaveformIncrement' in self.attributes:
-                                waveorigin = self.attributes\
-                                    ['WaveformOrigin']['lastReadValue']
-                                waveincrement = self.attributes\
-                                    ['WaveformIncrement']['lastReadValue']
-                                self.attributes[attrName]['lastReadValue'] = \
+                                waveorigin =\
+                                    self.attributes['WaveformOrigin'].\
+                                    lastReadValue
+                                waveincrement =\
+                                    self.attributes['WaveformIncrement'].\
+                                    lastReadValue
+                                self.attributes[attrName].lastReadValue = \
                                     (waveorigin + (waveincrement * floats))
-                                self.attributes[attrName]['timestamp'] = t
-                                self.attributes[attrName]['quality'] = \
+                                self.attributes[attrName].timestamp = t
+                                self.attributes[attrName].quality = \
                                     PyTango.AttrQuality.ATTR_VALID
                 else:
                     self.warn_stream("In __postHardwareSpectrumRead() "
                                      "Unrecognised spectrum attribute, "
                                      "storing raw data")
-                    self.attributes[attrName]['lastReadValue'] = answer
-                    self.attributes[attrName]['timestamp'] = t
-                    self.attributes[attrName]['quality'] = \
+                    self.attributes[attrName].lastReadValue = answer
+                    self.attributes[attrName].timestamp = t
+                    self.attributes[attrName].quality = \
                         PyTango.AttrQuality.ATTR_VALID
                 multiattr = self.get_device_attr()
                 attrId = multiattr.get_attr_ind_by_name(attrName)
                 if attrId in self._monitoredAttributeIds:
                     attrWithEvents.append(
-                        [attrName, self.attributes[attrName]['lastReadValue'],
-                         self.attributes[attrName]['quality']])
+                        [attrName, self.attributes[attrName].lastReadValue,
+                         self.attributes[attrName].quality])
             self.fireEventsList(attrWithEvents)
         except Exception as e:
             self.error_stream("In __postHardwareSpectrumRead() Exception: %s"
@@ -908,39 +914,41 @@ class Skippy (PyTango.Device_4Impl):
     def read_attr(self, attr):
         attrName = attr.get_name()
         if attrName in self.attributes:
-            value = self.attributes[attrName]['lastReadValue']
-            timestamp = self.attributes[attrName]['timestamp']
-            quality = self.attributes[attrName]['quality']
-            if self.attributes[attrName]['dim'] == 0:
-                if value == None:
+            value = self.attributes[attrName].lastReadValue
+            timestamp = self.attributes[attrName].timestamp
+            quality = self.attributes[attrName].quality
+            if self.attributes[attrName].dim == 0:
+                if value is None:
                     attr.set_value_date_quality(0, time.time(),
-                        PyTango.AttrQuality.ATTR_INVALID)
+                                                PyTango.AttrQuality.
+                                                ATTR_INVALID)
                 else:
                     attr.set_value_date_quality(value, timestamp, quality)
-            elif self.attributes[attrName]['dim'] == 1:
-                if value == None:
+            elif self.attributes[attrName].dim == 1:
+                if value is None:
                     attr.set_value_date_quality([0], time.time(),
-                        PyTango.AttrQuality.ATTR_INVALID, 1)
+                                                PyTango.AttrQuality.
+                                                ATTR_INVALID, 1)
                 else:
                     attr.set_value_date_quality(value, timestamp, quality,
                                                 len(value))
-            if 'lastWriteValue' in self.attributes[attrName]:
+            if self.attributes[attrName].isWritable():
                 attr.set_write_value(value)
                 # when there has been no read (yet) avoid the Non-initialised.
         elif attrName.endswith("Step"):
             parentAttrName = attrName.split('Step')[0]
-            value = self.attributes[parentAttrName]['rampStep']
-            if value == None:
+            value = self.attributes[parentAttrName].rampStep
+            if value is None:
                 attr.set_value_date_quality(0, time.time(),
-                    PyTango.AttrQuality.ATTR_INVALID)
+                                            PyTango.AttrQuality.ATTR_INVALID)
             else:
                 attr.set_value(value)
         elif attrName.endswith("StepSpeed"):
             parentAttrName = attrName.split('StepSpeed')[0]
-            value = self.attributes[parentAttrName]['rampStepSpeed']
-            if value == None:
+            value = self.attributes[parentAttrName].rampStepSpeed
+            if value is None:
                 attr.set_value_date_quality(0, time.time(),
-                    PyTango.AttrQuality.ATTR_INVALID)
+                                            PyTango.AttrQuality.ATTR_INVALID)
             else:
                 attr.set_value(value)
         else:
@@ -964,23 +972,23 @@ class Skippy (PyTango.Device_4Impl):
             self.__write_instrument_attr(attr, attrName, data)
         elif attrName.endswith("Step"):
             parentAttrName = attrName.split('Step')[0]
-            self.attributes[parentAttrName]['rampStep'] = data[0]
+            self.attributes[parentAttrName].rampStep = data[0]
         elif attrName.endswith("StepSpeed"):
             parentAttrName = attrName.split('StepSpeed')[0]
-            self.attributes[parentAttrName]['rampStepSpeed'] = data[0]
+            self.attributes[parentAttrName].rampStepSpeed = data[0]
         else:
             raise AttributeError("Invalid write of the attribute %s"
                                  % (attrName))
 
     def __write_instrument_attr(self, attr, attrName, data):
-        self.attributes[attrName]['lastWriteValue'] = data[0]
+        self.attributes[attrName].lastWriteValue = data[0]
         # Normal case, non rampeable attribute
         if 'rampThread' not in self.attributes[attrName]:
-            cmd = self.attributes[attrName]['writeStr'](data[0])
+            cmd = self.attributes[attrName].writeCmd(data[0])
             # filter the write value if the attribute was configured this way
-            if 'writeValues' in self.attributes[attrName] and \
+            if self.attributes[attrName].hasWriteValue() and \
                     not data[0].upper() in \
-                    self.attributes[attrName]['writeValues']:
+                    self.attributes[attrName].writeValues:
                 self.error_stream("In __write_instrument_attr() avoid to "
                                   "send: %s" % (cmd))
                 raise AttributeError("Invalid write value %r of the "
@@ -991,83 +999,83 @@ class Skippy (PyTango.Device_4Impl):
                 self.__hardwareWrite(cmd)
         else:
             # rampeable but invalid ramp
-            if self.attributes[attrName]['rampStep'] in [None, 0.0] or \
-                    self.attributes[attrName]['rampStepSpeed'] in [None, 0.0]:
+            if self.attributes[attrName].rampStep in [None, 0.0] or \
+                    self.attributes[attrName].rampStepSpeed in [None, 0.0]:
                 self.warn_stream("In __write_instrument_attr() No ramp "
                                  "parameters defined, direct setpoint for %s"
                                  % (attrName))
-                cmd = self.attributes[attrName]['writeStr'](data[0])
+                cmd = self.attributes[attrName].writeCmd(data[0])
                 self.info_stream("In __write_instrument_attr() sending: %s"
-                                  % (cmd))
+                                 % (cmd))
                 self.__hardwareWrite(cmd)
             else:
                 # rampeable and create a thread, if it doesn't exist
-                if self.attributes[attrName]['rampThread'] == None:
+                if self.attributes[attrName].isRampeable() is None:
                     self.info_stream("In __write_instrument_attr() launching "
                                      "ramp procedure for %s to setpoint %g"
                                      % (attrName,
-                                        self.attributes[attrName]
-                                        ['lastWriteValue']))
-                    self.attributes[attrName]['rampThread'] = \
+                                        self.attributes[attrName].
+                                        lastWriteValue))
+                    self.attributes[attrName].rampThread = \
                         threading.Thread(target=self._rampStepper,
                                          args=([attrName]))
-                    self.attributes[attrName]['rampThread'].setDaemon(True)
-                    self.attributes[attrName]['rampThread'].start()
+                    self.attributes[attrName].rampThread.setDaemon(True)
+                    self.attributes[attrName].rampThread.start()
                 else:
                     self.info_stream("In __write_instrument_attr(), attribute"
                                      "%s already with an ongoing ramp. Final "
                                      "setpoint changed to %g."
                                      % (attrName,
-                                        self.attributes[attrName]
-                                        ['lastWriteValue']))
-                # no else need because during the ramp the it goes to 
+                                        self.attributes[attrName].
+                                        lastWriteValue))
+                # no else need because during the ramp the it goes to
                 # 'lastWriteValue' and it has been already updated.
 
     def _rampStepper(self, attrName):
         # Remember the arguments when this is called as thread target, is a
-        # tuple and the content of this tuple is a list with one string 
+        # tuple and the content of this tuple is a list with one string
         # element.
         self.info_stream("In _rampStepper(%s)" % (attrName))
         # prepare
         backup_state = self.get_state()
         self.change_state(PyTango.DevState.MOVING)
         self.rebuildStatus()
-        attrReadCmd = self.attributes[attrName]['readStr']
+        attrReadCmd = self.attributes[attrName].readCmd
         # move
-        self.attributes[attrName]['lastReadValue'] = \
+        self.attributes[attrName].lastReadValue = \
             float(self.__hardwareRead(attrReadCmd))
-        current_pos = self.attributes[attrName]['lastReadValue']
+        current_pos = self.attributes[attrName].lastReadValue
         self.info_stream("In _rampSteeper(): started the movement from %f"
                          % (current_pos))
-        while not current_pos == self.attributes[attrName]['lastWriteValue']:
-            if current_pos > self.attributes[attrName]['lastWriteValue']:
-                if current_pos - self.attributes[attrName]['lastWriteValue'] <\
-                        self.attributes[attrName]['rampStep']:
-                    current_pos = self.attributes[attrName]['lastWriteValue']
+        while not current_pos == self.attributes[attrName].lastWriteValue:
+            if current_pos > self.attributes[attrName].lastWriteValue:
+                if current_pos - self.attributes[attrName].lastWriteValue <\
+                        self.attributes[attrName].rampStep:
+                    current_pos = self.attributes[attrName].lastWriteValue
                 else:
-                    current_pos -= self.attributes[attrName]['rampStep']
-            elif current_pos < self.attributes[attrName]['lastWriteValue']:
-                if self.attributes[attrName]['lastWriteValue'] -\
-                        current_pos < self.attributes[attrName]['rampStep']:
-                    current_pos = self.attributes[attrName]['lastWriteValue']
+                    current_pos -= self.attributes[attrName].rampStep
+            elif current_pos < self.attributes[attrName].lastWriteValue:
+                if self.attributes[attrName].lastWriteValue -\
+                        current_pos < self.attributes[attrName].rampStep:
+                    current_pos = self.attributes[attrName].lastWriteValue
                 else:
-                    current_pos += self.attributes[attrName]['rampStep']
-            attrWriteCmd = self.attributes[attrName]['writeStr'](current_pos)
+                    current_pos += self.attributes[attrName].rampStep
+            attrWriteCmd = self.attributes[attrName].writeCmd(current_pos)
             self.info_stream("In write_attr() sending: %s" % (attrWriteCmd))
             self.__hardwareWrite(attrWriteCmd)
-            time.sleep(self.attributes[attrName]['rampStepSpeed'])
+            time.sleep(self.attributes[attrName].rampStepSpeed)
         self.info_stream("In _rampSteeper(): finished the movement at %f"
                          % (current_pos))
         # close
         self.change_state(backup_state)
         self.rebuildStatus()
-        self.attributes[attrName]['rampThread'] = None
+        self.attributes[attrName].rampThread = None
 
-    #----- done dynamic attributes builder section
+    # done dynamic attributes builder section ---
     ######
 
     ######
-    #----- event manager section
+    # event manager section ---
     def fireEventsList(self, eventsAttrList):
         timestamp = time.time()
         for attrEvent in eventsAttrList:
@@ -1135,7 +1143,7 @@ class Skippy (PyTango.Device_4Impl):
         except Exception as e:
             self.error_stream("In cleanAllImportantLogs() Exception: %s" % (e))
 
-    def addStatusMsg(self, newStatusLine, important = False):
+    def addStatusMsg(self, newStatusLine, important=False):
         self.debug_stream("In addStatusMsg()")
         msg = "The device is in %s state.\n" % (self.get_state())
         for ilog in self._important_logs:
@@ -1143,7 +1151,7 @@ class Skippy (PyTango.Device_4Impl):
         status = "%s%s"%(msg, newStatusLine)
         self.change_status(status)
         try:
-            if important and not newStatusLine in self._important_logs:
+            if important and newStatusLine not in self._important_logs:
                 self._important_logs.append(newStatusLine)
         except Exception as e:
             self.warn_stream("In addStatusMsg() cannot append the new "
@@ -1155,21 +1163,21 @@ class Skippy (PyTango.Device_4Impl):
             if len(self.MonitoredAttributes) > 0:
                 self.addStatusMsg("Attributes monitored: %r"
                                   % (self.MonitoredAttributes), important=True)
-            if hasattr(self,'_alarmDueToMonitoring') and \
-                    len(self._alarmDueToMonitoring)>0:
+            if hasattr(self, '_alarmDueToMonitoring') and \
+                    len(self._alarmDueToMonitoring) > 0:
                 self.addStatusMsg("Attributes %r required too much time "
                                   "to be read"
                                   % (self._alarmDueToMonitoring),
                                   important=True)
         except Exception as e:
             self.error_stream("In rebuildStatus() Exception: %s" % (e))
-    #----- done event manager section
+    # done event manager section ---
     ######
-    
+
     ######
-    #----- attribute monitor section
+    # attribute monitor section ---
     def __builtMonitorThread(self, name, period):
-        scheleton = {'Name': name,  # Only used to output a message 
+        scheleton = {'Name': name,  # Only used to output a message
                                     # when threads start
                      'Thread': None,
                      'Event': threading.Event(),
@@ -1177,7 +1185,7 @@ class Skippy (PyTango.Device_4Impl):
                      'AttrList': []}
         scheleton['Event'].clear()
         return scheleton
-    
+
     def __prepareMonitor(self):
         ''' - The lines in the property 'MonitoredAttributes' defines an
             attribute name to be monitored (with an optional tag of an
@@ -1211,7 +1219,7 @@ class Skippy (PyTango.Device_4Impl):
                     attrPeriod = float(attrPeriod)
                     attrId = multiattr.get_attr_ind_by_name(attrName)
                 # Once initialised they can be build by reference
-                if not attrName in self.attributes.keys():
+                if attrName not in self.attributes.keys():
                     self.error_stream("The name %s is not an attribute in "
                                       "this device" % (attrName))
                 elif attrId in self._monitoredAttributeIds:
@@ -1225,8 +1233,8 @@ class Skippy (PyTango.Device_4Impl):
                     self._monitoredAttributeIds.append(attrId)
                     if monitoringType not in self._monitorThreads:
                         self._monitorThreads[monitoringType] = \
-                           self.__builtMonitorThread(monitoringType,
-                                                     attrPeriod)
+                            self.__builtMonitorThread(monitoringType,
+                                                      attrPeriod)
                     self._monitorThreads[monitoringType]['AttrList'].\
                         append(attrName)
         except Exception as e:
@@ -1253,7 +1261,7 @@ class Skippy (PyTango.Device_4Impl):
         self.info_stream("In __endMonitoring() waiting for %d"
                          % (len(self._monitorThreads.keys())))
         self._generalMonitorEvent.set()
-        while any([self._monitorThreads[monitorTag]['Thread'].isAlive() 
+        while any([self._monitorThreads[monitorTag]['Thread'].isAlive()
                    for monitorTag in self._monitorThreads.keys()]):
             self.info_stream("In __endMonitoring() waiting for %d"
                              % (len(self._monitorThreads.keys())))
@@ -1349,7 +1357,7 @@ class Skippy (PyTango.Device_4Impl):
 
     def __appendToAlarmCausingList(self, attrList):
         for attrName in attrList:
-            if not attrName in self._alarmDueToMonitoring:
+            if attrName not in self._alarmDueToMonitoring:
                 self._alarmDueToMonitoring.append(attrName)
         self.rebuildStatus()
 
@@ -1403,14 +1411,14 @@ class Skippy (PyTango.Device_4Impl):
         propertiesDict[propertyName] = self.__list2strProperty(propertyList)
         db.put_device_property(self.get_name(), propertiesDict)
         return propertyList
-    
-    def __list2strProperty(self,lst):
+
+    def __list2strProperty(self, lst):
         strLst = ''.join("%s\n" % each for each in lst)
         self.debug_stream("In __list2strProperty(%s): %r" % (lst, strLst))
         return strLst[:-1]
-    
-    def __str2listProperty(self,strLst):
-        self.debug_stream("%r"%strLst)
+
+    def __str2listProperty(self, strLst):
+        self.debug_stream("%r" % strLst)
         return strLst.split('\n')
     #----- done attribute monitor section
     ######
@@ -1559,7 +1567,7 @@ class Skippy (PyTango.Device_4Impl):
         data=attr.get_write_value()
         #----- PROTECTED REGION ID(Skippy.TimeStampsThreshold_write) ENABLED START -----#
         self.attr_TimeStampsThreshold_read = float(data)
-        if hasattr(self,'_monitorThreads') and \
+        if hasattr(self, '_monitorThreads') and \
                 'Generic' in self._monitorThreads:
             self._monitorThreads['Generic']['Period'] = \
                 self.attr_TimeStampsThreshold_read
@@ -1891,7 +1899,7 @@ class Skippy (PyTango.Device_4Impl):
                     self.MonitoredAttributes = \
                         self.__popPropertyElement('MonitoredAttributes', argin)
                     argout = True
-                except Exception,e:
+                except Exception as e:
                     self.error_stream("In RemoveMonitoring(%s) cannot remove "
                                       "from the property: %s"
                                       % (argin, e))
@@ -2075,7 +2083,7 @@ class Skippy (PyTango.Device_4Impl):
                 self.__hardwareWrite(argin)
                 argout = ""
             self.info_stream("In CMD(%r): %r" % (argin, argout))
-        except Exception,e:
+        except Exception as e:
             self.error_stream("In CMD(%r) Exception: %s" % (argin, e))
             argout = ""
             self.change_state(PyTango.DevState.FAULT)
