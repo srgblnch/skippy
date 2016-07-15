@@ -933,7 +933,11 @@ class Skippy (PyTango.Device_4Impl):
                     attr.set_value_date_quality(value, timestamp, quality,
                                                 len(value))
             if self.attributes[attrName].isWritable():
-                attr.set_write_value(value)
+                wvalue = self.attributes[attrName].lastWriteValue
+                if wvalue is not None:
+                    attr.set_write_value(wvalue)
+                else:
+                    attr.set_write_value(value)
                 # when there has been no read (yet) avoid the Non-initialised.
         elif attrName.endswith("Step"):
             parentAttrName = attrName.split('Step')[0]
