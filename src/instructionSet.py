@@ -264,8 +264,8 @@ class WAttributeObj(AttributeObj):
                   self.timestamp, self.quality, self.dim)
 
     def __repr__(self):
-        return "%s, readCmd: %s, writeCmd: %s}"\
-               % (self.__str__()[:-1], self.readCmd, self.writeCmd)
+        return "%s, readCmd: '%s', writeCmd: '%s'}"\
+               % (self.__str__()[:-1], self.readCmd, self.writeCmd("value"))
 
     def isWritable(self):
         return True
