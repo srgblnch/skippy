@@ -47,39 +47,110 @@ import PyTango
 #            )
 #
 
-Attribute('Center',
-          {'type':PyTango.CmdArgType.DevDouble,
-           'format':'%9.6f',
-           'dim':[0],
-           'readCmd':":FREQ:CENTER?"
-         })
+Attribute('Attenuation',
+          {'type': PyTango.CmdArgType.DevUShort,
+           'dim': [0],
+           'readCmd': ":input:attenuation?",
+           'writeCmd': lambda value: ":input:attenuation %d" % value,
+           'unit': 'dB', 'min': 0, 'max': 75
+           })
 
-Attribute('Span',
-          {'type':PyTango.CmdArgType.DevDouble,
-           'format':'%9.6f',
-           'dim':[0],
-           'readCmd':":FREQ:SPAN?"
-         })
+Attribute('FrequencyCenter',
+          {'label': 'Frequency Center',
+           'type': PyTango.CmdArgType.DevDouble,
+           'format': '%9.6f',
+           'dim': [0],
+           'readCmd': ":FREQ:CENTER?",
+           'writeCmd': lambda value: ":FREQ:CENTER %s" % value,
+           'unit': 'Hz'
+           })
 
-Attribute('Bandwidth',
-          {'type':PyTango.CmdArgType.DevDouble,
-           'format':'%9.6f',
-           'dim':[0],
-           'readCmd':":BAND:RES?"
-         })
+Attribute('FrequencySpan',
+          {'label': 'Frequency Span',
+           'type': PyTango.CmdArgType.DevDouble,
+           'format': '%9.6f',
+           'dim': [0],
+           'readCmd': ":FREQ:SPAN?",
+           'writeCmd': lambda value: ":FREQ:SPAN %s" % value,
+           'unit': 'Hz'
+           })
+
+Attribute('FrequencyStart',
+          {'label': 'Frequency Start',
+           'type': PyTango.CmdArgType.DevDouble,
+           'format': '%9.6f',
+           'dim': [0],
+           'readCmd': ":FREQ:START?",
+           'writeCmd': lambda value: ":FREQ:START %s" % value,
+           'unit': 'Hz'
+           })
+
+Attribute('FrequencyStop',
+          {'label': 'Frequency Stop',
+           'type': PyTango.CmdArgType.DevDouble,
+           'format': '%9.6f',
+           'dim': [0],
+           'readCmd': ":FREQ:STOP?",
+           'writeCmd': lambda value: ":FREQ:STOP %s" % value,
+           'unit': 'Hz'
+           })
+
+Attribute('Impedance',
+          {'type': PyTango.CmdArgType.DevUShort,
+           'dim': [0],
+           'readCmd': ":input:impedance?",
+           'writeCmd': lambda value: ":input:impedance %d" % value
+           })  # 50 | 75
+
+Attribute('ResolutionBandWidth',  # RBW
+          {'label': 'Resolution Bandwidth (RBW)',
+           'type': PyTango.CmdArgType.DevDouble,
+           'format': '%9.6f',
+           'dim': [0],
+           'readCmd': ":BAND:RES?",
+           'writeCmd': lambda value: ":BAND:RES %d" % value,
+           'unit': 'Hz', 'min': 10, 'max': 10000000,  # between 10Hz to 10MHz
+           })
+
+Attribute('SweepTime',  # SWT
+          {'label': 'Sweep time (SWT)',
+           'description': 'N_samples/RBW',
+           'type': PyTango.CmdArgType.DevDouble,
+           'format': '%9.6f',
+           'dim': [0],
+           'readCmd': ":SWE:TIME?",
+           'unit': 's'
+           })
+
+Attribute('VideoBandWidth',  # VBW
+          {'label': 'Video Bandwidth (VBW)',
+           'type': PyTango.CmdArgType.DevDouble,
+           'format': '%9.6f',
+           'dim': [0],
+           'readCmd': ":BAND:VID?",
+           'writeCmd': lambda value: ":BAND:VID %d" % value,
+           'unit': 'Hz', 'min': 1, 'max': 10000000,  # between 1Hz to 10MHz
+           })
 
 Attribute('WaveformState',
-          {'type':PyTango.CmdArgType.DevDouble,
-           'format':'%9.6f',
-           'dim':[0],
-           'readCmd':":TRAC:IQ:?",
-           'writeCmd':lambda value:":TRAC:IQ:STAT %s"%(str(value))
-         })
+          {'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': ":TRAC:IQ:STAT?",
+           'writeCmd': lambda value: ":TRAC:IQ:STAT %s"
+                                     % ("1" if bool(value) else "0")
+           })
 
 Attribute('Waveform',
-          {'type':PyTango.CmdArgType.DevDouble,
-           'format':'%9.6f',
-           'dim':[1,40000000],
-           'readCmd':":TRAC:IQ:DATA?"
-         })
+          {'type': PyTango.CmdArgType.DevDouble,
+           'format': '%9.6f',
+           'dim': [1, 40000000],
+           'readCmd': ":TRAC:IQ:DATA?"
+           })
 
+Attribute('WaveformDataFormat',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': ":format?",
+           'writeCmd': lambda value: ":format %s" % (str(value)),
+           'writeValues': ['ASC,0', 'REAL,32'],
+           })

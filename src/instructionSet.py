@@ -64,7 +64,7 @@ def identifier(idn, deviceObj):
             file = "instructions/radioFrequencyGenerator/rohdeSchwarzRFG.py"
         elif model.lower() == 'fsp-3':
             attrBuilder = AttributeBuilder(deviceObj)
-            file = "instructions/spectrumAnalyzer/rohdeSchwarzFSP.py"
+            file = "instructions/spectrumAnalyser/rohdeSchwarzFSP.py"
         else:
             raise EnvironmentError("Rohde&Schwarz %s model not supported"
                                    % (model))
@@ -99,6 +99,11 @@ def AttrExc(function):
 def latin1(x):
     return x.decode('utf-8').replace(u'\u2070', u'\u00b0').\
         replace(u'\u03bc', u'\u00b5').encode('latin1')
+
+
+class AttributeObj(object):
+    def __init__(self, *xargs, **kwargs):
+        super(AttributeObj, self).__init__(*args, **kwargs)
 
 
 class AttributeBuilder:
@@ -145,7 +150,17 @@ class AttributeBuilder:
                         per all the channels
            - functions: boolean to indicate if this must be replicated
                         per all the functions
-           TODO: attribute configuration (like unit, label, etc)
+           - format:    format to display information
+           - label:     human string about the attribute
+           - description: longer text for humans
+           - unit:      extra attribute information
+           - min/max:   ranges
+           - memorized: to be stored the writes in a database
+           TODO: attribute input validation
+           TODO: dependencies between attributes (state-like, mode,...)
+           TODO: expert attributes flag
+           TODO: formulas to transform input before send and write after
+                 receive.
         '''
         # preconditions
         if not type(attributeDefinition) == dict:
