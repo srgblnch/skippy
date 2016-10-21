@@ -434,8 +434,7 @@ class AttributeBuilder:
         else:
             try:
                 attr = self.__getAttrObj(attributeName, attributeDefinition)
-                self.__device.debug_stream("Added attribute: %s"
-                                           % (attr.get_name()))
+                self.__device.debug_stream("Added: %r" % (attr))
             except Exception as e:
                 self.__device.error_stream("NOT added attribute: %s "
                                            "due to exception: %s"
@@ -467,7 +466,7 @@ class AttributeBuilder:
                 readmethod = AttrExc(getattr(self.__device, 'read_attr'))
                 writemethod = None
         else:
-            raise AttributeError("Not supported dimensions")
+            raise AttributeError("Not supported multiple dimensions")
         # attribute properties
         aprop = PyTango.UserDefaultAttrProp()
         if 'unit' in definition:
@@ -507,24 +506,24 @@ class AttributeBuilder:
             if 'writeCmd' in definition:
                 writeCmd = definition['writeCmd']
         # build internal structure ---
-        if 'writeCmd' not in definition:
+        if 'writeCmd' not in definition or definition['writeCmd'] is None:
             self.__device.attributes[attrName] =\
                 AttributeObj(name=attrName, type=definition['type'],
                              dim=definition['dim'][0], readCmd=readCmd)
         else:
-            if 'rampeable' not in definition:
+            if 'rampeable' in definition:
                 self.__device.attributes[attrName] =\
                     WAttributeObj(name=attrName, type=definition['type'],
                                   dim=definition['dim'][0],
-                                  readCmd=readCmd, writeCmd=writeCmd)
+                                  readCmd=readCmd, writeCmd=writeCmd,
+                                  rampeable=True)
                 self.configureRamping(attrName, definition,
                                       readmethod, writemethod)
             else:
                 self.__device.attributes[attrName] =\
                     WAttributeObj(name=attrName, type=definition['type'],
                                   dim=definition['dim'][0],
-                                  readCmd=readCmd, writeCmd=writeCmd,
-                                  rampeable=True)
+                                  readCmd=readCmd, writeCmd=writeCmd)
             if 'writeValues' in definition:
                 self.__device.attributes[attrName].\
                     setWriteValues(definition['writeValues'])
