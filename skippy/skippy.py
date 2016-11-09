@@ -987,11 +987,14 @@ class Skippy (PyTango.Device_4Impl):
     def __write_instrument_attr(self, attr, attrName, data):
         self.attributes[attrName].lastWriteValue = data[0]
         # Normal case, non rampeable attribute
-        if 'rampThread' not in self.attributes[attrName]:
+        if not self.attributes[attrName].isWritable():
+            raise AttributeError("%s is not writable attribute"
+                                 % (attr.get_name()))
+        if not self.attributes[attrName].isRampeable():
             cmd = self.attributes[attrName].writeCmd(data[0])
             # filter the write value if the attribute was configured this way
-            if self.attributes[attrName].hasWriteValue() and \
-                    not data[0].upper() in \
+            if self.attributes[attrName].hasWriteValues() and \
+                    not str(data[0]).upper() in \
                     self.attributes[attrName].writeValues:
                 self.error_stream("In __write_instrument_attr() avoid to "
                                   "send: %s" % (cmd))

@@ -171,13 +171,14 @@ class AttributeObj(object):
             self._raw = None
 
     def __str__(self):
-        return "%s {lastReadValue: %s, timestamp: %s, quality: %s, dim: %s}"\
-               % (self.name, self.lastReadValue, self.timestamp, self.quality,
-                  self.dim)
+        basicAttrs = "lastReadValue: %s, timestamp: %s, quality: %s, dim: %s"\
+            % (self.lastReadValue, self.timestamp, self.quality, self.dim)
+        return "%s {%s}" % (self.name, basicAttrs)
 
     def __repr__(self):
-        return "%s, readCmd: %s}"\
-               % (self.__str__()[:-1], self.readCmd)
+        expertAttrs = "readCmd: %r" % (self.readCmd)
+        return "%s, %s}"\
+               % (self.__str__()[:-1], expertAttrs)
 
     @property
     def name(self):
@@ -258,14 +259,17 @@ class WAttributeObj(AttributeObj):
         self._writeValues = writeValues
 
     def __str__(self):
-        return "%s {lastReadValue: %s, lastWriteValue: %s, timestamp: %s, "\
-               "quality: %s, dim: %s}"\
-               % (self.name, self.lastReadValue, self.lastWriteValue,
-                  self.timestamp, self.quality, self.dim)
+        basicAttrs = "lastReadValue: %s, lastWriteValue: %s, timestamp: %s, "\
+            "quality: %s, dim: %s"\
+            % (self.lastReadValue, self.lastWriteValue, self.timestamp,
+               self.quality, self.dim)
+        return "%s {%s}" % (self.name, basicAttrs)
 
     def __repr__(self):
-        return "%s, readCmd: '%s', writeCmd: '%s'}"\
-               % (self.__str__()[:-1], self.readCmd, self.writeCmd("value"))
+        expertAttrs = "readCmd: %r, writeCmd: %r" % (self.readCmd,
+                                                     self.writeCmd("value"))
+        return "%s, %s}"\
+               % (self.__str__()[:-1], expertAttrs)
 
     def isWritable(self):
         return True
@@ -323,6 +327,10 @@ class WAttributeObj(AttributeObj):
             self._ramp.rampThread = value
 
         return property(getter, setter)
+
+    @property
+    def writeValues(self):
+        return self._writeValues
 
     def setWriteValues(self, writeValues):
         self._writeValues = writeValues

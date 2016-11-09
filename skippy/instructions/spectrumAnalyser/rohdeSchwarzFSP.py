@@ -33,16 +33,17 @@ import PyTango
 #              'dim'  -> can be: 0
 #                               [1,X]
 #                               [2,X,Y]
-#              'channels' -> boolean to build attrs with a 'ch' suffix
-#              'funtions' -> boolean to build attrs with a 'fn' suffix
-#              'unit'     -> the unit of the tango attribute
-#              'min','max'-> in writable attributes configure limits
-#              'format'   -> in floats and integers the representation
-#              'label'    -> attribute property
+#              'channels'    -> boolean to build attrs with a 'ch' suffix
+#              'functions'   -> boolean to build attrs with a 'fn' suffix
+#              'unit'        -> the unit of the tango attribute
+#              'min','max'   -> in writable attributes configure limits
+#              'format'      -> in floats and integers the representation
+#              'label'       -> attribute property
 #              'description' -> attribute property
-#              'memorized' -> attribute property
+#              'memorised'   -> attribute property
 #              'writeValues' -> list of accepted values to write
-#              'manager'  -> to flag if a channel is close to avoid reads there
+#              'manager'     -> to flag if a channel is close to avoid reads
+#                               there
 #              })
 #
 
@@ -52,6 +53,14 @@ Attribute('Attenuation',
            'readCmd': ":input:attenuation?",
            'writeCmd': lambda value: ":input:attenuation %s" % value,
            'unit': 'dB', 'min': 0, 'max': 75
+           })
+
+Attribute('ContinuousAcquisition',
+          {'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': ":INIT:CONT?",
+           'writeCmd': lambda value: ":INIT:CONT %s"
+                                     % ("1" if bool(value) else "0")
            })
 
 Attribute('FrequencyCenter',
@@ -111,6 +120,12 @@ Attribute('ResolutionBandWidth',  # RBW
            'unit': 'Hz', 'min': 10, 'max': 10000000,  # between 10Hz to 10MHz
            })
 
+Attribute('SystemErrors',
+          {'label': 'System Errors',
+           'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "SYSTEM:ERROR?"})
+
 Attribute('SweepTime',  # SWT
           {'label': 'Sweep time (SWT)',
            'description': 'N_samples/RBW',
@@ -118,7 +133,19 @@ Attribute('SweepTime',  # SWT
            'format': '%9.6f',
            'dim': [0],
            'readCmd': ":SWE:TIME?",
+           'writeCmd': lambda value: ":SWE:TIME %s" % value,
            'unit': 's'
+           })
+
+Attribute('SweepPoints',
+          {'label': 'Sweep Points',
+           'description': 'Number of measurement points for one sweep run.\n'
+           'valid values: 125, 251, 501, 1001, 2001, 4001, 8001',
+           'type': PyTango.CmdArgType.DevUShort,
+           'dim': [0],
+           'readCmd': "SWE:POINts?",
+           'writeCmd': lambda value: ":SWE:POINts %s" % value,
+           'writeValues': ['125', '251', '501', '1001', '2001', '4001', '8001']
            })
 
 Attribute('VideoBandWidth',  # VBW
@@ -142,8 +169,8 @@ Attribute('WaveformState',
 Attribute('Waveform',
           {'type': PyTango.CmdArgType.DevDouble,
            'format': '%9.6f',
-           'dim': [1, 40000000],
-           'readCmd': ":TRAC:IQ:DATA?"
+           'dim': [1, 10000],
+           'readCmd': ":TRAC? TRACE1"
            })
 
 Attribute('WaveformDataFormat',
