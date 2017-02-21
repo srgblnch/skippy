@@ -110,6 +110,15 @@ Attribute('Impedance',
            'writeCmd': lambda value: ":input:impedance %s" % value
            })  # 50 | 75
 
+Attribute('MarkerState',
+          {'type': PyTango.CmdArgType.DevBoolean,
+           'format': '%9.6f',
+           'dim': [0],
+           'readCmd': lambda ch, num: ":CALC1:MARK%s?"
+                                      % (num),
+           'functions': True,
+           })
+
 Attribute('ResolutionBandWidth',  # RBW
           {'label': 'Resolution Bandwidth (RBW)',
            'type': PyTango.CmdArgType.DevDouble,
