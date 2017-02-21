@@ -48,6 +48,11 @@ def identifier(idn, deviceObj):
             # the DSO80204B Agilent scope
             attrBuilder = AttributeBuilder(deviceObj)
             file = "instructions/scope/agilentDSO.py"
+        elif model.upper().startswith('N5171'):
+            # It is a Keysight signal generator
+            attrBuilder = AttributeBuilder(deviceObj)
+            file = "instructions/radioFrequencyGenerator/"\
+                "keysightSignalGenerator.py"
         else:
             raise EnvironmentError("Agilent %s model not supported" % (model))
     elif company.lower() == 'tektronix':
@@ -80,7 +85,8 @@ def identifier(idn, deviceObj):
             attrBuilder = AttributeBuilder(deviceObj)
             file = "instructions/albaEm/albaEm.py"
         else:
-            raise EnvironmentError("Alba Synchrotron %s model not supported" % (model))
+            raise EnvironmentError("Alba Synchrotron %s model not supported"
+                                   % (model))
     else:
         raise EnvironmentError("instrument not supported")
     attrBuilder.parseFile(file)
