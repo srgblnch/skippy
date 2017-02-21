@@ -74,6 +74,13 @@ def identifier(idn, deviceObj):
             file = "instructions/temperatureController/arroyo5300.py"
         else:
             raise EnvironmentError("Arroyo %s model not supported" % (model))
+
+    elif company.lower() == 'albasynchrotron':
+        if model.lower() == 'electrometer2':
+            attrBuilder = AttributeBuilder(deviceObj)
+            file = "instructions/albaEm/albaEm.py"
+        else:
+            raise EnvironmentError("Alba Synchrotron %s model not supported" % (model))
     else:
         raise EnvironmentError("instrument not supported")
     attrBuilder.parseFile(file)
