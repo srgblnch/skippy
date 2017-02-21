@@ -78,7 +78,7 @@ def identifier(idn, deviceObj):
     elif company.lower() == 'albasynchrotron':
         if model.lower() == 'electrometer2':
             attrBuilder = AttributeBuilder(deviceObj)
-            file = "instructions/albaEm#/albaEm#.py"
+            file = "instructions/albaEm/albaEm.py"
         else:
             raise EnvironmentError("Alba Synchrotron %s model not supported" % (model))
     else:
