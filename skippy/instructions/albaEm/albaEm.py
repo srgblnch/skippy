@@ -30,27 +30,25 @@ Attribute('Mac',
           {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
            'readCmd': "*MAC?",
-           # 'writeCmd': lambda num: (lambda value: ":OUTPut%d:STATE %s"
-           #                          %(num, value)),
            })
 
-# IO Port functions ---
-Attribute('IOCONFIG',
-          {'type': PyTango.CmdArgType.DevString,
-           'dim': [0],
-           'readCmd': "IOPO%d:CONFI?",
-           'writeCmd': lambda num: (lambda value: "IOPO%d:CONFI %s"
-                                    % (num, value)),
-           'channels': True
-           })
-Attribute('IO',
-          {'type': PyTango.CmdArgType.DevString,
-           'dim': [0],
-           'readCmd': "IOPO%d:VALU?",
-           'writeCmd': lambda num: (lambda value: "IOPO%d:VALU %s"
-                                    % (num, value)),
-           'channels': True
-           })
+# # IO Port functions ---
+# Attribute('IOCONFIG',
+#           {'type': PyTango.CmdArgType.DevString,
+#            'dim': [0],
+#            'readCmd': lambda mult, num: "%s%.2d:CONFI?" % (mult, num),
+#            'writeCmd': lambda mult, num: (lambda value: "%s%d:CONFI %s"
+#                                           % (mult, num, value)),
+#            'multiple': {'scpiPrefix': 'IOPOrt', 'attrSuffix': 'Cf'}
+#            })
+# Attribute('IO',
+#           {'type': PyTango.CmdArgType.DevString,
+#            'dim': [0],
+#            'readCmd': lambda mult, num: "%s%.2d:VALU?" % (mult, num),
+#            'writeCmd': lambda mult, num: (lambda value: "%s%.2d:VALU %s"
+#                                           % (mult, num, value)),
+#            'multiple': {'scpiPrefix': 'IOPOrt', 'attrSuffix': ''}
+#            })
 
 # Trigger Commands ---
 Attribute('TriggerDelay',
@@ -138,84 +136,75 @@ Attribute('AcqTime',
 Attribute('InstantCurrent',
           {'type': PyTango.CmdArgType.DevDouble,
            'dim': [0],
-           'readCmd': "CHAN%d:INSCurrent?",
-           # 'writeCmd': lambda num: (lambda value: "DEBUg:ENABle %s"
-           #                          % (value)),
-           # FIXME: alert, this command doesn't use channel number
+           'readCmd': lambda ch, num: "%s%.2d:INSCurrent?" % (ch, num),
            'channels': True
            })
 Attribute('Current',
           {'type': PyTango.CmdArgType.DevString,
            # FIXME: DevString? should it be an array of doubles?
            'dim': [0],
-           'readCmd': "CHAN%d:CURRent?",
-           # 'writeCmd': lambda num: (lambda value: "DEBUg:ENABle %s"
-           #                          % (value)),
-           # FIXME: alert, this command doesn't use channel number
+           'readCmd': lambda ch, num: "%s%.2d:CURRent?" % (ch, num),
            'channels': True
            })
 Attribute('AverageCurrent',
           {'type': PyTango.CmdArgType.DevDouble,
            'dim': [0],
-           'readCmd': "CHAN%d:AVGCurrent?",
-           # 'writeCmd': lambda num: (lambda value: "DEBUg:ENABle %s"
-           #                          % (value)),
-           # FIXME: alert, this command doesn't use channel number
+           'readCmd': lambda ch, num: "%s%.2d:AVGCurrent?" % (ch, num),
            'channels': True
            })
 Attribute('CARange',
-          {'type': PyTango.CmdArgType.DevDouble,
+          {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
-           'readCmd': "CHAN%d:CABO:RANGE?",
-           'writeCmd': lambda num: (lambda value: "CHAN%d:CABO:RANGE %s"
-                                    % (num, value)),
+           'readCmd': lambda ch, num: "%s%.2d:CABO:RANGE?" % (ch, num),
+           'writeCmd': lambda ch, num: (lambda value: "%s%.2d:CABO:RANGE %s"
+                                        % (ch, num, value)),
            'channels': True
            })
 Attribute('CAFilter',
-          {'type': PyTango.CmdArgType.DevDouble,
+          {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
-           'readCmd': "CHAN%d:CABO:FILT?",
-           'writeCmd': lambda num: (lambda value: "CHAN%d:CABO:FILT %s"
-                                    % (num, value)),
+           'readCmd': lambda ch, num: "%s%.2d:CABO:FILT?" % (ch, num),
+           'writeCmd': lambda ch, num: (lambda value: "%s%.2d:CABO:FILT %s"
+                                        % (ch, num, value)),
            'channels': True
            })
 Attribute('CAPostFilter',
-          {'type': PyTango.CmdArgType.DevDouble,
+          {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
-           'readCmd': "CHAN%d:CABO:POST?",
-           'writeCmd': lambda num: (lambda value: "CHAN%d:CABO:POST %s"
-                                    % (num, value)),
+           'readCmd': lambda ch, num: "%s%.2d:CABO:POST?" % (ch, num),
+           'writeCmd': lambda ch, num: (lambda value: "%s%.2d:CABO:POST %s"
+                                        % (ch, num, value)),
            'channels': True
            })
 Attribute('CAPreFilter',
-          {'type': PyTango.CmdArgType.DevDouble,
+          {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
-           'readCmd': "CHAN%d:CABO:PREF?",
-           'writeCmd': lambda num: (lambda value: "CHAN%d:CABO:PREF %s"
-                                    % (num, value)),
+           'readCmd': lambda ch, num: "%s%.2d:CABO:PREF?" % (ch, num),
+           'writeCmd': lambda ch, num: (lambda value: "%s%.2d:CABO:PREF %s"
+                                        % (ch, num, value)),
            'channels': True
            })
 Attribute('CAInversion',
           {'type': PyTango.CmdArgType.DevDouble,
            'dim': [0],
-           'readCmd': "CHAN%d:CABO:INVE?",
-           'writeCmd': lambda num: (lambda value: "CHAN%d:CABO:INVE %s"
-                                    % (num, value)),
+           'readCmd': lambda ch, num: "%s%.2d:CABO:INVE?" % (ch, num),
+           'writeCmd': lambda ch, num: (lambda value: "%s%.2d:CABO:INVE %s"
+                                        % (ch, num, value)),
            'channels': True
            })
 Attribute('CATIGain',
-          {'type': PyTango.CmdArgType.DevDouble,
+          {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
-           'readCmd': "CHAN%d:CABO:TIGA?",
-           'writeCmd': lambda num: (lambda value: "CHAN%d:CABO:TIGA %s"
-                                    % (num, value)),
+           'readCmd': lambda ch, num: "%s%.2d:CABO:TIGA?" % (ch, num),
+           'writeCmd': lambda ch, num: (lambda value: "%s%.2d:CABO:TIGA %s"
+                                        % (ch, num, value)),
            'channels': True
            })
 Attribute('CAVGain',
           {'type': PyTango.CmdArgType.DevDouble,
            'dim': [0],
-           'readCmd': "CHAN%d:CABO:VGAI?",
-           'writeCmd': lambda num: (lambda value: "CHAN%d:CABO:VGAI %s"
-                                    % (num, value)),
+           'readCmd': lambda ch, num: "%s%.2d:CABO:VGAI?" % (ch, num),
+           'writeCmd': lambda ch, num: (lambda value: "%s%.2d:CABO:VGAI %s"
+                                        % (ch, num, value)),
            'channels': True
            })

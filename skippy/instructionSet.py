@@ -405,46 +405,65 @@ class AttributeBuilder:
                                  % (attributeName))
         for k in ['type', 'dim', 'readCmd']:
             if k not in attributeDefinition:
-                raise KeyError("Invalid definition, key %s is mandatory" % (k))
+                msg = "In %s Invalid definition, key %s is mandatory"\
+                    % (attributeName, k)
+                self.__device.error_stream(msg)
+                raise KeyError(msg)
 
         # If the attribute definition includes channels and functions,
         # do it in loop
         if 'channels' in attributeDefinition or \
-                'functions' in attributeDefinition:
+                'functions' in attributeDefinition or \
+                'multiple' in attributeDefinition:
+            # TODO: Deprecate 'channels' and 'functions'
+            #       to use a generalised way of 'multiple'.
+            #       Instead of a True in the item, a dictionary to have:
+            #       - the prefix in the scpi command (if needed)
+            #       - the suffix for the attribute generation with the number
             if 'channels' in attributeDefinition and \
-                    attributeDefinition['channels'] and \
-                    self.__device.NumChannels > 0:
-                for ch in range(1, self.__device.NumChannels+1):
-                    try:
-                        attr = self.__getAttrObj("%sCh%d"
-                                                 % (attributeName, ch),
-                                                 attributeDefinition,
-                                                 channel=ch)
-                        self.__device.debug_stream("Added attribute: %s"
-                                                   % (attr.get_name()))
-                    except Exception as e:
-                        self.__device.error_stream("NOT added attribute: "
-                                                   "%sCh%d due to exception: "
-                                                   "%s" % (attributeName,
-                                                           ch, e))
-                        traceback.print_exc()
+                    attributeDefinition['channels']:
+                if self.__device.NumChannels > 0:
+                    for ch in range(1, self.__device.NumChannels+1):
+                        try:
+                            attr = self.__getAttrObj("%sCh%d"
+                                                     % (attributeName, ch),
+                                                     attributeDefinition,
+                                                     channel=ch)
+                            self.__device.debug_stream("Added attribute: %s"
+                                                       % (attr.get_name()))
+                        except Exception as e:
+                            self.__device.error_stream("NOT added attribute: "
+                                                       "%sCh%d due to "
+                                                       "exception: %s"
+                                                       % (attributeName,
+                                                          ch, e))
+                            traceback.print_exc()
+                else:
+                    self.__device.error_stream("Invalid NumChannels property")
             if 'functions' in attributeDefinition and \
-               attributeDefinition['functions'] and \
-               self.__device.NumFunctions > 0:
-                for fn in range(1, self.__device.NumFunctions+1):
-                    try:
-                        attr = self.__getAttrObj("%sFn%d"
-                                                 % (attributeName, fn),
-                                                 attributeDefinition,
-                                                 function=fn)
-                        self.__device.debug_stream("Added attribute: %s"
-                                                   % (attr.get_name()))
-                    except Exception as e:
-                        self.__device.error_stream("NOT added attribute: "
-                                                   "%sFn%d due to exception: "
-                                                   "%s" % (attributeName,
-                                                           fn, e))
-                        traceback.print_exc()
+                    attributeDefinition['functions']:
+                if self.__device.NumFunctions > 0:
+                    for fn in range(1, self.__device.NumFunctions+1):
+                        try:
+                            attr = self.__getAttrObj("%sFn%d"
+                                                     % (attributeName, fn),
+                                                     attributeDefinition,
+                                                     function=fn)
+                            self.__device.debug_stream("Added attribute: %s"
+                                                       % (attr.get_name()))
+                        except Exception as e:
+                            self.__device.error_stream("NOT added attribute: "
+                                                       "%sFn%d due to "
+                                                       "exception: %s"
+                                                       % (attributeName,
+                                                          fn, e))
+                            traceback.print_exc()
+                else:
+                    self.__device.error_stream("Invalid NumChannels property")
+#             if 'multiple' in attributeDefinition and \
+#                     isinstance(attributeDefinition['multiple'], dict):
+#                 if scpiPrefix in attributeDefinition['multiple']:
+#                     
         # when is a single attribute, no loop required
         else:
             try:

@@ -566,19 +566,17 @@ class Skippy (PyTango.Device_4Impl):
 
     def __checkChannelManager(self, attrName):
         if attrName[-3:-1] in ['Ch', 'Fn']:
-            managerName = self.attributesFlags[attrName[-3:]]
-            managerValue = self.attributes[managerName].lastReadValue
-            if managerValue is None:
-                return managerName
-            elif not managerValue:
-                self.debug_stream("In __checkChannelManager() "
-                                  "excluding %s from filter: channel or "
-                                  "function is close" % (attrName))
-                return None
-            else:
-                return attrName
-        else:  # non channel or function no sub-filter
-            return attrName
+            if attrName[-3:] in self.attributesFlags:
+                managerName = self.attributesFlags[attrName[-3:]]
+                managerValue = self.attributes[managerName].lastReadValue
+                if managerValue is None:
+                    return managerName
+                elif not managerValue:
+                    self.debug_stream("In __checkChannelManager() "
+                                      "excluding %s from filter: channel or "
+                                      "function is close" % (attrName))
+                    return None
+        return attrName
 
     def __preHardwareRead(self, attrList, window=1):
         '''Given a list of attributes to be read, prepare it.
