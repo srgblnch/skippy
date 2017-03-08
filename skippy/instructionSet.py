@@ -33,64 +33,85 @@ def identifier(idn, deviceObj):
        instrument to the '*IDN?' command, what is the correct object that
        contains the set of commands for this instrument.
     '''
-    company = ''
-    for separator in (',', ' '):
-        try:
-            company, model, serial, firmware = \
-                idn.split('\n')[0].split(separator)[:4]
-        except:
-            continue
-    # TODO: builder pattern to create the object with the instructions set
-    #       for this instrument.
-    if company.lower() == 'agilent technologies':
-        if model.upper().startswith('DSO'):
-            # This is a series of scopes and this has been tested with
-            # the DSO80204B Agilent scope
-            attrBuilder = AttributeBuilder(deviceObj)
-            file = "instructions/scope/agilentDSO.py"
-        elif model.upper().startswith('N5171'):
-            # It is a Keysight signal generator
-            attrBuilder = AttributeBuilder(deviceObj)
-            file = "instructions/radioFrequencyGenerator/"\
-                "keysightSignalGenerator.py"
-        else:
-            raise EnvironmentError("Agilent %s model not supported" % (model))
-    elif company.lower() == 'tektronix':
-        if model.upper().startswith('DPO'):
-            attrBuilder = AttributeBuilder(deviceObj)
-            file = "instructions/scope/tektronixDPO.py"
-        elif model.upper().startswith('AFG'):
-            attrBuilder = AttributeBuilder(deviceObj)
-            file = "instructions/arbitraryFunctionGenerator/tektronicsAFG.py"
-        raise EnvironmentError("Tektronix %s model not supported" % (model))
-    elif company.lower() == 'rohde&schwarz':
-        if model.lower() == 'sma100a':
-            attrBuilder = AttributeBuilder(deviceObj)
-            file = "instructions/radioFrequencyGenerator/rohdeSchwarzRFG.py"
-        elif model.lower() == 'fsp-3':
-            attrBuilder = AttributeBuilder(deviceObj)
-            file = "instructions/spectrumAnalyser/rohdeSchwarzFSP.py"
-        else:
-            raise EnvironmentError("Rohde&Schwarz %s model not supported"
-                                   % (model))
-    elif company.lower() == 'arroyo':
-        if model.lower() == '5300':
-            attrBuilder = AttributeBuilder(deviceObj)
-            file = "instructions/temperatureController/arroyo5300.py"
-        else:
-            raise EnvironmentError("Arroyo %s model not supported" % (model))
-
-    elif company.lower() == 'albasynchrotron':
-        if model.lower() == 'electrometer2':
-            attrBuilder = AttributeBuilder(deviceObj)
-            file = "instructions/albaEm/albaEm.py"
-        else:
-            raise EnvironmentError("Alba Synchrotron %s model not supported"
-                                   % (model))
-    else:
-        raise EnvironmentError("instrument not supported")
+    company, model = splitIDN(idn)
+    file = {'agilent technologies': agilent,
+            'tektronix': tektronix,
+            'rohde&schwarz': rohdeschwarz,
+            'arroyo': arroyo,
+            'albasynchrotron': albasynchrotron,
+            'keithley instruments inc.': keithley}[company](model)
+    attrBuilder = AttributeBuilder(deviceObj)
     attrBuilder.parseFile(file)
     return attrBuilder
+
+
+def splitIDN(idn):
+    # Only company and model in use. Perhaps one day the firmware version
+    # would be useful but not found the case by now.
+    idn = idn.strip().lower()
+    if idn.count(',') == 3:
+        separator = ','
+    elif idn.count(' ') == 3:
+        separator = ' '
+    else:
+        raise SyntaxError("Could not identify the separator in %r" % (idn))
+    try:
+        company, model, rest = idn.split(separator, 2)
+        company = company.strip()
+        model = model.strip()
+        return company, model
+    except Exception as e:
+        raise SyntaxError("Could not identify the manufacturer and model "
+                          "in %r" % (idn))
+
+
+#################################
+# supported companies methods ---
+def agilent(model):
+    if model.startswith('dso'):
+        return "instructions/scope/agilentDSO.py"
+    elif model.startswith('n5171'):
+        return "instructions/radioFrequencyGenerator/"\
+            "keysightSignalGenerator.py"
+    raise EnvironmentError("Agilent %s model not supported" % (model))
+
+
+def tektronix(model):
+    if model.startswith('dpo'):
+        return "instructions/scope/tektronixDPO.py"
+    elif model.upper().startswith('AFG'):
+        return "instructions/arbitraryFunctionGenerator/tektronicsAFG.py"
+    raise EnvironmentError("Tektronix %s model not supported" % (model))
+
+
+def rohdeschwarz(model):
+    if model == 'sma100a':
+        return "instructions/radioFrequencyGenerator/rohdeSchwarzRFG.py"
+    elif model.lower() == 'fsp-3':
+        return "instructions/spectrumAnalyser/rohdeSchwarzFSP.py"
+    raise EnvironmentError("Rohde&Schwarz %s model not supported" % (model))
+
+
+def arroyo(model):
+    if model == '5300':
+        return "instructions/temperatureController/arroyo5300.py"
+    raise EnvironmentError("Arroyo %s model not supported" % (model))
+
+
+def albasynchrotron(model):
+    if model == 'electrometer2':
+        return "instructions/albaEm/albaEm.py"
+    raise EnvironmentError("Alba Synchrotron %s model not supported" % (model))
+
+
+def keithley(model):
+    if model == 'model 2000':
+        return "instructions/multimeter/keithley2000.py"
+    elif model == 'model 2635a':
+        return "instructions/sourcemeter/keithley2635.py"
+    raise EnvironmentError("Keithley %s model not supported" % (model))
+# done supported companies methods
+##################################
 
 
 def AttrExc(function):
