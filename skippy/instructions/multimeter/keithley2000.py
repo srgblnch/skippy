@@ -62,7 +62,7 @@ Attribute('VoltageDCAverage',
            })
 
 Attribute('VoltageDCMovingAverage',
-          {'type': PyTango.CmdArgType.DevDouble,
+          {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
            'readCmd': "sense:volt:dc:aver:tcon?",
            'writeCmd': lambda value: "sense:volt:dc:aver:tcon %s" % (value),
@@ -98,7 +98,7 @@ Attribute('VoltageACAverage',
            })
 
 Attribute('VoltageACMovingAverage',
-          {'type': PyTango.CmdArgType.DevDouble,
+          {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
            'readCmd': "sense:volt:ac:aver:tcon?",
            'writeCmd': lambda value: "sense:volt:ac:aver:tcon %s" % (value),

@@ -92,6 +92,7 @@ class Skippy (PyTango.Device_4Impl):
            The expected result of this method is to have the skippy tango
            device in OFF state.
         '''
+        self.info_stream("In __buildInstrumentObj()")
         try:
             self._instrument = None
             if self.SerialTimeout == -1:
@@ -104,10 +105,12 @@ class Skippy (PyTango.Device_4Impl):
                                'stopbits': self.SerialStopbits,
                                'timeout': timeout,
                                'xonxoff': self.SerialXonXoff}
+            terminator = self.TxTerminator
             self._instrument = communicator.buildCommunicator(self.Instrument,
                                                               self.Port,
                                                               self,
-                                                              extra_arguments)
+                                                              extra_arguments,
+                                                              terminator)
         except SyntaxError as e:
             self.error_stream("Error in the instrument name: %s" % (e))
             self.change_state(PyTango.DevState.FAULT)
@@ -122,7 +125,7 @@ class Skippy (PyTango.Device_4Impl):
         self.rebuildStatus()
         return True
 
-    def __connectInstrumentObj(self):
+    def __connectInstrumentObj(self, tries=4):
         '''With this method a communication channel is opened to the instrument
            and the identification string is requested to it.
         '''
@@ -132,10 +135,27 @@ class Skippy (PyTango.Device_4Impl):
             return False
         try:
             self._instrument.connect()
-            self._idn = self._instrument.ask("*IDN?")
+            self._idn = ''
+            for i in range(1, tries+1):
+                self._idn = self._instrument.ask("*IDN?", waittimefactor=i)
+                if len(self._idn) > 0:
+                    break
+                if self._reconnectAwaker.isSet():
+                    self.info_stream("Abort reconnection to the instrument")
+                    return False
+                self.warn_stream("In __connectInstrumentObj() no answer to the"
+                                 " identification request (try %d)" % (i))
+                time.sleep(communicator.TIME_BETWEEN_SENDANDRECEIVE*10)
+            if len(self._idn) == 0:
+                self.error_stream("In __connectInstrumentObj() Cannot identify"
+                                  " the instrument after %d tries" % (i))
+                return False
+            self.info_stream("In __connectInstrumentObj() instrument "
+                             "identification: %s" % (self._idn))
         except Exception as e:
             self.error_stream("In __connectInstrumentObj() Cannot connect "
                               "to the instrument due to: %s" % (e))
+            traceback.print_exc()
             return False
         else:
             self.info_stream("In __connectInstrumentObj() Connected to "
@@ -152,6 +172,7 @@ class Skippy (PyTango.Device_4Impl):
            Else, in case the communication cannot be restablished by itself,
            then the state changes to FAULT to report the malfunction.
         '''
+        self.info_stream("In __reconnectInstrumentObj()")
         if not hasattr(self, '_instrument') or self._instrument is None:
             self.error_stream("In __reconnectInstrumentObj(): instrument "
                               "object not build yet")
@@ -165,31 +186,31 @@ class Skippy (PyTango.Device_4Impl):
                               "exception: %s" % (e))
             self.change_state(PyTango.DevState.FAULT)
             self.rebuildStatus()
-        else:
-            self._instrument = None
-            # give some rest time to the instrument before reconnect
-            if self.__buildInstrumentObj():
-                if self.Off():
-                    self.warn_stream("In __reconnectInstrumentObj() "
-                                     "delay reconnection by %6.3f seconds"
-                                     % (self._recoveryDelay))
-                    time.sleep(self._recoveryDelay)
-                    if self.Standby() and self.On():
-                        if self.AutoStart and self.Start():
-                            self.info_stream("In __reconnectInstrumentObj(): "
-                                             "reconnected and started.")
-                            self._lastRecovery = time.time()
-                            return True
-                        else:
-                            self.info_stream("In __reconnectInstrumentObj(): "
-                                             "reconnection done.")
-                            self._lastRecovery = time.time()
-                            return True
-            self.change_state(PyTango.DevState.DISABLE)
-            self.rebuildStatus()
-            self.error_stream("In __reconnectInstrumentObj(): "
-                              "Cannot rebuild the InstrumentObj.")
             return False
+        if self.__buildInstrumentObj():
+            if self.Off():
+                self.warn_stream("In __reconnectInstrumentObj() "
+                                 "delay reconnection by %6.3f seconds"
+                                 % (self._recoveryDelay))
+                time.sleep(self._recoveryDelay)
+                if self.Standby() and self.On():
+                    if self.AutoStart and self.Start():
+                        print("....")
+                        self.info_stream("In __reconnectInstrumentObj(): "
+                                         "reconnected and started.")
+                        self._lastRecovery = time.time()
+                        return True
+                    else:
+                        print("...,")
+                        self.info_stream("In __reconnectInstrumentObj(): "
+                                         "reconnection done.")
+                        self._lastRecovery = time.time()
+                        return True
+        self.change_state(PyTango.DevState.DISABLE)
+        self.rebuildStatus()
+        self.error_stream("In __reconnectInstrumentObj(): "
+                          "Cannot rebuild the InstrumentObj.")
+        return False
 
     def __reconnectProcedure(self):
         '''The procedure of reconnect, because it takes time, is executed by
@@ -409,7 +430,8 @@ class Skippy (PyTango.Device_4Impl):
         try:
             self._builder.remove_alldynAttrs()
             return True
-        except:
+        except Exception as e:
+            self.error_stream("Exception removing dynattributes: %s" % (e))
             return False
 
     def __read_attr_procedure(self, data, fromMonitor=False):
@@ -1502,14 +1524,17 @@ class Skippy (PyTango.Device_4Impl):
         self._builder = None
         self.__buildInstrumentObj()
         if not self.AutoStandby:
+            self.debug_stream("Configured to NOT progress to StandBy")
             return
         self.Standby()
         if not self.AutoOn:
+            self.debug_stream("Configured to NOT progress to On")
             return
         self.On()
         # TODO: flag to distinguish the minimal communications in STANDBY and
         #       the normal queries of the ON
         if not self.AutoStart:
+            self.debug_stream("Configured to NOT progress to Start")
             return
         self.Start()
         #----- PROTECTED REGION END -----#  //  Skippy.init_device
@@ -1738,16 +1763,19 @@ class Skippy (PyTango.Device_4Impl):
         if self.get_state() == PyTango.DevState.ON:
             self.Standby()
         try:
-            self._instrument.close()
-        except:
-            self.error_stream("Cannot disconnect from the instrument")
+            if hasattr(self, '_instrument') and self._instrument is not None:
+                self._instrument.close()
+        except Exception as e:
+            self.error_stream("Cannot disconnect from the instrument "
+                              "due to: %s" % (e))
+            traceback.print_exc()
             self.change_state(PyTango.DevState.FAULT)
             self.addStatusMsg("Off command failed")
         else:
             self._idn = ""
             self.info_stream("disconnected to the instrument %s"
                              % (self.Instrument))
-            if self.__unbuilder():
+            if self._builder is None or self.__unbuilder():
                 self.change_state(PyTango.DevState.OFF)
                 self.rebuildStatus()
                 argout = True
@@ -2160,7 +2188,7 @@ class Skippy (PyTango.Device_4Impl):
         argout = False
         #----- PROTECTED REGION ID(Skippy.Standby) ENABLED START -----#
         if self.get_state() == PyTango.DevState.OFF:
-            if self.__buildInstrumentObj():
+            #if self.__buildInstrumentObj():
                 if self.__connectInstrumentObj():
                     self.change_state(PyTango.DevState.STANDBY)
                     self.rebuildStatus()
@@ -2169,7 +2197,7 @@ class Skippy (PyTango.Device_4Impl):
                     self.__reconnectProcedure()
                     argout = False
         elif self.get_state() == PyTango.DevState.ON:
-            if self.__unbuilder():
+            if self._builder is None or self.__unbuilder():
                 self.change_state(PyTango.DevState.STANDBY)
                 self.rebuildStatus()
                 argout = True
@@ -2249,6 +2277,10 @@ class SkippyClass(PyTango.DeviceClass):
             [PyTango.DevBoolean,
             "Enable software flow control of serial port: use -1 for None (only for direct serial connection)",
             [False]],
+        'TxTerminator':
+            [PyTango.DevString,
+             "Symbol to be append to the end of the scpi string send to the instrument",
+             ["\n"]],
         'NumChannels':
             [PyTango.DevUShort,
             "Number of channels available in the instrument, if it has",
