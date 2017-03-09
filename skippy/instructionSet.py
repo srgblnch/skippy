@@ -535,41 +535,9 @@ class AttributeBuilder:
         # If the attribute definition includes channels and functions,
         # do it in loop
         if 'channels' in attributeDefinition or \
-                'functions' in attributeDefinition:
-            if 'channels' in attributeDefinition and \
-                    attributeDefinition['channels'] and \
-                    self.__device.NumChannels > 0:
-                for ch in range(1, self.__device.NumChannels+1):
-                    try:
-                        attr = self.__getAttrObj("%sCh%d"
-                                                 % (attributeName, ch),
-                                                 attributeDefinition,
-                                                 channel=ch)
-                        self.__device.debug_stream("Added attribute: %s"
-                                                   % (attr.get_name()))
-                    except Exception as e:
-                        self.__device.error_stream("NOT added attribute: "
-                                                   "%sCh%d due to exception: "
-                                                   "%s" % (attributeName,
-                                                           ch, e))
-                        traceback.print_exc()
-            if 'functions' in attributeDefinition and \
-               attributeDefinition['functions'] and \
-               self.__device.NumFunctions > 0:
-                for fn in range(1, self.__device.NumFunctions+1):
-                    try:
-                        attr = self.__getAttrObj("%sFn%d"
-                                                 % (attributeName, fn),
-                                                 attributeDefinition,
-                                                 function=fn)
-                        self.__device.debug_stream("Added attribute: %s"
-                                                   % (attr.get_name()))
-                    except Exception as e:
-                        self.__device.error_stream("NOT added attribute: "
-                                                   "%sFn%d due to exception: "
-                                                   "%s" % (attributeName,
-                                                           fn, e))
-                        traceback.print_exc()
+                'functions' in attributeDefinition or \
+                'multiple' in attributeDefinition:
+            self.__prepareChannelLikeGroup(attributeName, attributeDefinition)
         # when is a single attribute, no loop required
         else:
             try:
@@ -579,6 +547,51 @@ class AttributeBuilder:
                 self.__device.error_stream("NOT added attribute: %s "
                                            "due to exception: %s"
                                            % (attributeName, e))
+                traceback.print_exc()
+
+    def __prepareChannelLikeGroup(self, attributeName, attributeDefinition):
+        if 'channels' in attributeDefinition and \
+                attributeDefinition['channels']:
+            if self.__device.NumChannels <= 0:
+                raise ValueError("Could not prepare channels for %s because "
+                                 "not well defined the device property about"
+                                 "how many have to be created" % (attributeName))
+            self.__buildGroup(attributeName, attributeDefinition,
+                              self.__device.NumChannels, "Ch")
+        if 'functions' in attributeDefinition and \
+               attributeDefinition['functions']:
+            if self.__device.NumFunctions <= 0:
+                raise ValueError("Could not prepare functions for %s because "
+                                 "not well defined the device property about"
+                                 "how many have to be created" % (attributeName))
+            self.__buildGroup(attributeName, attributeDefinition,
+                              self.__device.NumFunctions, "Fn")
+        # TODO: multiple
+
+    def __buildGroup(self, name, definition, number, attrSuffix):
+        attrName = "%s%s" % (name, attrSuffix)
+        for i in range(1,number+1):
+            if attrSuffix in ['Ch', 'Fn']:
+                if attrSuffix == 'Ch':
+                    ch, fn, multiple = i, None, None
+                if attrSuffix == 'Fn':
+                    ch, fn, multiple = None, i, None
+            else:
+                ch, fn = None, None
+                multiple = {}
+                for k in ['scpiPrefix', 'attrSuffix']:
+                    multiple[k] = definition['multiple'][k]
+            try:
+                attr = self.__getAttrObj("%s%d" % (attrName, i),
+                                         definition, channel=ch, function=fn,
+                                         multiple=multiple)
+                self.__device.debug_stream("Added attribute: %s"
+                                               % (attr.get_name()))
+            except Exception as e:
+                self.__device.error_stream("NOT added attribute: "
+                                           "%s%d due to exception: "
+                                           "%s" % (attrName,
+                                                   i, e))
                 traceback.print_exc()
 
     def __getAttrObj(self, attrName, definition, channel=None, function=None,
