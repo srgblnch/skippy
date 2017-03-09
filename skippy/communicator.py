@@ -37,7 +37,8 @@ import threading
 TIME_BETWEEN_SENDANDRECEIVE = 0.05
 
 
-def buildCommunicator(instrumentName, port=None, parent=None, extra_args=None):
+def buildCommunicator(instrumentName, port=None, parent=None, extra_args=None,
+                      terminator=None):
     if __isHostName(instrumentName):
         return bySocket(instrumentName, port=port, parent=parent)
     elif __isVisaDevice(instrumentName):
@@ -45,7 +46,8 @@ def buildCommunicator(instrumentName, port=None, parent=None, extra_args=None):
     elif __isSerialDevice(instrumentName):
         return bySerialDevice(instumentName, parent=parent)
     elif __isSerial(instrumentName):
-        return bySerial(instrumentName, parent=parent, serial_args=extra_args)
+        return bySerial(instrumentName, parent=parent, serial_args=extra_args,
+                        terminator=terminator)
     raise SyntaxError("Instrument name invalid or instrument unreachable")
 
 
@@ -90,6 +92,8 @@ def __isVisaDevice(devName):
 
 
 class Communicator:
+    _terminator = '\n'
+
     def __init__(self):
         raise NotImplementedError("This class is pure abstract")
 
@@ -105,13 +109,14 @@ class Communicator:
         else:
             print("ERROR: "+msg)
 
-    def ask(self, commandList):
+    def ask(self, commandList, waittimefactor=1):
         '''Prepare the command list and do a combination of send(msg) and recv()
         '''
+        waittime = TIME_BETWEEN_SENDANDRECEIVE * waittimefactor
         with self.mutex:
             command = self.prepareCommand(commandList)
             self._send(command)
-            sleep(TIME_BETWEEN_SENDANDRECEIVE)
+            sleep(waittime)
             answer = self._recv()
             return answer
 
@@ -134,13 +139,18 @@ class Communicator:
            sure it ends with a '\n'. If it's a list of strings concatenate them
            using ';' as a separator.
         '''
-        if isinstance(commands, str) and not commands[-1:] == '\n':
-            return commands+'\n'
+        if isinstance(commands, str) and not commands[-1:] == self.terminator:
+            return "%s%s" % (commands, self.terminator)
         elif isinstance(commands, list):
-            return reduce(lambda x, y: x+';'+y+';', commands)[:-1]+'\n'
+            return reduce(lambda x, y: x+';'+y+';',
+                          commands)[:-1]+self.terminator
         else:
             raise Exception('Exception: Wrong type! Command should be a str '
                             'or list of commands')
+
+    @property
+    def terminator(self):
+        return self._terminator
 
 
 SOCKET_TIMEOUT = 2
@@ -181,8 +191,6 @@ class bySocket(Communicator):
         return hasattr(self, '_socket') and self._socket is not None
 
     def _send(self, msg):
-        # self.debug_stream("Sending to %s:%d %s"
-        #                   % (self.__hostName, self.__port, repr(msg)))
         if self.isConnected():
             self._socket.send(msg)
 
@@ -235,12 +243,14 @@ class bySocket(Communicator):
             #                     repr(completeMsg)))
         return completeMsg
 
-    def ask_for_values(self, commandList):
+    def ask_for_values(self, commandList, waittimefactor=1):
         '''
         '''
+        waittime = TIME_BETWEEN_SENDANDRECEIVE * waittimefactor
         with self.mutex:
             command = self.prepareCommand(commandList)
             self._send(command)
+            sleep(waittime)
             answer = self._recv()
             return answer
 
@@ -261,56 +271,62 @@ class byVisa(Communicator):
         self.__device.Close()
 
     def _send(self, msg):
-        # self.debug_stream("Sending to %s %s"
-        #                   %(self.__device.get_name(),repr(msg)))
         self.__device.Write(array.array('B', msg).tolist())
 
     def _recv(self):
         msg = array.array('B', self.__device.ReadLine())
-        # self.debug_stream("Received from %s %s"%(self.__device.get_name(),
-        #                                          repr(msg)[:100]))
         return msg
 
     def close(self):
         if self.__device.State() == PyTango.DevState.ON:
             self.__device.Close()
 
-    def ask(self, commandList):
+    def ask(self, commandList, waittimefactor=None):
+        if waittimefactor is not None:
+            self.warning_stream("No wait time available for "
+                                "PyVisa intermediary, ignored")
         answer = self.__device.Ask(array.array('B', commandList).tolist())
         return array.array('B', answer).tostring()
 
-    def ask_for_values(self, commandList):
+    def ask_for_values(self, commandList, waittimefactor=None):
+        if waittimefactor is not None:
+            self.warning_stream("No wait time available for "
+                                "PyVisa intermediary, ignored")
         with self.mutex:
             answer = self.__device.AskValues(array.array('B',
                                                          commandList).tolist())
-            # self.debug_stream("byVisa.ask_for_values(): %s"%answer)
             self.mutex.release()
             return answer
 
 
 class bySerial(Communicator):
-    def __init__(self, name, parent=None, serial_args=None):
+    def __init__(self, name, parent=None, serial_args=None, terminator=None):
         serial_args['port'] = name
-        self.__device = serial.Serial(**serial_args)
-        print self.__device
+        self.__serialName = name
+        self.__serial = serial.Serial(**serial_args)
+        self._terminator = terminator or '\n'
         self._parent = parent
         self.mutex = threading.Lock()
         self.debug_stream("building a communication to %s by direct serial "
                           "connection" % (name))
 
     def connect(self):
-        self.__device.open()
-        self.__device.readlines()
-        self.__device.flush()
+        if not self.__serial.isOpen():
+            self.__serial.open()
+        self.__serial.flush()
 
     def disconnect(self):
-        self.__device.close()
+        self.__serial.close()
+
+    def close(self):
+        self.disconnect()
 
     def _send(self, msg):
-        self.__device.write(msg+'\n')
+        self.__serial.write(msg)
+        self.__serial.flush()
 
     def _recv(self):
-        msg = self.__device.readline()
+        msg = self.__serial.readline(eol=self.terminator)
         return msg
 
 
