@@ -28,7 +28,8 @@ import PyTango
 Attribute('Output',
           {'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
-           'readCmd': "smua.source.output?",
+           'readCmd': "print(smua.source.output)\n?",
+           'readFormula': "bool(float(VALUE))",
            'writeCmd': lambda value: "smua.source.output=smua.OUTPUT_%s"
            % ("ON" if value else "OFF"),
            })
@@ -37,7 +38,7 @@ Attribute('MeasureRange',
           {'type': PyTango.CmdArgType.DevDouble,
            'format': '%e',
            'dim': [0],
-           'readCmd': "smua.measure.rangei?",
+           'readCmd': "print(smua.measure.rangei)\n?",
            'writeCmd': lambda value: "smua.measure.rangei=%s" % value,
            })
 
@@ -45,6 +46,6 @@ Attribute('SourceRange',
           {'type': PyTango.CmdArgType.DevDouble,
            'format': '%e',
            'dim': [0],
-           'readCmd': "smua.source.rangei?",
+           'readCmd': "print(smua.source.rangei)\n?",
            'writeCmd': lambda value: "smua.source.rangei=%s" % value,
            })

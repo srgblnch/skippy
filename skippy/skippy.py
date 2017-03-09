@@ -716,6 +716,7 @@ class Skippy (PyTango.Device_4Impl):
                             self.error_stream("In __postHardwareScalarRead() "
                                               "Exception of attribute %s: %s"
                                               % (attrName, e))
+                            traceback.print_exc()
                             self.attributes[attrName].lastReadValue = None
                             self.attributes[attrName].quality = \
                                 PyTango.AttrQuality.ATTR_INVALID
@@ -748,7 +749,10 @@ class Skippy (PyTango.Device_4Impl):
     def __isScalarBoolean(self, attrName, attrValue):
         if self.attributes[attrName].type in \
                 [PyTango.CmdArgType.DevBoolean]:
-            self.attributes[attrName].lastReadValue = bool(int(attrValue))
+            if self.attributes[attrName].readFormula:
+                self.attributes[attrName].lastReadValue = attrValue
+            else:
+                self.attributes[attrName].lastReadValue = bool(int(attrValue))
             self.attributes[attrName].quality = \
                 PyTango.AttrQuality.ATTR_VALID
             return True
@@ -936,7 +940,7 @@ class Skippy (PyTango.Device_4Impl):
     def read_attr(self, attr):
         attrName = attr.get_name()
         if attrName in self.attributes:
-            value = self.attributes[attrName].lastReadValue
+            value = self.attributes[attrName].rvalue
             timestamp = self.attributes[attrName].timestamp
             quality = self.attributes[attrName].quality
             if self.attributes[attrName].dim == 0:

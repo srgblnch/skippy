@@ -138,12 +138,41 @@ def latin1(x):
 ###############################
 # Attribute functionalities ---
 
-class RampObj(object):
-    def __init__(self, name, *args, **kwargs):
+class AttributeFunctionality(object):
+    def __init__(self, name, owner, *args, **kwargs):
+        super(AttributeFunctionality, self).__init__(*args, **kwargs)
+        self._name = name
+        self._owner = owner
+
+    def __str__(self):
+        return "%s (%s)" % (self.name, self.__class__.__name__)
+
+    def _buildrepr_(self, attributes):
+        repr = "%s:\n" % self
+        for key in attributes:
+            attr = getattr(self, key)
+            if attr is None:
+                repr += "\t%s: None\n" % (key)
+            elif isinstance(attr, list) and len(attr) == 0:
+                repr += "\t%s: []\n" % (key)
+            elif isinstance(attr, str):
+                repr += "\t%s: %r\n" % (key, attr)
+            elif hasattr(attr, '__call__'):
+                args = [0]*attr.__code__.co_argcount
+                repr += "\t%s: %r\n" % (key, attr(*args))
+            else:
+                repr += "\t%s: %s\n" % (key, attr)
+        return repr
+
+class RampObj(AttributeFunctionality):
+    def __init__(self, *args, **kwargs):
         super(RampObj, self).__init__(*args, **kwargs)
         self._rampStep = None
         self._rampStepSpeep = None
         self._rampThread = None
+
+    def __repr__(self):
+        return self._buildrepr_(['step', 'stepSpeed'])
 
     @property
     def rampStep(self):
@@ -170,10 +199,13 @@ class RampObj(object):
         self._rampThread = value
 
 
-class RawDataObj(object):
+class RawDataObj(AttributeFunctionality):
     def __init__(self, *args, **kwargs):
         super(RawDataObj, self).__init__(*args, **kwargs)
         self._lastReadRaw = None
+
+    def __repr__(self):
+        return self._buildrepr_(['rawData'])
 
     @property
     def lastReadRaw(self):
@@ -186,33 +218,13 @@ class RawDataObj(object):
 
 ###############################
 # Attribute Objects ---
-
-
 class AttributeObj(object):
-    def __init__(self, name, type, dim, readCmd, withRawData=False,
-                 *args, **kwargs):
-        super(AttributeObj, self).__init__(*args, **kwargs)
+    def __init__(self, name, type, dim, parent=None, *args, **kwargs):
+        super(AttributeObj, self).__init__()  # *args, **kwargs)
         self._name = name
         self._type = type
         self._dim = dim
-        self._readCmd = readCmd
-        self._lastReadValue = None
-        self._timestamp = None
-        self._quality = PyTango.AttrQuality.ATTR_INVALID
-        if withRawData:
-            self._raw = RawDataObj()
-        else:
-            self._raw = None
-
-    def __str__(self):
-        basicAttrs = "lastReadValue: %s, timestamp: %s, quality: %s, dim: %s"\
-            % (self.lastReadValue, self.timestamp, self.quality, self.dim)
-        return "%s {%s}" % (self.name, basicAttrs)
-
-    def __repr__(self):
-        expertAttrs = "readCmd: %r" % (self.readCmd)
-        return "%s, %s}"\
-               % (self.__str__()[:-1], expertAttrs)
+        self._parent = parent
 
     @property
     def name(self):
@@ -225,6 +237,62 @@ class AttributeObj(object):
     @property
     def dim(self):
         return self._dim
+
+    def debug_stream(self, msg):
+        msg = "[%s] %s" % (self.name, msg)
+        if self._parent is not None:
+            self._parent.debug_stream(msg)
+        else:
+            print("DEBUG: %s" % (msg))
+
+    def warn_stream(self, msg):
+        if self._parent is not None:
+            self._parent.warn_stream(msg)
+        else:
+            print("WARN:  %s" % (msg))
+
+    def _buildrepr_(self, attributes):
+        repr = "%s (%s):\n" % (self.name, self.__class__.__name__)
+        for key in attributes:
+            if hasattr(self, key):
+                attr = getattr(self, key)
+                if attr is None:
+                    repr += "\t%s: None\n" % (key)
+                elif isinstance(attr, list) and len(attr) == 0:
+                    repr += "\t%s: []\n" % (key)
+                elif isinstance(attr, str):
+                    repr += "\t%s: %r\n" % (key, attr)
+                elif hasattr(attr, '__call__'):
+                    args = [0]*attr.__code__.co_argcount
+                    repr += "\t%s: %r\n" % (key, attr(*args))
+                else:
+                    repr += "\t%s: %s\n" % (key, attr)
+            else:
+                self.debug_stream("In _buildrepr_() doesn't have %s" % (key))
+        return repr
+
+class ROAttributeObj(AttributeObj):
+    def __init__(self, readCmd, readFormula=None,
+                 withRawData=False, *args, **kwargs):
+        super(ROAttributeObj, self).__init__(*args, **kwargs)
+        self._readCmd = readCmd
+        self._readFormula = readFormula
+        self._lastReadValue = None
+        self._timestamp = None
+        self._quality = PyTango.AttrQuality.ATTR_INVALID
+        if withRawData:
+            self._raw = RawDataObj("rawdata", self)
+        else:
+            self._raw = None
+
+    def __str__(self):
+        return "%s (%s) [%s, %s, %s]" % (self.name, self.__class__.__name__,
+                                         self.rvalue, self.timestamp,
+                                         self.quality)
+
+    def __repr__(self):
+        return self._buildrepr_(['rvalue', 'timestamp', 'quality', 'dim',
+                                 'readCmd', 'readFormula'])
 
     def isWritable(self):
         return False
@@ -243,6 +311,22 @@ class AttributeObj(object):
     @property
     def readCmd(self):
         return self._readCmd
+
+    @property
+    def readFormula(self):
+        return self._readFormula
+
+    @property
+    def rvalue(self):
+        if self._readFormula:
+            self.debug_stream("Evaluating %r with VALUE=%s"
+                              % (self._readFormula, self._lastReadValue))
+            try:
+                return eval(self._readFormula.replace("VALUE",
+                                                      self._lastReadValue))
+            except Exception as e:
+                self.warn_stream("Exception evaluating formula: %s" % (e))
+        return self._lastReadValue
 
     @property
     def lastReadValue(self):
@@ -281,11 +365,12 @@ class AttributeObj(object):
         return property(getter, setter)
 
 
-class WAttributeObj(AttributeObj):
-    def __init__(self, writeCmd=None, rampeable=False, writeValues=None,
-                 *args, **kwargs):
-        super(WAttributeObj, self).__init__(*args, **kwargs)
+class RWAttributeObj(ROAttributeObj):
+    def __init__(self, writeCmd=None, writeFormula=None, rampeable=False,
+                 writeValues=None, *args, **kwargs):
+        super(RWAttributeObj, self).__init__(*args, **kwargs)
         self._writeCmd = writeCmd
+        self._writeFormula = writeFormula
         self._lastWriteValue = None
         self._ramp = None
         if rampeable:
@@ -293,17 +378,16 @@ class WAttributeObj(AttributeObj):
         self._writeValues = writeValues
 
     def __str__(self):
-        basicAttrs = "lastReadValue: %s, lastWriteValue: %s, timestamp: %s, "\
-            "quality: %s, dim: %s"\
-            % (self.lastReadValue, self.lastWriteValue, self.timestamp,
-               self.quality, self.dim)
-        return "%s {%s}" % (self.name, basicAttrs)
+        return "%s (%s) [(%s, %s), %s, %s]" % (self.name,
+                                               self.__class__.__name__,
+                                               self.rvalue, self.wvalue,
+                                               self.timestamp, self.quality)
 
     def __repr__(self):
-        expertAttrs = "readCmd: %r, writeCmd: %r" % (self.readCmd,
-                                                     self.writeCmd("value"))
-        return "%s, %s}"\
-               % (self.__str__()[:-1], expertAttrs)
+        return self._buildrepr_(['rvalue', 'wvalue', 'timestamp', 'quality',
+                                 'dim', 'readCmd', 'readFormula', 'writeCmd',
+                                 # 'writeFormula'
+                                 ])
 
     def isWritable(self):
         return True
@@ -321,6 +405,14 @@ class WAttributeObj(AttributeObj):
         return self._writeCmd
 
     @property
+    def writeFormula(self):
+        return self._writeFormula
+
+    @property
+    def wvalue(self):
+        return self._lastWriteValue
+
+    @property
     def lastWriteValue(self):
         return self._lastWriteValue
 
@@ -330,7 +422,7 @@ class WAttributeObj(AttributeObj):
 
     def makeRampeable(self):
         if self._ramp is None:
-            self._ramp = RampObj()
+            self._ramp = RampObj("ramp", self)
             setattr(self, 'rampStep', self._makeRampStepProperty())
             setattr(self, 'rampStepSpeed', self._makeRampStepSpeedProperty())
             setattr(self, 'rampThread', self._makeRampThreadProperty())
@@ -425,6 +517,12 @@ class AttributeBuilder:
            TODO: expert attributes flag
            TODO: formulas to transform input before send and write after
                  receive.
+            - readFormula: evaluable string to be applied to the answer from
+                           the instrument to modify it to become the device
+                           answer to the attribute.
+            TODO writeFormula: evaluable string to be applied to the value set
+                            to an attribute before format the string to be
+                            send to the instrument.
         '''
         # preconditions
         if not type(attributeDefinition) == dict:
@@ -483,7 +581,8 @@ class AttributeBuilder:
                                            % (attributeName, e))
                 traceback.print_exc()
 
-    def __getAttrObj(self, attrName, definition, channel=None, function=None):
+    def __getAttrObj(self, attrName, definition, channel=None, function=None,
+                     multiple=None):
         # TODO: image dimensions
         if definition['dim'] == [0]:
             if 'writeCmd' in definition:
@@ -530,56 +629,99 @@ class AttributeBuilder:
                                     w_meth=writemethod)
         self._attributeList.append(attrName)
         # prepare internal structure ---
-        if channel:
-            readCmd = definition['readCmd']("CHAN", channel)
-            if 'writeCmd' in definition:
-                writeCmd = definition['writeCmd']("CHAN", channel)
-            if 'manager' in definition and definition['manager'] is True:
-                self.__device.attributesFlags["Ch%d" % channel] = attrName
-        elif function:
-            readCmd = definition['readCmd']("FUNC", function)
-            self.__device.attributes[attrName]['readStr'] = readCmd
-            if 'writeCmd' in definition:
-                writeCmd = definition['writeCmd']("FUNC", function)
-            if 'manager' in definition and definition['manager'] is True:
-                self.__device.attributesFlags["Fn%d" % function] = attrName
+        if channel or function or multiple:
+            if channel:
+                like = "channel"
+            elif function:
+                like = "function"
+            elif multiple and 'scpiPrefix' in definition['multiple'] and\
+                    'attrSuffix' in definition['multiple']:
+                like = definition['multiple']['scpiPrefix']
+            else:
+                raise AttributeError("Wrong definition of multiple attribute")
+            number = channel or function
+            self.__prepareChannelLikeAttr(like, number, definition)
         else:
             readCmd = definition['readCmd']
-            if 'writeCmd' in definition:
-                writeCmd = definition['writeCmd']
+            if 'writeCmd' not in definition:
+                # writeCmd = definition['writeCmd']
+                definition['writeCmd'] = None
+        if 'readFormula' not in definition:
+            # readFormula = definition['readFormula']
+            definition['readFormula'] = None
+        # if 'writeFormula' not in definition:
+        #     # writeFormula = definition['writeFormula']
+        #     writeFormula = None
         # build internal structure ---
-        if 'writeCmd' not in definition or definition['writeCmd'] is None:
-            self.__device.attributes[attrName] =\
-                AttributeObj(name=attrName, type=definition['type'],
-                             dim=definition['dim'][0], readCmd=readCmd)
+        if definition['writeCmd'] is None:
+            self.__buildROObj(attrName, definition)
         else:
-            if 'rampeable' in definition:
-                self.__device.attributes[attrName] =\
-                    WAttributeObj(name=attrName, type=definition['type'],
-                                  dim=definition['dim'][0],
-                                  readCmd=readCmd, writeCmd=writeCmd,
-                                  rampeable=True)
-                self.configureRamping(attrName, definition,
-                                      readmethod, writemethod)
-            else:
-                self.__device.attributes[attrName] =\
-                    WAttributeObj(name=attrName, type=definition['type'],
-                                  dim=definition['dim'][0],
-                                  readCmd=readCmd, writeCmd=writeCmd)
+            self.__buildRWObj(attrName, definition, readmethod, writemethod)
             if 'writeValues' in definition:
-                self.__device.attributes[attrName].\
-                    setWriteValues(definition['writeValues'])
-                # this is a very important information to have
-                # in the attr descrition
-                if 'description' in definition:
-                    prefix = definition['description']+". "
-                else:
-                    prefix = ""
-                descr = "%sAllowed values: %s"\
-                        % (prefix, repr(definition['writeValues']))
-                aprop.set_description(descr)
-                attr.set_default_properties(aprop)
+                self.__prepareWriteValues(attrName, definition, aprop, attr)
         return attr
+
+    def __prepareChannelLikeAttr(self, like, number, definition):
+        if like == 'channel':
+            scpiPrefix = "CHAN"
+            attrSuffix = "Ch"
+        elif like == 'function':
+            scpiPrefix = "FUNC"
+            attrSuffix = "Fn"
+        else:
+            scpiPrefix = definition['multiple']['scpiPrefix']
+            attrSuffix = definition['multiple']['attrSuffix']
+        definition['readCmd'] = definition['readCmd'](scpiPrefix, number)
+        if 'writeCmd' not in definition:
+            definition['writeCmd'] = None
+        if 'manager' in definition and definition['manager'] is True:
+            self.__device.attributesFlags["%s%d"
+                                          % (attrSuffix, channel)] = attrName
+
+    def __buildROObj(self, attrName, definition):
+        self.__device.attributes[attrName] =\
+            ROAttributeObj(name=attrName, type=definition['type'],
+                           dim=definition['dim'][0],
+                           readCmd=definition['readCmd'],
+                           readFormula=definition['readFormula'],
+                           parent=self.__device)
+
+    def __buildRWObj(self, attrName, definition, readmethod, writemethod):
+        if 'rampeable' in definition:
+            self.__device.attributes[attrName] =\
+                RWAttributeObj(name=attrName, type=definition['type'],
+                               dim=definition['dim'][0],
+                               readCmd=definition['readCmd'],
+                               writeCmd=definition['writeCmd'],
+                               readFormula=definition['readFormula'],
+                               # writeFormula=definition['writeFormula'],
+                               rampeable=True,
+                               parent=self.__device)
+            self.configureRamping(attrName, definition,
+                                  readmethod, writemethod)
+        else:
+            self.__device.attributes[attrName] =\
+                RWAttributeObj(name=attrName, type=definition['type'],
+                               dim=definition['dim'][0],
+                               readCmd=definition['readCmd'],
+                               writeCmd=definition['writeCmd'],
+                               readFormula=definition['readFormula'],
+                               # writeFormula=definition['writeFormula'],
+                               parent=self.__device)
+
+    def __prepareWriteValues(self, attrName, definition, aprop, attr):
+        self.__device.attributes[attrName].\
+            setWriteValues(definition['writeValues'])
+        # this is a very important information to have
+        # in the attr descrition
+        if 'description' in definition:
+            prefix = definition['description']+". "
+        else:
+            prefix = ""
+        descr = "%sAllowed values: %s"\
+                % (prefix, repr(definition['writeValues']))
+        aprop.set_description(descr)
+        attr.set_default_properties(aprop)
 
     def configureRamping(self, attrName, definition, readmethod, writemethod):
         db = PyTango.Database()
