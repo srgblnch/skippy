@@ -32,23 +32,23 @@ Attribute('Mac',
            'readCmd': "*MAC?",
            })
 
-# # IO Port functions ---
-# Attribute('IOCONFIG',
-#           {'type': PyTango.CmdArgType.DevString,
-#            'dim': [0],
-#            'readCmd': lambda mult, num: "%s%.2d:CONFI?" % (mult, num),
-#            'writeCmd': lambda mult, num: (lambda value: "%s%d:CONFI %s"
-#                                           % (mult, num, value)),
-#            'multiple': {'scpiPrefix': 'IOPOrt', 'attrSuffix': 'Cf'}
-#            })
-# Attribute('IO',
-#           {'type': PyTango.CmdArgType.DevString,
-#            'dim': [0],
-#            'readCmd': lambda mult, num: "%s%.2d:VALU?" % (mult, num),
-#            'writeCmd': lambda mult, num: (lambda value: "%s%.2d:VALU %s"
-#                                           % (mult, num, value)),
-#            'multiple': {'scpiPrefix': 'IOPOrt', 'attrSuffix': ''}
-#            })
+# IO Port functions ---
+Attribute('IOCONFIG',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': lambda mult, num: "%s%.2d:CONFI?" % (mult, num),
+           'writeCmd': lambda mult, num: (lambda value: "%s%d:CONFI %s"
+                                          % (mult, num, value)),
+           'multiple': {'scpiPrefix': 'IOPOrt', 'attrSuffix': 'Port'}
+           })
+Attribute('IO',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': lambda mult, num: "%s%.2d:VALU?" % (mult, num),
+           'writeCmd': lambda mult, num: (lambda value: "%s%.2d:VALU %s"
+                                          % (mult, num, value)),
+           'multiple': {'scpiPrefix': 'IOPOrt', 'attrSuffix': 'Port'}
+           })
 
 # Trigger Commands ---
 Attribute('TriggerDelay',

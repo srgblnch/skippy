@@ -26,6 +26,7 @@ __status__ = "Production"
 import PyTango
 import traceback
 import functools
+from copy import copy
 
 
 def identifier(idn, deviceObj):
@@ -569,24 +570,63 @@ class AttributeBuilder:
                                  "how many have to be created" % (attributeName))
             self.__buildGroup(attributeName, attributeDefinition,
                               self.__device.NumFunctions, "Fn")
-        # TODO: multiple
+        if 'multiple' in attributeDefinition and \
+                attributeDefinition['multiple']:
+            try:
+                scpiPrefix = attributeDefinition['multiple']['scpiPrefix']
+                attrSuffix = attributeDefinition['multiple']['attrSuffix']
+                number = self.__checkNumberOfMultiple(attributeName,
+                                                      scpiPrefix)
+                self.__buildGroup(attributeName, attributeDefinition, number,
+                                  attrSuffix)
+            except Exception as e:
+                self.__device.error_stream("NOT added attribute: %s "
+                                           "due to exception: %s"
+                                           % (attributeName, e))
+                # traceback.print_exc()
+
+    def __checkNumberOfMultiple(self, attributeName, scpiPrefix):
+        scpiPrefix = scpiPrefix.lower()
+        number = None
+        e = "Could not prepare 'Multiple' attributes for %s " % (attributeName)
+        if len(self.__device.NumMultiple) > 0:
+            for element in self.__device.NumMultiple:
+                element = element.lower()
+                if element.startswith("%s:" % scpiPrefix):
+                    try:
+                        _, number = element.split('%s:' % (scpiPrefix))
+                        number = int(number)
+                        break
+                    except:
+                        number = -1
+                        break
+            if number == -1:
+                e += "because element %r of NumMultiple property "\
+                    "couldn't be interpreted correctly." % (element)
+            elif number is None:
+                e += "because no description in NumMultiple property "\
+                    "has %s." % (scpiPrefix)
+            else:
+                return number
+        else:
+             e += "because not well defined the device property about "\
+                "how many have to be created."
+        raise ValueError(e)
 
     def __buildGroup(self, name, definition, number, attrSuffix):
         attrName = "%s%s" % (name, attrSuffix)
         for i in range(1,number+1):
+            defcopy = copy(definition)
             if attrSuffix in ['Ch', 'Fn']:
                 if attrSuffix == 'Ch':
                     ch, fn, multiple = i, None, None
                 if attrSuffix == 'Fn':
                     ch, fn, multiple = None, i, None
             else:
-                ch, fn = None, None
-                multiple = {}
-                for k in ['scpiPrefix', 'attrSuffix']:
-                    multiple[k] = definition['multiple'][k]
+                ch, fn, multiple = None, None, i
             try:
                 attr = self.__getAttrObj("%s%d" % (attrName, i),
-                                         definition, channel=ch, function=fn,
+                                         defcopy, channel=ch, function=fn,
                                          multiple=multiple)
                 self.__device.debug_stream("Added attribute: %s"
                                                % (attr.get_name()))
@@ -655,7 +695,7 @@ class AttributeBuilder:
                 like = definition['multiple']['scpiPrefix']
             else:
                 raise AttributeError("Wrong definition of multiple attribute")
-            number = channel or function
+            number = channel or function or multiple
             self.__prepareChannelLikeAttr(like, number, definition)
         else:
             readCmd = definition['readCmd']

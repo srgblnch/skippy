@@ -696,7 +696,13 @@ class Skippy (PyTango.Device_4Impl):
                                               .split(';')):
                         attrName = indexes[i][j]
                         try:
-                            if self.__isScalarBoolean(attrName, value):
+                            # With formulas, they will be responsible to build
+                            # the conversion.
+                            if self.attributes[attrName].readFormula:
+                                self.attributes[attrName].lastReadValue = value
+                            # old way tries the transformation based on
+                            # attribute type information.
+                            elif self.__isScalarBoolean(attrName, value):
                                 pass
                             elif self.__isScalarInteger(attrName, value):
                                 pass
@@ -747,10 +753,7 @@ class Skippy (PyTango.Device_4Impl):
     def __isScalarBoolean(self, attrName, attrValue):
         if self.attributes[attrName].type in \
                 [PyTango.CmdArgType.DevBoolean]:
-            if self.attributes[attrName].readFormula:
-                self.attributes[attrName].lastReadValue = attrValue
-            else:
-                self.attributes[attrName].lastReadValue = bool(int(attrValue))
+            self.attributes[attrName].lastReadValue = bool(int(attrValue))
             self.attributes[attrName].quality = \
                 PyTango.AttrQuality.ATTR_VALID
             return True
@@ -2291,6 +2294,10 @@ class SkippyClass(PyTango.DeviceClass):
             [PyTango.DevUShort,
             "Number of functions available in the instrument, if it has",
             [0]],
+        'NumMultiple':
+            [PyTango.DevVarStringArray,
+            "From the generalisation of channels and functions, a list of pairs with the 'scpiPrefix' and how many shall be build",
+            [] ],
         'MonitoredAttributes':
             [PyTango.DevVarStringArray,
             "When the device is in RUNNING state, the attributes listed here will be monitored (having events) with a period said in the attribute TimeStampsThreashold (or different if specified with a : separator after the attrName)",
