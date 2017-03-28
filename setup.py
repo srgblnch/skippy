@@ -1,3 +1,5 @@
+#!/usr/bin/env python
+
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
@@ -16,49 +18,48 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+
+from setuptools import setup, find_packages
+from skippy import version
+
 __author__ = "Sergi Blanch-Torne"
 __email__ = "sblanch@cells.es"
 __copyright__ = "Copyright 2016, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 
 
-from setuptools import setup, find_packages
-from skippy import version
-
-
-setup(name = 'skippy',
-      license = "GPLv3+",
-      description = "Tango Device Server to control instruments that support "
-                    "the scpi protocol",
-      version = version(),
-      author = "Sergi Blanch-Torn\'e",
-      author_email = "sblanch@cells.es",
-      classifiers = ['Development Status :: 5 - Production/Stable',
-                     'Intended Audience :: Developers',
-                     'Intended Audience :: Science/Research',
-                     'License :: OSI Approved :: '\
-                        'GNU General Public License v3 or later (GPLv3+)',
-                     'Operating System :: POSIX',
-                     # 'Programming Language :: Cython',
-                     'Programming Language :: Python',
-                     'Topic :: Scientific/Engineering :: '\
-                        'Interface Engine/Protocol Translator',
-                     'Topic :: Software Development :: Embedded Systems',
-                     'Topic :: Software Development :: Libraries :: '\
-                        'Python Modules',
-                     ''],
+setup(name='skippy',
+      license="GPLv3+",
+      description="Tango Device Server to control instruments that support "
+                  "the scpi protocol",
+      version=version(),
+      author="Sergi Blanch-Torn\'e",
+      author_email="sblanch@cells.es",
+      classifiers=['Development Status :: 5 - Production/Stable',
+                   'Intended Audience :: Developers',
+                   'Intended Audience :: Science/Research',
+                   'License :: OSI Approved :: '\
+                   'GNU General Public License v3 or later (GPLv3+)',
+                   'Operating System :: POSIX',
+                   # 'Programming Language :: Cython',
+                   'Programming Language :: Python',
+                   'Topic :: Scientific/Engineering :: '\
+                   'Interface Engine/Protocol Translator',
+                   'Topic :: Software Development :: Embedded Systems',
+                   'Topic :: Software Development :: Libraries :: '\
+                   'Python Modules',
+                   ''],
       packages=find_packages(),
       url="https://github.com/srgblnch/skippy",
       entry_points={
-          'console_scripts': ['skippy=skippy.skippy:main']
-          }
-)
+          'console_scripts': ['Skippy=skippy.skippy:main']
+          })
 
-#for the classifiers review see:
-#https://pypi.python.org/pypi?%3Aaction=list_classifiers
+# for the classifiers review see:
+# https://pypi.python.org/pypi?%3Aaction=list_classifiers
 #
-#Development Status :: 1 - Planning
-#Development Status :: 2 - Pre-Alpha
-#Development Status :: 3 - Alpha
-#Development Status :: 4 - Beta
-#Development Status :: 5 - Production/Stable
+# Development Status :: 1 - Planning
+# Development Status :: 2 - Pre-Alpha
+# Development Status :: 3 - Alpha
+# Development Status :: 4 - Beta
+# Development Status :: 5 - Production/Stable
