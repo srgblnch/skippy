@@ -49,6 +49,9 @@ setup(name = 'skippy',
                      ''],
       packages=find_packages(),
       url="https://github.com/srgblnch/skippy",
+      entry_points={
+          'console_scripts': ['skippy=skippy.skippy:main']
+          }
 )
 
 #for the classifiers review see:
