@@ -1,418 +1,210 @@
-#!/usr/bin/env python
-# -*- coding:utf-8 -*- 
+# ##### BEGIN GPL LICENSE BLOCK #####
+#
+#  This program is free software; you can redistribute it and/or
+#  modify it under the terms of the GNU General Public License
+#  as published by the Free Software Foundation; either version 3
+#  of the License, or (at your option) any later version.
+#
+#  This program is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU General Public License for more details.
+#
+#  You should have received a copy of the GNU General Public License
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#
+# ##### END GPL LICENSE BLOCK #####
 
+__author__ = "Manuel Broseta Sebastia"
+__maintainer__ = "Antonio Milan Otero"
+__email__ = "mbroseta@cells.es"
+__copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
+__license__ = "GPLv3+"
+__status__ = "Production"
 
-##############################################################################
-## license :
-##============================================================================
-##
-## File :        AlbaEm#.py
-## 
-## Project :     SCPI
-##
-## $Author :      mbroseta$
-##
-## $Revision :    $
-##
-## $Date :        $
-##
-## $HeadUrl :     $
-##============================================================================
-##        (c) - Controls Software Section - ALBA/CELLS
-##############################################################################
 
 import PyTango
 
 Attribute('Mac',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"*MAC?",
-           #'writeCmd':lambda num:(lambda value:":OUTPut%d:STATE %s"%(num,value)),
-         })
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "*MAC?",
+           })
 
-# IO Port functions
-Attribute('IO01_CONFIG',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"IOPO01:CONFI?",
-           'writeCmd':lambda value:"IOPO01:CONFI %s"%value,
-         })
+# IO Port functions ---
+Attribute('IOCONFIG',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': lambda mult, num: "%s%.2d:CONFI?" % (mult, num),
+           'writeCmd': lambda mult, num: (lambda value: "%s%d:CONFI %s"
+                                          % (mult, num, value)),
+           'multiple': {'scpiPrefix': 'IOPOrt', 'attrSuffix': 'Port'}
+           })
+Attribute('IO',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': lambda mult, num: "%s%.2d:VALU?" % (mult, num),
+           'writeCmd': lambda mult, num: (lambda value: "%s%.2d:VALU %s"
+                                          % (mult, num, value)),
+           'multiple': {'scpiPrefix': 'IOPOrt', 'attrSuffix': 'Port'}
+           })
 
-Attribute('IO01',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"IOPO01:VALU?",
-           'writeCmd':lambda value:"IOPO01:VALU %s"%value,
-         })
-Attribute('IO02_CONFIG',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"IOPO02:CONFI?",
-           'writeCmd':lambda value:"IOPO02:CONFI %s"%value,
-         })
-
-Attribute('IO02',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"IOPO02:VALU?",
-           'writeCmd':lambda value:"IOPO02:VALU %s"%value,
-         })
-Attribute('IO03_CONFIG',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"IOPO03:CONFI?",
-           'writeCmd':lambda value:"IOPO03:CONFI %s"%value,
-         })
-
-Attribute('IO03',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"IOPO03:VALU?",
-           'writeCmd':lambda value:"IOPO03:VALU %s"%value,
-         })
-Attribute('IO04_CONFIG',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"IOPO04:CONFI?",
-           'writeCmd':lambda value:"IOPO04:CONFI %s"%value,
-         })
-
-Attribute('IO04',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"IOPO04:VALU?",
-           'writeCmd':lambda value:"IOPO04:VALU %s"%value,
-         })
-
-
-# Trigger Commands
+# Trigger Commands ---
 Attribute('TriggerDelay',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"TRIG:DELA?",
-           'writeCmd':lambda value:"TRIG:DELA %s"%value,           
-         })
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "TRIG:DELA?",
+           'writeCmd': lambda value: "TRIG:DELA %s" % (value),
+           })
 Attribute('TriggerInput',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"TRIG:INPU?",
-           'writeCmd':lambda value:"TRIG:INPU %s"%value,           
-         })
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "TRIG:INPU?",
+           'writeCmd': lambda value: "TRIG:INPU %s" % (value),
+           })
 Attribute('TriggerMode',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"TRIG:MODE?",
-           'writeCmd':lambda value:"TRIG:MODE %s"%value,           
-         })
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "TRIG:MODE?",
+           'writeCmd': lambda value: "TRIG:MODE %s" % (value),
+           })
 Attribute('TriggerPolarity',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"TRIG:POLA?",
-           'writeCmd':lambda value:"TRIG:POLA %s"%value,           
-         })
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "TRIG:POLA?",
+           'writeCmd': lambda value: "TRIG:POLA %s" % (value),
+           })
 Attribute('SWTrigger',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"TRIG:SWSET?",
-           'writeCmd':lambda value:"TRIG:SWSET %s"%value,           
-         })
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "TRIG:SWSET?",
+           'writeCmd': lambda value: "TRIG:SWSET %s" % (value),
+           })
 
-# Acquisition Commands
+# Acquisition Commands ---
 Attribute('AcqFilter',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"ACQU:FILTER?",
-           'writeCmd':lambda value:"ACQU:FILTER %s"%value,           
-         })
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "ACQU:FILTER?",
+           'writeCmd': lambda value: "ACQU:FILTER %s" % (value),
+           })
 Attribute('Meas',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"ACQU:MEAS?",
-           #'writeCmd':lambda value:"ACQU:FILTER %s"%value,           
-         })
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "ACQU:MEAS?",
+           # 'writeCmd': lambda value: "ACQU:FILTER %s" % (value),
+           })
 Attribute('NData',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"ACQU:NData?",
-           #'writeCmd':lambda value:"ACQU:FILTER %s"%value,           
-         })
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "ACQU:NData?",
+           # 'writeCmd': lambda value: "ACQU:FILTER %s" % (value),
+           })
 Attribute('AcqRange',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"ACQU:RANGE?",
-           'writeCmd':lambda value:"ACQU:RANGE %s"%value,           
-         })
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "ACQU:RANGE?",
+           'writeCmd': lambda value: "ACQU:RANGE %s" % (value),
+           })
 Attribute('AcqStart',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"ACQU:START?",
-           'writeCmd':lambda value:"ACQU:START %s"%value,           
-         })
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "ACQU:START?",
+           'writeCmd': lambda value: "ACQU:START %s" % (value),
+           })
 Attribute('AcqState',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"ACQU:STATE?",
-           #'writeCmd':lambda value:"ACQU:FILTER %s"%value,           
-         })
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "ACQU:STATE?",
+           # 'writeCmd': lambda value: "ACQU:FILTER %s" % (value),
+           })
 Attribute('AcqStop',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"ACQU:STOP?",
-           'writeCmd':lambda value:"ACQU:STOP %s"%value,           
-         })
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "ACQU:STOP?",
+           'writeCmd': lambda value: "ACQU:STOP %s" % (value),
+           })
 Attribute('AcqTime',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"ACQU:TIME?",
-           'writeCmd':lambda value:"ACQU:TIME %s"%value,           
-         })
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "ACQU:TIME?",
+           'writeCmd': lambda value: "ACQU:TIME %s" % (value),
+           })
 
-
-# Channel 01
-Attribute('CHAN01_InstantCurrent',
-          {'type':PyTango.CmdArgType.DevDouble,
-           'dim':[0],
-           'readCmd':"CHAN01:INSCurrent?",
-           #'writeCmd':lambda num:(lambda value:"DEBUg:ENABle %s"%value),
-         })
-Attribute('CHAN01_Current',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN01:CURRent?",
-           #'writeCmd':lambda num:(lambda value:"DEBUg:ENABle %s"%value),
-         })
-Attribute('CHAN01_AverageCurrent',
-          {'type':PyTango.CmdArgType.DevDouble,
-           'dim':[0],
-           'readCmd':"CHAN01:AVGCurrent?",
-           #'writeCmd':lambda num:(lambda value:"DEBUg:ENABle %s"%value),
-         })
-Attribute('CHAN01_CARange',
-          {'type':PyTango.CmdArgType.DevLong,
-           'dim':[0],
-           'readCmd':"CHAN01:CABO:RANGE?",
-           'writeCmd':lambda value:"CHAN01:CABO:RANGE %s"%value,           
-         })
-Attribute('CHAN01_CAFilter',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN01:CABO:FILT?",
-           'writeCmd':lambda value:"CHAN01:CABO:FILT %s"%value,
-         })
-Attribute('CHAN01_CAPostFilter',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN01:CABO:POST?",
-           'writeCmd':lambda value:"CHAN01:CABO:POST %s"%value,
-         })
-Attribute('CHAN01_CAPreFilter',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN01:CABO:PREF?",
-           'writeCmd':lambda value:"CHAN01:CABO:PREF %s"%value,
-         })
-Attribute('CHAN01_CAInversion',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN01:CABO:INVE?",
-           'writeCmd':lambda value:"CHAN01:CABO:INVE %s"%value,
-         })
-Attribute('CHAN01_CAInversion',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN01:CABO:TIGA?",
-           'writeCmd':lambda value:"CHAN01:CABO:TIGA %s"%value,
-         })
-Attribute('CHAN01_CAInversion',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN01:CABO:VGAI?",
-           'writeCmd':lambda value:"CHAN01:CABO:VGAI %s"%value,
-         })
-
-# Channel 02
-Attribute('CHAN02_InstantCurrent',
-          {'type':PyTango.CmdArgType.DevDouble,
-           'dim':[0],
-           'readCmd':"CHAN02:INSCurrent?",
-           #'writeCmd':lambda num:(lambda value:"DEBUg:ENABle %s"%value),
-         })
-Attribute('CHAN02_Current',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN02:CURRent?",
-           #'writeCmd':lambda num:(lambda value:"DEBUg:ENABle %s"%value),
-         })
-Attribute('CHAN02_AverageCurrent',
-          {'type':PyTango.CmdArgType.DevDouble,
-           'dim':[0],
-           'readCmd':"CHAN02:AVGCurrent?",
-           #'writeCmd':lambda num:(lambda value:"DEBUg:ENABle %s"%value),
-         })
-Attribute('CHAN02_CARange',
-          {'type':PyTango.CmdArgType.DevLong,
-           'dim':[0],
-           'readCmd':"CHAN02:CABO:RANGE?",
-           'writeCmd':lambda value:"CHAN02:CABO:RANGE %s"%value,           
-         })
-Attribute('CHAN02_CAFilter',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN02:CABO:FILT?",
-           'writeCmd':lambda value:"CHAN02:CABO:FILT %s"%value,
-         })
-Attribute('CHAN02_CAPostFilter',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN02:CABO:POST?",
-           'writeCmd':lambda value:"CHAN02:CABO:POST %s"%value,
-         })
-Attribute('CHAN02_CAPreFilter',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN02:CABO:PREF?",
-           'writeCmd':lambda value:"CHAN02:CABO:PREF %s"%value,
-         })
-Attribute('CHAN02_CAInversion',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN02:CABO:INVE?",
-           'writeCmd':lambda value:"CHAN02:CABO:INVE %s"%value,
-         })
-Attribute('CHAN02_CAInversion',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN02:CABO:TIGA?",
-           'writeCmd':lambda value:"CHAN02:CABO:TIGA %s"%value,
-         })
-Attribute('CHAN02_CAInversion',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN02:CABO:VGAI?",
-           'writeCmd':lambda value:"CHAN02:CABO:VGAI %s"%value,
-         })
-
-# Channel 03
-Attribute('CHAN03_InstantCurrent',
-          {'type':PyTango.CmdArgType.DevDouble,
-           'dim':[0],
-           'readCmd':"CHAN03:INSCurrent?",
-           #'writeCmd':lambda num:(lambda value:"DEBUg:ENABle %s"%value),
-         })
-Attribute('CHAN03_Current',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN03:CURRent?",
-           #'writeCmd':lambda num:(lambda value:"DEBUg:ENABle %s"%value),
-         })
-Attribute('CHAN03_AverageCurrent',
-          {'type':PyTango.CmdArgType.DevDouble,
-           'dim':[0],
-           'readCmd':"CHAN03:AVGCurrent?",
-           #'writeCmd':lambda num:(lambda value:"DEBUg:ENABle %s"%value),
-         })
-Attribute('CHAN03_CARange',
-          {'type':PyTango.CmdArgType.DevLong,
-           'dim':[0],
-           'readCmd':"CHAN03:CABO:RANGE?",
-           'writeCmd':lambda value:"CHAN03:CABO:RANGE %s"%value,           
-         })
-Attribute('CHAN03_CAFilter',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN03:CABO:FILT?",
-           'writeCmd':lambda value:"CHAN03:CABO:FILT %s"%value,
-         })
-Attribute('CHAN03_CAPostFilter',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN03:CABO:POST?",
-           'writeCmd':lambda value:"CHAN03:CABO:POST %s"%value,
-         })
-Attribute('CHAN03_CAPreFilter',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN03:CABO:PREF?",
-           'writeCmd':lambda value:"CHAN03:CABO:PREF %s"%value,
-         })
-Attribute('CHAN03_CAInversion',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN03:CABO:INVE?",
-           'writeCmd':lambda value:"CHAN03:CABO:INVE %s"%value,
-         })
-Attribute('CHAN03_CAInversion',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN03:CABO:TIGA?",
-           'writeCmd':lambda value:"CHAN03:CABO:TIGA %s"%value,
-         })
-Attribute('CHAN03_CAInversion',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN03:CABO:VGAI?",
-           'writeCmd':lambda value:"CHAN03:CABO:VGAI %s"%value,
-         })
-
-# Channel 04
-Attribute('CHAN04_InstantCurrent',
-          {'type':PyTango.CmdArgType.DevDouble,
-           'dim':[0],
-           'readCmd':"CHAN04:INSCurrent?",
-           #'writeCmd':lambda num:(lambda value:"DEBUg:ENABle %s"%value),
-         })
-Attribute('CHAN04_Current',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN04:CURRent?",
-           #'writeCmd':lambda num:(lambda value:"DEBUg:ENABle %s"%value),
-         })
-Attribute('CHAN04_AverageCurrent',
-          {'type':PyTango.CmdArgType.DevDouble,
-           'dim':[0],
-           'readCmd':"CHAN04:AVGCurrent?",
-           #'writeCmd':lambda num:(lambda value:"DEBUg:ENABle %s"%value),
-         })
-Attribute('CHAN04_CARange',
-          {'type':PyTango.CmdArgType.DevLong,
-           'dim':[0],
-           'readCmd':"CHAN04:CABO:RANGE?",
-           'writeCmd':lambda value:"CHAN04:CABO:RANGE %s"%value,           
-         })
-Attribute('CHAN04_CAFilter',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN04:CABO:FILT?",
-           'writeCmd':lambda value:"CHAN04:CABO:FILT %s"%value,
-         })
-Attribute('CHAN04_CAPostFilter',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN04:CABO:POST?",
-           'writeCmd':lambda value:"CHAN04:CABO:POST %s"%value,
-         })
-Attribute('CHAN04_CAPreFilter',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN04:CABO:PREF?",
-           'writeCmd':lambda value:"CHAN04:CABO:PREF %s"%value,
-         })
-Attribute('CHAN04_CAInversion',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN04:CABO:INVE?",
-           'writeCmd':lambda value:"CHAN04:CABO:INVE %s"%value,
-         })
-Attribute('CHAN04_CAInversion',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN04:CABO:TIGA?",
-           'writeCmd':lambda value:"CHAN04:CABO:TIGA %s"%value,
-         })
-Attribute('CHAN04_CAInversion',
-          {'type':PyTango.CmdArgType.DevString,
-           'dim':[0],
-           'readCmd':"CHAN04:CABO:VGAI?",
-           'writeCmd':lambda value:"CHAN04:CABO:VGAI %s"%value,
-         })
-
+# Channels ---
+Attribute('InstantCurrent',
+          {'type': PyTango.CmdArgType.DevDouble,
+           'dim': [0],
+           'readCmd': lambda ch, num: "%s%.2d:INSCurrent?" % (ch, num),
+           'channels': True
+           })
+Attribute('Current',
+          {'type': PyTango.CmdArgType.DevString,
+           # FIXME: DevString? should it be an array of doubles?
+           'dim': [0],
+           'readCmd': lambda ch, num: "%s%.2d:CURRent?" % (ch, num),
+           'channels': True
+           })
+Attribute('AverageCurrent',
+          {'type': PyTango.CmdArgType.DevDouble,
+           'dim': [0],
+           'readCmd': lambda ch, num: "%s%.2d:AVGCurrent?" % (ch, num),
+           'channels': True
+           })
+Attribute('CARange',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': lambda ch, num: "%s%.2d:CABO:RANGE?" % (ch, num),
+           'writeCmd': lambda ch, num: (lambda value: "%s%.2d:CABO:RANGE %s"
+                                        % (ch, num, value)),
+           'channels': True
+           })
+Attribute('CAFilter',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': lambda ch, num: "%s%.2d:CABO:FILT?" % (ch, num),
+           'writeCmd': lambda ch, num: (lambda value: "%s%.2d:CABO:FILT %s"
+                                        % (ch, num, value)),
+           'channels': True
+           })
+Attribute('CAPostFilter',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': lambda ch, num: "%s%.2d:CABO:POST?" % (ch, num),
+           'writeCmd': lambda ch, num: (lambda value: "%s%.2d:CABO:POST %s"
+                                        % (ch, num, value)),
+           'channels': True
+           })
+Attribute('CAPreFilter',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': lambda ch, num: "%s%.2d:CABO:PREF?" % (ch, num),
+           'writeCmd': lambda ch, num: (lambda value: "%s%.2d:CABO:PREF %s"
+                                        % (ch, num, value)),
+           'channels': True
+           })
+Attribute('CAInversion',
+          {'type': PyTango.CmdArgType.DevDouble,
+           'dim': [0],
+           'readCmd': lambda ch, num: "%s%.2d:CABO:INVE?" % (ch, num),
+           'writeCmd': lambda ch, num: (lambda value: "%s%.2d:CABO:INVE %s"
+                                        % (ch, num, value)),
+           'channels': True
+           })
+Attribute('CATIGain',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': lambda ch, num: "%s%.2d:CABO:TIGA?" % (ch, num),
+           'writeCmd': lambda ch, num: (lambda value: "%s%.2d:CABO:TIGA %s"
+                                        % (ch, num, value)),
+           'channels': True
+           })
+Attribute('CAVGain',
+          {'type': PyTango.CmdArgType.DevDouble,
+           'dim': [0],
+           'readCmd': lambda ch, num: "%s%.2d:CABO:VGAI?" % (ch, num),
+           'writeCmd': lambda ch, num: (lambda value: "%s%.2d:CABO:VGAI %s"
+                                        % (ch, num, value)),
+           'channels': True
+           })
