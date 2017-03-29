@@ -16,17 +16,18 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+import os
+import PyTango
+import traceback
+import functools
+from copy import copy
+
 __author__ = "Sergi Blanch-Torne"
 __maintainer__ = "Sergi Blanch-Torne"
 __email__ = "sblanch@cells.es"
 __copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 __status__ = "Production"
-
-import PyTango
-import traceback
-import functools
-from copy import copy
 
 
 def identifier(idn, deviceObj):
@@ -66,50 +67,58 @@ def splitIDN(idn):
                           "in %r" % (idn))
 
 
+def _getFilePath(filename):
+    path = os.path.dirname(__file__)
+    full_path = path + '/' + filename
+    return full_path
+
+
 #################################
 # supported companies methods ---
 def agilent(model):
     if model.startswith('dso'):
-        return "instructions/scope/agilentDSO.py"
+        return _getFilePath("instructions/scope/agilentDSO.py")
     elif model.startswith('n5171'):
-        return "instructions/radioFrequencyGenerator/"\
-            "keysightSignalGenerator.py"
+        return _getFilePath("instructions/radioFrequencyGenerator/"
+                            "keysightSignalGenerator.py")
     raise EnvironmentError("Agilent %s model not supported" % (model))
 
 
 def tektronix(model):
     if model.startswith('dpo'):
-        return "instructions/scope/tektronixDPO.py"
+        return _getFilePath("instructions/scope/tektronixDPO.py")
     elif model.upper().startswith('AFG'):
-        return "instructions/arbitraryFunctionGenerator/tektronicsAFG.py"
+        return _getFilePath("instructions/arbitraryFunctionGenerator/"
+                            "tektronicsAFG.py")
     raise EnvironmentError("Tektronix %s model not supported" % (model))
 
 
 def rohdeschwarz(model):
     if model == 'sma100a':
-        return "instructions/radioFrequencyGenerator/rohdeSchwarzRFG.py"
+        return _getFilePath("instructions/radioFrequencyGenerator/"
+                            "rohdeSchwarzRFG.py")
     elif model.lower() == 'fsp-3':
-        return "instructions/spectrumAnalyser/rohdeSchwarzFSP.py"
+        return _getFilePath("instructions/spectrumAnalyser/rohdeSchwarzFSP.py")
     raise EnvironmentError("Rohde&Schwarz %s model not supported" % (model))
 
 
 def arroyo(model):
     if model == '5300':
-        return "instructions/temperatureController/arroyo5300.py"
+        return _getFilePath("instructions/temperatureController/arroyo5300.py")
     raise EnvironmentError("Arroyo %s model not supported" % (model))
 
 
 def albasynchrotron(model):
     if model == 'electrometer2':
-        return "instructions/albaEm/albaEm.py"
+        return _getFilePath('instructions/albaEm/albaEm.py')
     raise EnvironmentError("Alba Synchrotron %s model not supported" % (model))
 
 
 def keithley(model):
     if model == 'model 2000':
-        return "instructions/multimeter/keithley2000.py"
+        return _getFilePath("instructions/multimeter/keithley2000.py")
     elif model == 'model 2635a':
-        return "instructions/sourcemeter/keithley2635.py"
+        return _getFilePath("instructions/sourcemeter/keithley2635.py")
     raise EnvironmentError("Keithley %s model not supported" % (model))
 # done supported companies methods
 ##################################
