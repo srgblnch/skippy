@@ -26,10 +26,19 @@ __status__ = "Development"
 import PyTango
 
 Attribute('Function',
-          {'type': PyTango.CmdArgType.DevString,
+          {'description': 'Used to select the measurement function of the '
+           'instrument.',
+           'type': PyTango.CmdArgType.DevString,
            'dim': [0],
            'readCmd': "sense:func?",
-           'writeCmd': lambda value: "sense:func %s" % (value),
+           'readFormula': 'VALUE.strip()',
+           'writeCmd': lambda value: "sense:func '%s'" % (value),
+           'writeValues': ['voltage:dc', 'voltage:ac',
+                           # 'current:dc', 'current:ac',
+                           # 'resistence', 'fresistance',
+                           # 'period', 'frequency',
+                           # 'temperature', 'diode', 'continuity'
+                           ],
            })
 
 # DC ---
@@ -55,17 +64,21 @@ Attribute('VoltageDCResolution',
            })
 
 Attribute('VoltageDCAverage',
-          {'type': PyTango.CmdArgType.DevDouble,
+          {'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
            'readCmd': "sense:volt:dc:aver:stat?",
            'writeCmd': lambda value: "sense:volt:dc:aver:stat %s" % (value),
            })
 
 Attribute('VoltageDCMovingAverage',
-          {'type': PyTango.CmdArgType.DevString,
+          {''
+           'type': PyTango.CmdArgType.DevString,
            'dim': [0],
            'readCmd': "sense:volt:dc:aver:tcon?",
+           'readFormula': 'VALUE.strip()',
            'writeCmd': lambda value: "sense:volt:dc:aver:tcon %s" % (value),
+           'writeValues': ['MOV', 'moving',
+                           'REP', 'repeat'],
            })
 
 # AC ---
@@ -91,7 +104,7 @@ Attribute('VoltageACResolution',
            })
 
 Attribute('VoltageACAverage',
-          {'type': PyTango.CmdArgType.DevDouble,
+          {'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
            'readCmd': "sense:volt:ac:aver:stat?",
            'writeCmd': lambda value: "sense:volt:ac:aver:stat %s" % (value),
@@ -101,18 +114,23 @@ Attribute('VoltageACMovingAverage',
           {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
            'readCmd': "sense:volt:ac:aver:tcon?",
+           'readFormula': 'VALUE.strip()',
            'writeCmd': lambda value: "sense:volt:ac:aver:tcon %s" % (value),
+           'writeValues': ['MOV', 'moving',
+                           'REP', 'repeat'],
            })
 
 # Measurements ---
 Attribute('Measure',
-          {'type': PyTango.CmdArgType.DevDouble,
+          {'description': 'Used to read the latest instrument reading.',
+           'type': PyTango.CmdArgType.DevDouble,
            'dim': [0],
            'readCmd': "sense:data?",
            })
 
 Attribute('MeasureStatus',
-          {'type': PyTango.CmdArgType.DevDouble,
+          {'description': 'Used to read the event registers bit array',
+           'type': PyTango.CmdArgType.DevShort,
            'dim': [0],
            'readCmd': "stat:meas:even?",
            })

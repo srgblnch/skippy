@@ -329,11 +329,13 @@ class ROAttributeObj(AttributeObj):
     @property
     def rvalue(self):
         if self._readFormula:
-            self.debug_stream("Evaluating %r with VALUE=%s"
+            self.debug_stream("Evaluating %r with VALUE=%r"
                               % (self._readFormula, self._lastReadValue))
             try:
-                return eval(self._readFormula.replace("VALUE",
-                                                      self._lastReadValue))
+                formula = self._readFormula.replace("VALUE",
+                                                    "%r" % self._lastReadValue)
+                self.debug_stream("eval(%r)" % (formula))
+                return eval(formula)
             except Exception as e:
                 self.warn_stream("Exception evaluating formula: %s" % (e))
         return self._lastReadValue
