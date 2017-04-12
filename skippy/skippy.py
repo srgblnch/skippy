@@ -1024,7 +1024,8 @@ class Skippy (PyTango.Device_4Impl):
                     not str(data[0]).upper() in \
                     self.attributes[attrName].writeValues:
                 self.error_stream("In __write_instrument_attr() avoid to "
-                                  "send: %s" % (cmd))
+                                  "send: %s because it is not in %s"
+                                  % (cmd, self.attributes[attrName].writeValues))
                 raise AttributeError("Invalid write value %r of the "
                                      "attribute %s" % (data[0], attrName))
             else:
