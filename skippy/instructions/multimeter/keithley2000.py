@@ -33,7 +33,8 @@ Attribute('Function',
            'readCmd': "sense:func?",
            'readFormula': 'VALUE.strip()',
            'writeCmd': lambda value: "sense:func '%s'" % (value),
-           'writeValues': ['voltage:dc', 'voltage:ac',
+           'writeValues': ['VOLT:DC', 'VOLTA:DC', 'VOLTAG:DC', 'VOLTAGE:DC',
+			   'VOLT:AC', 'VOLTA:AC', 'VOLTAG:AC', 'VOLTAGE:AC',
                            # 'current:dc', 'current:ac',
                            # 'resistence', 'fresistance',
                            # 'period', 'frequency',
@@ -77,8 +78,8 @@ Attribute('VoltageDCMovingAverage',
            'readCmd': "sense:volt:dc:aver:tcon?",
            'readFormula': 'VALUE.strip()',
            'writeCmd': lambda value: "sense:volt:dc:aver:tcon %s" % (value),
-           'writeValues': ['MOV', 'moving',
-                           'REP', 'repeat'],
+           'writeValues': ['MOV', 'MOVI', 'MOVIN', 'MOVING',
+                           'REP', 'REPE', 'REPEA', 'REPEAT'],
            })
 
 # AC ---
@@ -116,8 +117,8 @@ Attribute('VoltageACMovingAverage',
            'readCmd': "sense:volt:ac:aver:tcon?",
            'readFormula': 'VALUE.strip()',
            'writeCmd': lambda value: "sense:volt:ac:aver:tcon %s" % (value),
-           'writeValues': ['MOV', 'moving',
-                           'REP', 'repeat'],
+           'writeValues': ['MOV', 'MOVI', 'MOVIN', 'MOVING',
+                           'REP', 'REPE', 'REPEA', 'REPEAT'],
            })
 
 # Measurements ---
