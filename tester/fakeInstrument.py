@@ -26,25 +26,42 @@ __status__ = "Production"
 
 from instrIdn import InstrumentIdentification
 import PyTango
+import signal
 import scpi
 import skippy
+from subprocess import Popen
+import sys
+from time import sleep
 import traceback
 
-
-DevName = 'fake/skyppy/instrument'
+DevServer = 'Skippy'
+DevInstance = 'FakeInstrument'
 DevClass = 'Skippy'
-DevServer = 'Skippy/FakeInstrument'
+DevName = 'fake/skyppy/instrument-01'
 
 
 class FakeInstrument(object):
+
+    _identity = None
+    _scpiObj = None
+
     def __init__(self, *args, **kwargs):
         super(FakeInstrument, self).__init__(*args, **kwargs)
+        self._buildFakeSCPI()
+
+    def _buildFakeSCPI(self):
         self._identity = InstrumentIdentification('ALBA', 'FakeInstrument', 0,
                                                   skippy.version())
         self._scpiObj = scpi.scpi(local=True)
-        self._scpiObj.addSpecialCommand('IDN', self._identity.idn)
-        # Prepare ...
+        self._buildSpecialCommands()
+        self._buildNormalCommands()
         self._scpiObj.open()
+
+    def _buildSpecialCommands(self):
+        self._scpiObj.addSpecialCommand('IDN', self._identity.idn)
+
+    def _buildNormalCommands(self):
+        pass
 
 
 def createTestDevice():
@@ -54,16 +71,32 @@ def createTestDevice():
     devInfo = PyTango.DbDevInfo()
     devInfo.name = DevName
     devInfo._class = DevClass
-    devInfo.server = DevServer
+    devInfo.server = DevServer+"/"+DevInstance
     tangodb.add_device(devInfo)
-    print("Server %s added" % DevServer)
+    print("Server %s added" % (DevServer+"/"+DevInstance))
     propertyName = 'Instrument'
     propertyValue = 'localhost'
     property = PyTango.DbDatum(propertyName)
     property.value_string.append(propertyValue)
     print("Set property %s: %s" % (propertyName, propertyValue))
     tangodb.put_device_property(DevName, property)
-    # TODO: run the device server to be tested
+
+
+def startTestDevice():
+    process = Popen([DevServer, DevInstance])
+    print("Launched the device server has pid %d" % (process.pid))
+    return process
+
+
+def stopTestDevice():
+    process.terminate()
+    sleep(1)
+    if process.poll() is not None:
+        print("device server process %d terminated (%d)"
+              % (process.pid, abs(process.returncode)))
+    else:
+        process.kill()
+        print("device server process needed to be killed")
 
 
 def deleteTestDevice():
@@ -72,19 +105,35 @@ def deleteTestDevice():
         print("\nRemove a %s device in %s:%s"
               % (DevName, tangodb.get_db_host(), tangodb.get_db_port()))
         tangodb.delete_device(DevName)
-        tangodb.delete_server(DevServer)
+        tangodb.delete_server(DevServer+"/"+DevInstance)
     except Exception as e:
         print("\n* Deletion failed, please review manually for garbage *\n")
+
+
+def signalHandler(signum, frame):
+    # print("Signal received %s (frame %s)" % (signum, frame))
+    if signum == signal.SIGINT:
+        print("\nCaptured a Ctrl+c: terminating the execution...")
+        stopTestDevice()
+        deleteTestDevice()
+        sys.exit(0)
+    else:
+        print("Unmanaged signal")
 
 
 def main():
     instrument = FakeInstrument()
     try:
         createTestDevice()
+        process = startTestDevice()
+        global process
+        signal.signal(signal.SIGINT, signalHandler)
+        print("\n\tPress Ctrl+c to finish the fake device")
+        signal.pause()
     except Exception as e:
-        print("Cannot complete the test: %s" % e)
+        print("\nCannot complete the test: %s\n" % e)
         traceback.print_exc()
-    finally:
+        stopTestDevice()
         deleteTestDevice()
 
 
