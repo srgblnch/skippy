@@ -1485,6 +1485,7 @@ class Skippy (PyTango.Device_4Impl):
         self.attr_QueryWindow_read = 0
         self.attr_TimeStampsThreshold_read = 0.0
         #----- PROTECTED REGION ID(Skippy.init_device) ENABLED START -----#
+        self.attr_TimeStampsThreshold_read = 0.1
         self._idn = None
         self.set_change_event('State', True, False)
         self.set_change_event('Status', True, False)

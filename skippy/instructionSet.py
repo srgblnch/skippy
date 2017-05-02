@@ -41,7 +41,9 @@ def identifier(idn, deviceObj):
             'rohde&schwarz': rohdeschwarz,
             'arroyo': arroyo,
             'albasynchrotron': albasynchrotron,
-            'keithley instruments inc.': keithley}[company](model)
+            'keithley instruments inc.': keithley,
+            'FakeInstruments. Inc': fakeinstrument,
+            }[company](model),
     attrBuilder = AttributeBuilder(deviceObj)
     attrBuilder.parseFile(file)
     return attrBuilder
@@ -120,6 +122,11 @@ def keithley(model):
     elif model == 'model 2635a':
         return _getFilePath("instructions/sourcemeter/keithley2635.py")
     raise EnvironmentError("Keithley %s model not supported" % (model))
+
+def fakeinstrument(model):
+    if model == 'idnonly':
+        return _getFilePath("instructions/fakeinstruments/tester.py")
+    raise EnvironmentError("Fake Instrument %s model not supported" % (model))
 # done supported companies methods
 ##################################
 

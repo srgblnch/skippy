@@ -28,8 +28,9 @@ from instrIdn import InstrumentIdentification
 import PyTango
 import signal
 import scpi
+from select import select
 import skippy
-from subprocess import Popen
+from subprocess import Popen, PIPE
 import sys
 from time import sleep
 import traceback
@@ -50,7 +51,8 @@ class FakeInstrument(object):
         self._buildFakeSCPI()
 
     def _buildFakeSCPI(self):
-        self._identity = InstrumentIdentification('ALBA', 'FakeInstrument', 0,
+        self._identity = InstrumentIdentification('FakeInstruments. Inc',
+                                                  'IDNonly', 0,
                                                   skippy.version())
         self._scpiObj = scpi.scpi(local=True)
         self._buildSpecialCommands()
@@ -92,7 +94,7 @@ def stopTestDevice():
     process.terminate()
     sleep(1)
     if process.poll() is not None:
-        print("device server process %d terminated (%d)"
+        print("device server process %d terminated (signal %d)"
               % (process.pid, abs(process.returncode)))
     else:
         process.kill()
@@ -111,22 +113,21 @@ def deleteTestDevice():
 
 
 def signalHandler(signum, frame):
-    # print("Signal received %s (frame %s)" % (signum, frame))
     if signum == signal.SIGINT:
         print("\nCaptured a Ctrl+c: terminating the execution...")
         stopTestDevice()
         deleteTestDevice()
         sys.exit(0)
     else:
-        print("Unmanaged signal")
+        print("Unmanaged signal received (%d)" % (signum))
 
 
 def main():
     instrument = FakeInstrument()
     try:
         createTestDevice()
-        process = startTestDevice()
         global process
+        process = startTestDevice()
         signal.signal(signal.SIGINT, signalHandler)
         print("\n\tPress Ctrl+c to finish the fake device")
         signal.pause()

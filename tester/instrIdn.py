@@ -26,6 +26,7 @@ __status__ = "Production"
 import scpi
 import skippy
 
+
 class InstrumentIdentification(object):
     def __init__(self, manufacturer, instrument, serialNumber,
                  firmwareVersion):
@@ -70,6 +71,7 @@ class InstrumentIdentification(object):
     def idn(self):
         return "%s,%s,%s,%s" % (self.manufacturer, self.instrument,
                                 self.serialNumber, self.firmwareVersion)
+
 
 def main():
     instrument = InstrumentIdentification('ALBA', 'test', 0, skippy.version())
