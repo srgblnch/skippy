@@ -167,8 +167,8 @@ class Skippy (PyTango.Device_4Impl):
         '''This method contains a procedure to reconnect to the instrument, if
            it is possible. It uses the state DISABLE to report that it is
            temporally out of service and automatically trying to recover.
-           If the connection can be restablished the state goes to ON of
-           RUNNONG depending on the monitoring procedure.
+           If the connection can be restablished the state goes to ON or
+           RUNNING depending on the monitoring procedure.
            Else, in case the communication cannot be restablished by itself,
            then the state changes to FAULT to report the malfunction.
         '''
