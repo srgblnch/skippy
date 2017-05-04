@@ -38,15 +38,15 @@ setup(name='skippy',
       classifiers=['Development Status :: 5 - Production/Stable',
                    'Intended Audience :: Developers',
                    'Intended Audience :: Science/Research',
-                   'License :: OSI Approved :: '\
+                   'License :: OSI Approved :: '
                    'GNU General Public License v3 or later (GPLv3+)',
                    'Operating System :: POSIX',
                    # 'Programming Language :: Cython',
                    'Programming Language :: Python',
-                   'Topic :: Scientific/Engineering :: '\
+                   'Topic :: Scientific/Engineering :: '
                    'Interface Engine/Protocol Translator',
                    'Topic :: Software Development :: Embedded Systems',
-                   'Topic :: Software Development :: Libraries :: '\
+                   'Topic :: Software Development :: Libraries :: '
                    'Python Modules',
                    ''],
       packages=find_packages(),
