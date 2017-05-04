@@ -90,6 +90,13 @@ Attribute('VoltageACBandwidth',
            'writeCmd': lambda value: "sense:volt:ac:det:band %s" % (value),
            })
 
+Attribute('VoltageACSpeed',
+          {'type': PyTango.CmdArgType.DevDouble,
+           'dim': [0],
+           'readCmd': "sense:volt:ac:nplc?",
+           'writeCmd': lambda value: "sense:volt:ac:nplc %s" % (value),
+           })
+
 Attribute('VoltageACRange',
           {'type': PyTango.CmdArgType.DevDouble,
            'dim': [0],
