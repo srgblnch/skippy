@@ -24,12 +24,13 @@ __license__ = "GPLv3+"
 __status__ = "Production"
 
 
+from instrAttrs import ROinteger, RWinteger, ROfloat, RWfloat
 from instrIdn import InstrumentIdentification
 import PyTango
 import signal
 import scpi
 from select import select
-import skippy
+from skippy import version as skippyVersion
 from subprocess import Popen, PIPE
 import sys
 from time import sleep
@@ -45,6 +46,7 @@ class FakeInstrument(object):
 
     _identity = None
     _scpiObj = None
+    _attrObjs = {}
 
     def __init__(self, *args, **kwargs):
         super(FakeInstrument, self).__init__(*args, **kwargs)
@@ -52,90 +54,158 @@ class FakeInstrument(object):
 
     def _buildFakeSCPI(self):
         self._identity = InstrumentIdentification('FakeInstruments. Inc',
-                                                  'IDNonly', 0,
-                                                  skippy.version())
+                                                  'Tester', 0,
+                                                  skippyVersion())
         self._scpiObj = scpi.scpi(local=True)
         self._buildSpecialCommands()
         self._buildNormalCommands()
+        self.open()
+
+    def open(self):
         self._scpiObj.open()
+
+    def close(self):
+        self._scpiObj.close()
 
     def _buildSpecialCommands(self):
         self._scpiObj.addSpecialCommand('IDN', self._identity.idn)
 
     def _buildNormalCommands(self):
-        pass
+        rointegerObj = ROinteger()
+        self._scpiObj.addCommand('source:readable:short:value',
+                                 readcb=rointegerObj.value, default=True)
+        self._scpiObj.addCommand('source:readable:short:upper',
+                                 readcb=rointegerObj.upperLimit,
+                                 writecb=rointegerObj.upperLimit)
+        self._scpiObj.addCommand('source:readable:short:lower',
+                                 readcb=rointegerObj.lowerLimit,
+                                 writecb=rointegerObj.lowerLimit)
+        self._attrObjs['rointeger'] = rointegerObj
+        rwinteger = RWinteger()
+        self._scpiObj.addCommand('source:writable:short:value',
+                                 readcb=rwinteger.value,
+                                 writecb=rwinteger.value,
+                                 default=True)
+        self._scpiObj.addCommand('source:writable:short:upper',
+                                 readcb=rwinteger.upperLimit,
+                                 writecb=rwinteger.upperLimit)
+        self._scpiObj.addCommand('source:writable:short:lower',
+                                 readcb=rwinteger.lowerLimit,
+                                 writecb=rwinteger.lowerLimit)
+        self._attrObjs['rwinteger'] = rwinteger
+        rofloat = ROfloat()
+        self._scpiObj.addCommand('source:readable:float:value',
+                                 readcb=rofloat.value, default=True)
+        self._scpiObj.addCommand('source:readable:float:upper',
+                                 readcb=rofloat.upperLimit,
+                                 writecb=rofloat.upperLimit)
+        self._scpiObj.addCommand('source:readable:float:lower',
+                                 readcb=rofloat.lowerLimit,
+                                 writecb=rofloat.lowerLimit)
+        self._attrObjs['rofloat'] = rofloat
+        rwfloat = RWfloat()
+        self._scpiObj.addCommand('source:writable:float:value',
+                                 readcb=rwfloat.value,
+                                 writecb=rwfloat.value,
+                                 default=True)
+        self._scpiObj.addCommand('source:writable:float:upper',
+                                 readcb=rwfloat.upperLimit,
+                                 writecb=rwfloat.upperLimit)
+        self._scpiObj.addCommand('source:writable:float:lower',
+                                 readcb=rwfloat.lowerLimit,
+                                 writecb=rwfloat.lowerLimit)
+        self._attrObjs['rwfloat'] = rwfloat
 
 
-def createTestDevice():
-    tangodb = PyTango.Database()
-    print("\nCreating a %s device in %s:%s"
-          % (DevName, tangodb.get_db_host(), tangodb.get_db_port()))
-    devInfo = PyTango.DbDevInfo()
-    devInfo.name = DevName
-    devInfo._class = DevClass
-    devInfo.server = DevServer+"/"+DevInstance
-    tangodb.add_device(devInfo)
-    print("Server %s added" % (DevServer+"/"+DevInstance))
-    propertyName = 'Instrument'
-    propertyValue = 'localhost'
-    property = PyTango.DbDatum(propertyName)
-    property.value_string.append(propertyValue)
-    print("Set property %s: %s" % (propertyName, propertyValue))
-    tangodb.put_device_property(DevName, property)
+global manager
+manager = None
 
 
-def startTestDevice():
-    process = Popen([DevServer, DevInstance])
-    print("Launched the device server has pid %d" % (process.pid))
-    return process
+class TestManager(object):
 
+    _deviceProcess = None
 
-def stopTestDevice():
-    process.terminate()
-    sleep(1)
-    if process.poll() is not None:
-        print("device server process %d terminated (signal %d)"
-              % (process.pid, abs(process.returncode)))
-    else:
-        process.kill()
-        print("device server process needed to be killed")
+    def __init__(self, *args, **kwargs):
+        super(TestManager, self).__init__(*args, **kwargs)
+        self._createTestDevice()
+        self._startTestDevice()
 
+    def __del__(self):
+        self._stopTestDevice()
+        self._deleteTestDevice()
 
-def deleteTestDevice():
-    try:
+    def log(self, msg):
+        print("%s" % (msg))
+
+    def _createTestDevice(self):
         tangodb = PyTango.Database()
-        print("\nRemove a %s device in %s:%s"
-              % (DevName, tangodb.get_db_host(), tangodb.get_db_port()))
-        tangodb.delete_device(DevName)
-        tangodb.delete_server(DevServer+"/"+DevInstance)
-    except Exception as e:
-        print("\n* Deletion failed, please review manually for garbage *\n")
+        self.log("Creating a %s device in %s:%s"
+                 % (DevName, tangodb.get_db_host(), tangodb.get_db_port()))
+        devInfo = PyTango.DbDevInfo()
+        devInfo.name = DevName
+        devInfo._class = DevClass
+        devInfo.server = DevServer+"/"+DevInstance
+        tangodb.add_device(devInfo)
+        self.log("Server %s added" % (DevServer+"/"+DevInstance))
+        propertyName = 'Instrument'
+        propertyValue = 'localhost'
+        property = PyTango.DbDatum(propertyName)
+        property.value_string.append(propertyValue)
+        self.log("Set property %s: %s" % (propertyName, propertyValue))
+        tangodb.put_device_property(DevName, property)
+
+    def _startTestDevice(self):
+        self._deviceProcess = Popen([DevServer, DevInstance, "-v4"])
+        self.log("Launched the device server has pid %d"
+                 % (self._deviceProcess.pid))
+
+    def _stopTestDevice(self):
+        if self._deviceProcess is None:
+            return
+        self._deviceProcess.terminate()
+        sleep(1)
+        if self._deviceProcess.poll() is not None:
+            self.log("device server process %d terminated (signal %d)"
+                     % (self._deviceProcess.pid,
+                        abs(self._deviceProcess.returncode)))
+        else:
+            self._deviceProcess.kill()
+            self.log("device server process needed to be killed")
+
+    def _deleteTestDevice(self):
+        try:
+            tangodb = PyTango.Database()
+            self.log("Remove a %s device in %s:%s"
+                     % (DevName, tangodb.get_db_host(), tangodb.get_db_port()))
+            tangodb.delete_device(DevName)
+            tangodb.delete_server(DevServer+"/"+DevInstance)
+        except Exception as e:
+            self.log("* Deletion failed, please review manually "
+                     "for garbage *\n")
 
 
 def signalHandler(signum, frame):
     if signum == signal.SIGINT:
         print("\nCaptured a Ctrl+c: terminating the execution...")
-        stopTestDevice()
-        deleteTestDevice()
+        global manager
+        del manager
         sys.exit(0)
     else:
         print("Unmanaged signal received (%d)" % (signum))
 
 
 def main():
-    instrument = FakeInstrument()
     try:
-        createTestDevice()
-        global process
-        process = startTestDevice()
+        global manager
+        instrument = FakeInstrument()
+        manager = TestManager()
         signal.signal(signal.SIGINT, signalHandler)
         print("\n\tPress Ctrl+c to finish the fake device")
         signal.pause()
     except Exception as e:
         print("\nCannot complete the test: %s\n" % e)
         traceback.print_exc()
-        stopTestDevice()
-        deleteTestDevice()
+        del manager
 
 
 if __name__ == '__main__':
