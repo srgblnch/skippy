@@ -24,7 +24,7 @@ __license__ = "GPLv3+"
 __status__ = "Production"
 
 
-from instrAttrs import ROinteger, RWinteger, ROfloat, RWfloat
+from instrAttrs import ROinteger, RWinteger, ROfloat, RWfloat, ROintegerArray
 from instrIdn import InstrumentIdentification
 import PyTango
 import signal
@@ -56,7 +56,7 @@ class FakeInstrument(object):
         self._identity = InstrumentIdentification('FakeInstruments. Inc',
                                                   'Tester', 0,
                                                   skippyVersion())
-        self._scpiObj = scpi.scpi(local=True)
+        self._scpiObj = scpi.scpi(local=True, debug=True, log2File=True)
         self._buildSpecialCommands()
         self._buildNormalCommands()
         self.open()
@@ -115,6 +115,19 @@ class FakeInstrument(object):
                                  readcb=rwfloat.lowerLimit,
                                  writecb=rwfloat.lowerLimit)
         self._attrObjs['rwfloat'] = rwfloat
+#         rointegerarray = ROintegerArray()
+#         self._scpiObj.addCommand('source:readable:array:short:value',
+#                                  readcb=rointegerarray.value, default=True)
+#         self._scpiObj.addCommand('source:readable:array:short:upper',
+#                                  readcb=rointegerarray.upperLimit,
+#                                  writecb=rointegerarray.upperLimit)
+#         self._scpiObj.addCommand('source:readable:array:short:lower',
+#                                  readcb=rointegerarray.lowerLimit,
+#                                  writecb=rointegerarray.lowerLimit)
+#         self._scpiObj.addCommand('source:readable:array:short:samples',
+#                                  readcb=rointegerarray.samples,
+#                                  writecb=rointegerarray.samples)
+#         self._attrObjs['rointegerarray'] = rointegerarray
 
 
 global manager

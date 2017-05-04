@@ -23,7 +23,8 @@ __copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 __status__ = "Production"
 
-from random import random, randint
+from numpy.random import random, randint
+#from numpy import random as nprandom
 
 
 class FakeNumber(object):
@@ -46,6 +47,20 @@ class FakeNumber(object):
         if value is None:
             return self._lowerLimit
         self._lowerLimit = int(value)
+
+
+# class FakeIntegerArray(FakeNumber):
+# 
+#     _samples = None
+# 
+#     def __init__(self, samples=10, *args, **kwargs):
+#         super(FakeIntegerArray, self).__init__(*args, **kwargs)
+#         self._samples = samples
+# 
+#     def samples(self, value=None):
+#         if value is None:
+#             return self._samples
+#         self._samples = int(value)
 
 
 class FakeInteger(FakeNumber):
@@ -88,6 +103,7 @@ class RWinteger(FakeInteger):
         if self._lowerLimit < value < self._upperLimit:
             self._value = value
 
+
 class ROfloat(FakeFloat):
     """ Read Only floating point number """
 
@@ -104,6 +120,7 @@ class ROfloat(FakeFloat):
                                   self._upperLimit)+random()
         return self._value
 
+
 class RWfloat(FakeFloat):
     """ Read Write Integer """
 
@@ -116,3 +133,14 @@ class RWfloat(FakeFloat):
         value = float(value)
         if self._lowerLimit < value < self._upperLimit:
             self._value = value
+
+
+# class ROintegerArray(FakeIntegerArray):
+#     def __init__(self, *args, **kwargs):
+#         super(ROintegerArray, self).__init__(*args, **kwargs)
+#         self.value()
+# 
+#     def value(self):
+#         self._value = randint(self._lowerLimit, self._upperLimit,
+#                               size=self._samples)
+#         return self._value

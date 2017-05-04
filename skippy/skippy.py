@@ -65,6 +65,7 @@ from version import version
 MINIMUM_RECOVERY_DELAY = 3.0
 DEFAULT_RECOVERY_DELAY = 600.0
 DEFAULT_ERRORS_THRESHOLD = 1
+RECONNECT_THREAD_DELETE_TRIES = 3
 #----- PROTECTED REGION END -----#  //  Skippy.additionnal_import
 
 ## Device States Description
@@ -218,30 +219,35 @@ class Skippy (PyTango.Device_4Impl):
            that comes from the read_attribute() call.
         '''
         try:
-            self.warn_stream("Starting a reconnect procedure.")
-            if self._reconnectThread is not None and \
-                    self._reconnectThread.isAlive():
-                self.warn_stream("Past reconnection thread is still alive...")
-                self._reconnectAwaker.set()
-                self._reconnectThread.join(1)
-                while self._reconnectThread.isAlive():
-                    self.warn_stream("Waiting the past reconnection thread "
-                                     "to finish")
-                    self._reconnectThread.join(1)
-                self.info_stream("Past reconnection thread finish")
-                # how to check if a the past reconnection was active and has
-                # already fixed the issue?
-                if self._instrument.isConnected():
-                    self.info_stream("Communication recovered by "
-                                     "past reconnection thread")
-                    return
-            if self._reconnectThread is None:
-                self.info_stream("Creating a reconnection thread")
-                self._reconnectThread = \
-                    threading.Thread(target=self.__doReconnect)
-            if not self._reconnectThread.isAlive():
-                self.info_stream("Launching the reconnection thread")
-                self._reconnectThread.start()
+            self.change_state(PyTango.DevState.FAULT)
+            self.addStatusMsg("Fatal error and communications lost with "
+                              "the instrument!", important=True)
+            #self.warn_stream("Starting a reconnect procedure.")
+            #if self._reconnectThread is not None and \
+            #        self._reconnectThread.isAlive():
+            #    self.warn_stream("Past reconnection thread is still alive...")
+            #    self._reconnectAwaker.set()
+            #    self._reconnectThread.join(1)
+            #    while self._reconnectThread.isAlive():
+            #        self.warn_stream("Waiting the past reconnection thread "
+            #                         "to finish")
+            #        self._reconnectThread.join(1)
+            #    self.info_stream("Past reconnection thread finish")
+            #    # how to check if a the past reconnection was active and has
+            #    # already fixed the issue?
+            #    if self._instrument.isConnected():
+            #        self.info_stream("Communication recovered by "
+            #                         "past reconnection thread")
+            #        return
+            #if self._reconnectThread is None:
+            #    self.info_stream("Creating a reconnection thread")
+            #    self._reconnectThread = \
+            #        threading.Thread(target=self.__doReconnect,
+            #                         name="reconnect")
+            #    self._reconnectThread.setDaemon(True)
+            #if not self._reconnectThread.isAlive():
+            #    self.info_stream("Launching the reconnection thread")
+            #    self._reconnectThread.start()
         except Exception as e:
             self.error_stream("Reconnect procedure cannot be started: %s"
                               % (e))
@@ -383,24 +389,31 @@ class Skippy (PyTango.Device_4Impl):
            them (like a restart).
         '''
         if not hasattr(self, '_stateMutex'):
+            self.debug_stream("preparing stateMutex")
             self._stateMutex = threading.Semaphore()
         else:
             while not self._stateMutex.acquire(False):
+                self.debug_stream("releasing stateMutex")
                 self._stateMutex.release()
 
     def stateMutex(decoratedMethod):
         def magic(self, methodVble):
             if hasattr(self, '_stateMutex'):
-                self.debug_stream("stateMutex() request to acquire")
+                self.debug_stream("stateMutex() request to acquire "
+                                  "by thread %r"
+                                  % (threading.currentThread().name))
                 self._stateMutex.acquire()
-                self.debug_stream("stateMutex() acquire")
+                self.debug_stream("stateMutex() acquired by %r thread"
+                                  % (threading.currentThread().name))
             try:
                 decoratedMethod(self, methodVble)
             except Exception as e:
-                self.error_stream("In StateMutex() exception: %s" % (e))
+                self.error_stream("In StateMutex() thread %r exception: %s"
+                                  % (threading.currentThread().name, e))
             if hasattr(self, '_stateMutex'):
                 self._stateMutex.release()
-                self.debug_stream("stateMutex() release")
+                self.debug_stream("stateMutex() thread %r release"
+                                  % (threading.currentThread().name))
         return magic
 
     # done section to resolve instrument property ---
@@ -442,6 +455,10 @@ class Skippy (PyTango.Device_4Impl):
            TODO: as all the readers (external or any of the monitors) will call
            this method, here is the place to implement the priorities.
         '''
+        if self.get_state() in [PyTango.DevState.FAULT]:
+            self.debug_stream("Avoid read procedure in %s state"
+                              % (self.get_state()))
+            return
         self.debug_stream("In __read_attr_procedure(%r)" % (data))
         try:
             multiattr = self.get_device_attr()
@@ -454,8 +471,7 @@ class Skippy (PyTango.Device_4Impl):
                 answers = []
                 for query in queries:
                     answer = self.__hardwareRead(query)
-                    if answer is not None:
-                        answers.append(answer)
+                    answers.append(answer)
                 msg = ""
                 for answer in answers:
                     if answer is None:
@@ -469,7 +485,7 @@ class Skippy (PyTango.Device_4Impl):
                     else:
                         msg = ''.join([msg, "%r" % (answer)])
                 self.debug_stream("In __read_attr_procedure() scalar answers:"
-                                  " %s" % (msg))
+                                  " %r" % (msg))
                 self.__postHardwareScalarRead(indexes, answers)
             if not len(spectrumList) == 0:
                 indexes, queries = self.__preHardwareRead(spectrumList, 1)
@@ -870,17 +886,18 @@ class Skippy (PyTango.Device_4Impl):
                         elif dataFormat.startswith('WORD'):
                             format = 'h'  # signed short, 2byte
                             divisor = 2
-                        elif dataFormat.lower() == 'real,32':
+                        elif dataFormat.lower() in ['real,32', 'asc']:
                             format = 'I'
                             divisor = 4
                         else:
                             self.error_stream("Cannot decodify data receiver "
-                                              "for the attribute %s"
-                                              % (attrName))
+                                              "for the attribute %s (%s)"
+                                              % (attrName, dataFormat))
                             self.attributes[attrName].lastReadValue = []
                             self.attributes[attrName].timestamp = t
                             self.attributes[attrName].quality = \
                                 PyTango.AttrQuality.ATTR_INVALID
+                            break
                         nIncompleteBytes = (len(bodyBlock) % divisor)
                         nCompletBytes = len(bodyBlock) - nIncompleteBytes
                         completBytes = bodyBlock[:nCompletBytes]
@@ -939,6 +956,11 @@ class Skippy (PyTango.Device_4Impl):
 
     @instructionSet.AttrExc
     def read_attr(self, attr):
+        if self.get_state() in [PyTango.DevState.FAULT]:
+            attr.set_value_date_quality(0, time.time(),
+                                                PyTango.AttrQuality.
+                                                ATTR_INVALID)
+            return
         attrName = attr.get_name()
         if attrName in self.attributes:
             value = self.attributes[attrName].rvalue
@@ -996,6 +1018,9 @@ class Skippy (PyTango.Device_4Impl):
            - The other two are the internal ramp attributes
            - Other case, raise an exception
         '''
+        if self.get_state() in [PyTango.DevState.FAULT]:
+            raise EnvironmentError("Not allowed to write in %s state"
+                                   % (self.get_state()))
         attrName = attr.get_name()
         data = []
         attr.get_write_value(data)
@@ -1053,6 +1078,7 @@ class Skippy (PyTango.Device_4Impl):
                                         lastWriteValue))
                     self.attributes[attrName].rampThread = \
                         threading.Thread(target=self._rampStepper,
+                                         name="%s_ramp" % (attrName),
                                          args=([attrName]))
                     self.attributes[attrName].rampThread.setDaemon(True)
                     self.attributes[attrName].rampThread.start()
@@ -1280,7 +1306,7 @@ class Skippy (PyTango.Device_4Impl):
             self._generalMonitorEvent.clear()
             for monitorTag in self._monitorThreads.keys():
                 self._monitorThreads[monitorTag]['Thread'] = \
-                    threading.Thread(target=self.__monitor,
+                    threading.Thread(target=self.__monitor, name="monitor",
                                      args=([self._monitorThreads[monitorTag]]))
                 self._monitorThreads[monitorTag]['Event'].clear()
                 self._monitorThreads[monitorTag]['Thread'].setDaemon(True)
@@ -1472,10 +1498,15 @@ class Skippy (PyTango.Device_4Impl):
         self.debug_stream("In delete_device()")
         #----- PROTECTED REGION ID(Skippy.delete_device) ENABLED START -----#
         self._reconnectAwaker.set()
+        i = RECONNECT_THREAD_DELETE_TRIES
         while self._reconnectThread is not None and\
-                self._reconnectThread.isAlive():
-            self.warn_stream("wait for reconnection thread...")
+                self._reconnectThread.isAlive() and i > 0:
+            self.warn_stream("wait for reconnection thread... (%d)" % i)
             self._reconnectThread.join(1)
+            i -= 1
+        if self._reconnectThread is not None and\
+                self._reconnectThread.isAlive():
+            self.error_stream("Couldn't wait more for the reconnection thread")
         #----- PROTECTED REGION END -----#  //  Skippy.delete_device
 
     def init_device(self):
@@ -1705,7 +1736,8 @@ class Skippy (PyTango.Device_4Impl):
         argout = False
         #----- PROTECTED REGION ID(Skippy.Stop) ENABLED START -----#
         try:
-            stopper = threading.Thread(target=self.__endMonitoring)
+            stopper = threading.Thread(target=self.__endMonitoring,
+                                       name="monitor_stopper")
             stopper.setDaemon(True)
             stopper.start()
             argout = True
@@ -2032,6 +2064,7 @@ class Skippy (PyTango.Device_4Impl):
                     if self.get_state() == PyTango.DevState.RUNNING:
                         self._monitorThreads[monitorTag]['Thread'] = \
                             threading.Thread(target=self.__monitor,
+                                name="%s_monitor" % (monitorTag),
                                 args=([self._monitorThreads[monitorTag]]))
                         self._monitorThreads[monitorTag]['Event'].clear()
                         self._monitorThreads[monitorTag]['Thread'].\

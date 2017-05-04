@@ -48,3 +48,20 @@ Attribute("float_scalar_rw",
            'readCmd': "source:writable:float:value?",
            'writeCmd': lambda value: "source:writable:float:value %s"
            % (value)})
+
+# Attribute('short_spectrum_ro',
+#           {'type': PyTango.CmdArgType.DevDouble,
+#            'format': '%9.6f',
+#            'dim': [1, 40000000],
+#            'readCmd': "source:readable:array:short:value?",
+#            })
+# 
+# Attribute('WaveformDataFormat',
+#           {'type': PyTango.CmdArgType.DevString,
+#            'dim': [0],
+#            'readCmd': ":waveform:format?",
+#            'writeCmd': lambda value: ":waveform:format %s" % (str(value)),
+#            'writeValues': ['BYTE', 'BYT',
+#                            'WORD', 'WOR',
+#                            'ASCII', 'ASCI', 'ASC'],
+#            })
