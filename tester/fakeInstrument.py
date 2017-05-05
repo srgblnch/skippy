@@ -24,7 +24,7 @@ __license__ = "GPLv3+"
 __status__ = "Production"
 
 
-from instrAttrs import ROinteger, RWinteger, ROfloat, RWfloat, ROintegerArray
+from instrAttrs import ROinteger, RWinteger, ROfloat, RWfloat
 from instrIdn import InstrumentIdentification
 import PyTango
 import signal
