@@ -479,6 +479,11 @@ class Skippy (PyTango.Device_4Impl):
                     if answer is None:
                         self.error_stream("In __read_attr_procedure() "
                                           "Uou, we've got a null answer!")
+                        self.change_state_status(newstate=
+                                                 PyTango.DevState.FAULT,
+                                                 newstatus="Communication "
+                                                 "error to the instrument",
+                                                 important=True)
                         return
                     elif len(answer) > 100:
                         msg = ''.join([msg, "%r(...)%r"
@@ -1186,41 +1191,43 @@ class Skippy (PyTango.Device_4Impl):
 
     def _change_state(self, newstate):
         try:
-            self.info_stream("In change_state(%s)" % (str(newstate)))
+            self.info_stream("In _change_state(%s)" % (str(newstate)))
             if newstate != self.get_state():
                 try:
                     self.push_change_event('State', newstate)
                 except PyTango.DevFailed as e:
-                    self.error_stream("In change_state() push_change_event "
+                    self.error_stream("In _change_state() push_change_event "
                                       "DevFailed: %s" % (e))
                     traceback.print_exc()
                 try:
                     self.set_state(newstate)
                 except PyTango.DevFailed as e:
-                    self.error_stream("In change_state() set_state "
+                    self.error_stream("In _change_state() set_state "
                                       "DevFailed: %s" % (e))
                     traceback.print_exc()
         except Exception as e:
-            self.error_stream("In change_state() Exception: %s" % (e))
+            self.error_stream("In _change_state() Exception: %s" % (e))
+            traceback.print_exc()
 
     def _change_status(self, newstatus):
         try:
-            self.info_stream("In change_status(): %r" % (str(newstatus)))
+            self.info_stream("In _change_status(): %r" % (str(newstatus)))
             if newstatus != self.get_status():
                 try:
                     self.push_change_event('Status', newstatus)
                 except PyTango.DevFailed as e:
-                    self.error_stream("In change_status() push_change_event "
+                    self.error_stream("In _change_status() push_change_event "
                                       "DevFailed: %s" % (e))
                     traceback.print_exc()
                 try:
                     self.set_status(newstatus)
                 except PyTango.DevFailed as e:
-                    self.error_stream("In change_status() set_status "
+                    self.error_stream("In _change_status() set_status "
                                       "DevFailed: %s" % (e))
                     traceback.print_exc()
         except Exception as e:
-            self.error_stream("In change_status() Exception: %s" % (e))
+            self.error_stream("In _change_status() Exception: %s" % (e))
+            traceback.print_exc()
 
     def cleanAllImportantLogs(self):
         try:
@@ -1234,7 +1241,7 @@ class Skippy (PyTango.Device_4Impl):
             self.error_stream("In cleanAllImportantLogs() Exception: %s" % (e))
 
     def _addStatusMsg(self, newStatusLine, important=False):
-        self.debug_stream("In addStatusMsg()")
+        self.debug_stream("In _addStatusMsg()")
         msg = "The device is in %s state.\n" % (self.get_state())
         for ilog in self._important_logs:
             msg = "%s%s\n" % (msg, ilog)
@@ -1244,8 +1251,9 @@ class Skippy (PyTango.Device_4Impl):
             if important and newStatusLine not in self._important_logs:
                 self._important_logs.append(newStatusLine)
         except Exception as e:
-            self.warn_stream("In addStatusMsg() cannot append the new "
+            self.warn_stream("In _addStatusMsg() cannot append the new "
                              "important log '%s'" % (newStatusLine))
+            traceback.print_exc()
 
     def _rebuildStatus(self):
         try:
@@ -1260,7 +1268,8 @@ class Skippy (PyTango.Device_4Impl):
                                   % (self._alarmDueToMonitoring),
                                   important=True)
         except Exception as e:
-            self.error_stream("In rebuildStatus() Exception: %s" % (e))
+            self.error_stream("In _rebuildStatus() Exception: %s" % (e))
+            traceback.print_exc()
     # done event manager section ---
     ######
 
@@ -1527,16 +1536,16 @@ class Skippy (PyTango.Device_4Impl):
     def delete_device(self):
         self.debug_stream("In delete_device()")
         #----- PROTECTED REGION ID(Skippy.delete_device) ENABLED START -----#
-        self._reconnectAwaker.set()
-        i = RECONNECT_THREAD_DELETE_TRIES
-        while self._reconnectThread is not None and\
-                self._reconnectThread.isAlive() and i > 0:
-            self.warn_stream("wait for reconnection thread... (%d)" % i)
-            self._reconnectThread.join(1)
-            i -= 1
-        if self._reconnectThread is not None and\
-                self._reconnectThread.isAlive():
-            self.error_stream("Couldn't wait more for the reconnection thread")
+        #self._reconnectAwaker.set()
+        #i = RECONNECT_THREAD_DELETE_TRIES
+        #while self._reconnectThread is not None and\
+        #        self._reconnectThread.isAlive() and i > 0:
+        #    self.warn_stream("wait for reconnection thread... (%d)" % i)
+        #    self._reconnectThread.join(1)
+        #    i -= 1
+        #if self._reconnectThread is not None and\
+        #        self._reconnectThread.isAlive():
+        #    self.error_stream("Couldn't wait more for the reconnection thread")
         #----- PROTECTED REGION END -----#  //  Skippy.delete_device
 
     def init_device(self):
@@ -1548,50 +1557,53 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION ID(Skippy.init_device) ENABLED START -----#
         if self.get_state() in [PyTango.DevState.FAULT]:
             self.warn_stream("Init() call from a fault state")
-        # else:
-            # self.info_stream("Init() call from %s state"
-            #                  % (self.get_state()))
-        self.prepareMutex()
+            fromScratch = False
+        else:
+            fromScratch = True
+        if fromScratch:
+            self.prepareMutex()
         self.change_state_status(newstate=PyTango.DevState.INIT,
                                  newstatus="Initializing...")
         self.attr_TimeStampsThreshold_read = 0.1
         self._idn = None
-        self.set_change_event('State', True, False)
-        self.set_change_event('Status', True, False)
+        if fromScratch:
+            self.set_change_event('State', True, False)
+            self.set_change_event('Status', True, False)
         self._important_logs = []
         self.attr_QueryWindow_read = 1  # Not allow 0
         # tools for the Exec() cmd
-        DS_MODULE = __import__(self.__class__.__module__)
-        kM = dir(DS_MODULE)
-        vM = map(DS_MODULE.__getattribute__, kM)
-        self.__globals = dict(zip(kM, vM))
-        self.__globals['self'] = self
-        self.__globals['module'] = DS_MODULE
-        self.__locals = {}
-        # prepare the attribute building
-        self.attributes={}
-        self.attributesFlags = {}
-        # Communications
-        self._reconnectThread = None
-        self._reconnectAwaker = threading.Event()
-        self._reconnectAwaker.clear()
-        self._commLost = []
-        # 1.- if more than N errors during the last M seconds: 
-        #     then delay the recovery by S seconds.
-        self._lastNErrorsThreshold = DEFAULT_ERRORS_THRESHOLD
-        self._lastMSeconds = DEFAULT_RECOVERY_DELAY
-        self._recoveryDelay = MINIMUM_RECOVERY_DELAY
-        # 2.- if last delayed recovery comes from less than R seconds:
-        #     then double the S time.
-        self._recoverThreshold = 120.0
-        self._lastRecovery = None
-        # conversion of the MonitoredAttributes property, 
-        # from string list to list
-        try:
-            attrLst = str(self.MonitoredAttributes[0])
-            self.MonitoredAttributes = self.__str2listProperty(attrLst)
-        except:
-            self.info_stream("No monitored attributes defined")
+        if fromScratch:
+            DS_MODULE = __import__(self.__class__.__module__)
+            kM = dir(DS_MODULE)
+            vM = map(DS_MODULE.__getattribute__, kM)
+            self.__globals = dict(zip(kM, vM))
+            self.__globals['self'] = self
+            self.__globals['module'] = DS_MODULE
+            self.__locals = {}
+            # prepare the attribute building
+            self.attributes={}
+            self.attributesFlags = {}
+            # Communications
+            # self._reconnectThread = None
+            # self._reconnectAwaker = threading.Event()
+            # self._reconnectAwaker.clear()
+            # self._commLost = []
+            # # 1.- if more than N errors during the last M seconds: 
+            # #     then delay the recovery by S seconds.
+            # self._lastNErrorsThreshold = DEFAULT_ERRORS_THRESHOLD
+            # self._lastMSeconds = DEFAULT_RECOVERY_DELAY
+            # self._recoveryDelay = MINIMUM_RECOVERY_DELAY
+            # # 2.- if last delayed recovery comes from less than R seconds:
+            # #     then double the S time.
+            # self._recoverThreshold = 120.0
+            # self._lastRecovery = None
+            # # conversion of the MonitoredAttributes property, 
+            # # from string list to list
+            # try:
+            #     attrLst = str(self.MonitoredAttributes[0])
+            #     self.MonitoredAttributes = self.__str2listProperty(attrLst)
+            # except:
+            #     self.info_stream("No monitored attributes defined")
         #---- once initialized, begin the process to connect with the instrument
         self._instrument = None
         self._builder = None
@@ -1807,7 +1819,7 @@ class Skippy (PyTango.Device_4Impl):
             self.Standby()
         if self.__builder():
             self.__prepareMonitor()
-            self.change_state_status(newstatus=PyTango.DevState.ON,
+            self.change_state_status(newstate=PyTango.DevState.ON,
                                      rebuild=True)
             # self.rebuildStatus()
             argout = True
