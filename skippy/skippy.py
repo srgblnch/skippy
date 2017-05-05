@@ -156,9 +156,12 @@ class Skippy (PyTango.Device_4Impl):
             self.info_stream("In __connectInstrumentObj() instrument "
                              "identification: %s" % (self._idn))
         except Exception as e:
-            self.error_stream("In __connectInstrumentObj() Cannot connect "
-                              "to the instrument due to: %s" % (e))
+            msg = "Cannot connect to the instrument."
+            self.error_stream("In __connectInstrumentObj() %s due to: %s"
+                              % (msg, e))
             traceback.print_exc()
+            self.change_state_status(newstate=PyTango.DevState.FAULT,
+                                     newstatus=msg)
             return False
         else:
             self.info_stream("In __connectInstrumentObj() Connected to "
