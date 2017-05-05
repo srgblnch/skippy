@@ -114,16 +114,18 @@ class Skippy (PyTango.Device_4Impl):
                                                               terminator)
         except SyntaxError as e:
             self.error_stream("Error in the instrument name: %s" % (e))
-            self.change_state(PyTango.DevState.FAULT)
-            self.addStatusMsg("%s: review the 'instrument' property" % (e))
+            self.change_state_status(PyTango.DevState.FAULT,
+                                     newLine="%s: review the 'instrument' "
+                                     "property" % (e))
             return False
         except Exception as e:
             self.error_stream("Generic exception: %s" % (e))
-            self.change_state(PyTango.DevState.FAULT)
-            self.addStatusMsg("initialisation exception: %s" % (e))
+            self.change_state_status(newstate=PyTango.DevState.FAULT,
+                                     newLine="initialisation exception: %s"
+                                     % (e))
             return False
-        self.change_state(PyTango.DevState.OFF)
-        self.rebuildStatus()
+        self.change_state_status(newstate=PyTango.DevState.OFF, rebuild=True)
+        # self.rebuildStatus()
         return True
 
     def __connectInstrumentObj(self, tries=4):
@@ -164,224 +166,224 @@ class Skippy (PyTango.Device_4Impl):
                              % (self._idn))
             return True
 
-    def __reconnectInstrumentObj(self):
-        '''This method contains a procedure to reconnect to the instrument, if
-           it is possible. It uses the state DISABLE to report that it is
-           temporally out of service and automatically trying to recover.
-           If the connection can be restablished the state goes to ON or
-           RUNNING depending on the monitoring procedure.
-           Else, in case the communication cannot be restablished by itself,
-           then the state changes to FAULT to report the malfunction.
-        '''
-        self.info_stream("In __reconnectInstrumentObj()")
-        if not hasattr(self, '_instrument') or self._instrument is None:
-            self.error_stream("In __reconnectInstrumentObj(): instrument "
-                              "object not build yet")
-            return False
-        try:
-            self._instrument.disconnect()
-            self.change_state(PyTango.DevState.DISABLE)
-            self.rebuildStatus()
-        except Exception as e:
-            self.error_stream("In __reconnectInstrumentObj(): disconnect "
-                              "exception: %s" % (e))
-            self.change_state(PyTango.DevState.FAULT)
-            self.rebuildStatus()
-            return False
-        if self.__buildInstrumentObj():
-            if self.Off():
-                self.warn_stream("In __reconnectInstrumentObj() "
-                                 "delay reconnection by %6.3f seconds"
-                                 % (self._recoveryDelay))
-                time.sleep(self._recoveryDelay)
-                if self.Standby() and self.On():
-                    if self.AutoStart and self.Start():
-                        print("....")
-                        self.info_stream("In __reconnectInstrumentObj(): "
-                                         "reconnected and started.")
-                        self._lastRecovery = time.time()
-                        return True
-                    else:
-                        print("...,")
-                        self.info_stream("In __reconnectInstrumentObj(): "
-                                         "reconnection done.")
-                        self._lastRecovery = time.time()
-                        return True
-        self.change_state(PyTango.DevState.DISABLE)
-        self.rebuildStatus()
-        self.error_stream("In __reconnectInstrumentObj(): "
-                          "Cannot rebuild the InstrumentObj.")
-        return False
+#     def __reconnectInstrumentObj(self):
+#         '''This method contains a procedure to reconnect to the instrument, if
+#            it is possible. It uses the state DISABLE to report that it is
+#            temporally out of service and automatically trying to recover.
+#            If the connection can be restablished the state goes to ON or
+#            RUNNING depending on the monitoring procedure.
+#            Else, in case the communication cannot be restablished by itself,
+#            then the state changes to FAULT to report the malfunction.
+#         '''
+#         self.info_stream("In __reconnectInstrumentObj()")
+#         if not hasattr(self, '_instrument') or self._instrument is None:
+#             self.error_stream("In __reconnectInstrumentObj(): instrument "
+#                               "object not build yet")
+#             return False
+#         try:
+#             self._instrument.disconnect()
+#             self.change_state(PyTango.DevState.DISABLE)
+#             self.rebuildStatus()
+#         except Exception as e:
+#             self.error_stream("In __reconnectInstrumentObj(): disconnect "
+#                               "exception: %s" % (e))
+#             self.change_state(PyTango.DevState.FAULT)
+#             self.rebuildStatus()
+#             return False
+#         if self.__buildInstrumentObj():
+#             if self.Off():
+#                 self.warn_stream("In __reconnectInstrumentObj() "
+#                                  "delay reconnection by %6.3f seconds"
+#                                  % (self._recoveryDelay))
+#                 time.sleep(self._recoveryDelay)
+#                 if self.Standby() and self.On():
+#                     if self.AutoStart and self.Start():
+#                         print("....")
+#                         self.info_stream("In __reconnectInstrumentObj(): "
+#                                          "reconnected and started.")
+#                         self._lastRecovery = time.time()
+#                         return True
+#                     else:
+#                         print("...,")
+#                         self.info_stream("In __reconnectInstrumentObj(): "
+#                                          "reconnection done.")
+#                         self._lastRecovery = time.time()
+#                         return True
+#         self.change_state(PyTango.DevState.DISABLE)
+#         self.rebuildStatus()
+#         self.error_stream("In __reconnectInstrumentObj(): "
+#                           "Cannot rebuild the InstrumentObj.")
+#         return False
 
-    def __reconnectProcedure(self):
-        '''The procedure of reconnect, because it takes time, is executed by
-           a separeated thread. This avoids timeout issues from the thread
-           that comes from the read_attribute() call.
-        '''
-        try:
-            self.change_state(PyTango.DevState.FAULT)
-            self.addStatusMsg("Fatal error and communications lost with "
-                              "the instrument!", important=True)
-            #self.warn_stream("Starting a reconnect procedure.")
-            #if self._reconnectThread is not None and \
-            #        self._reconnectThread.isAlive():
-            #    self.warn_stream("Past reconnection thread is still alive...")
-            #    self._reconnectAwaker.set()
-            #    self._reconnectThread.join(1)
-            #    while self._reconnectThread.isAlive():
-            #        self.warn_stream("Waiting the past reconnection thread "
-            #                         "to finish")
-            #        self._reconnectThread.join(1)
-            #    self.info_stream("Past reconnection thread finish")
-            #    # how to check if a the past reconnection was active and has
-            #    # already fixed the issue?
-            #    if self._instrument.isConnected():
-            #        self.info_stream("Communication recovered by "
-            #                         "past reconnection thread")
-            #        return
-            #if self._reconnectThread is None:
-            #    self.info_stream("Creating a reconnection thread")
-            #    self._reconnectThread = \
-            #        threading.Thread(target=self.__doReconnect,
-            #                         name="reconnect")
-            #    self._reconnectThread.setDaemon(True)
-            #if not self._reconnectThread.isAlive():
-            #    self.info_stream("Launching the reconnection thread")
-            #    self._reconnectThread.start()
-        except Exception as e:
-            self.error_stream("Reconnect procedure cannot be started: %s"
-                              % (e))
-            self.change_state(PyTango.DevState.FAULT)
-            self.addStatusMsg("Fatal error and communications lost with "
-                              "the instrument!", important=True)
+#     def __reconnectProcedure(self):
+#         '''The procedure of reconnect, because it takes time, is executed by
+#            a separeated thread. This avoids timeout issues from the thread
+#            that comes from the read_attribute() call.
+#         '''
+#         try:
+#             self.change_state(PyTango.DevState.FAULT)
+#             self.addStatusMsg("Fatal error and communications lost with "
+#                               "the instrument!", important=True)
+#             #self.warn_stream("Starting a reconnect procedure.")
+#             #if self._reconnectThread is not None and \
+#             #        self._reconnectThread.isAlive():
+#             #    self.warn_stream("Past reconnection thread is still alive...")
+#             #    self._reconnectAwaker.set()
+#             #    self._reconnectThread.join(1)
+#             #    while self._reconnectThread.isAlive():
+#             #        self.warn_stream("Waiting the past reconnection thread "
+#             #                         "to finish")
+#             #        self._reconnectThread.join(1)
+#             #    self.info_stream("Past reconnection thread finish")
+#             #    # how to check if a the past reconnection was active and has
+#             #    # already fixed the issue?
+#             #    if self._instrument.isConnected():
+#             #        self.info_stream("Communication recovered by "
+#             #                         "past reconnection thread")
+#             #        return
+#             #if self._reconnectThread is None:
+#             #    self.info_stream("Creating a reconnection thread")
+#             #    self._reconnectThread = \
+#             #        threading.Thread(target=self.__doReconnect,
+#             #                         name="reconnect")
+#             #    self._reconnectThread.setDaemon(True)
+#             #if not self._reconnectThread.isAlive():
+#             #    self.info_stream("Launching the reconnection thread")
+#             #    self._reconnectThread.start()
+#         except Exception as e:
+#             self.error_stream("Reconnect procedure cannot be started: %s"
+#                               % (e))
+#             self.change_state(PyTango.DevState.FAULT)
+#             self.addStatusMsg("Fatal error and communications lost with "
+#                               "the instrument!", important=True)
 
-    def __doReconnect(self):
-        '''To reconnect to the instrument, and this often happens due to the
-           drowning in the instrument response, after disconnect delay the
-           reconnection following the algorithm:
-           1.- if more than N errors during the last M seconds:
-               then delay the recovery by S seconds.
-           2.- if last delayed recovery comes from less than R seconds:
-               then double the S time.
-        '''
-        try:
-            self.info_stream("Reconnection thread started")
-            now = time.time()
-            # 1.- if more than N errors during the last M seconds:
-            #     then delay the recovery by S seconds.
-            if self.__communicationErrors(now, self._lastMSeconds) > \
-                    self._lastNErrorsThreshold:
-                self.info_stream("In __doReconnect() found more than "
-                                 "%d errors" % (self._lastNErrorsThreshold))
-                # 2.- if last delayed recovery comes from less than R seconds:
-                #     then double the S time.
-                if self._lastRecovery is not None and \
-                        now-self._lastRecovery < \
-                        self._recoverThreshold + self._recoveryDelay:
-                    self.warn_stream("In __doReconnect() doubling the "
-                                     "time to recover because the error "
-                                     "happened less than %6.3f seconds after "
-                                     "the previous recover delay of %6.3f "
-                                     "seconds" % (self._recoverThreshold,
-                                                  self._recoveryDelay))
-                    if self._recoveryDelay <= self._lastMSeconds:
-                        # maximum delay
-                        self._recoveryDelay = self._recoveryDelay * 2
-                elif self._recoveryDelay > MINIMUM_RECOVERY_DELAY:
-                    self._recoveryDelay = self._recoveryDelay / 2
-                self.warn_stream("In __doReconnect() delay reconnection "
-                                 "by %6.3f seconds" % (self._recoveryDelay))
-                time.sleep(self._recoveryDelay)
-            self.__appendToCommunicationLost(now)
-            reconnected = self.__reconnectLoop(tries=5)
-            if reconnected:
-                return True
-            retriesMade = 5
-            self.info_stream("Could not reconnect, check the instrument")
-            self.change_state(PyTango.DevState.FAULT)
-            self.addStatusMsg("Reconnection procedure not possible",
-                              important=True)
-            reconnected = self.__reconnectLoop(tries=retriesMade+10,
-                                               fixTime2retry=60,
-                                               starttry=retriesMade+1)
-            retriesMade += 10
-            if reconnected:
-                return True
-            self.info_stream("Extend the time for reconnect tries")
-            reconnected = self.__reconnectLoop(tries=retriesMade+12,
-                                               fixTime2retry=600,
-                                               starttry=retriesMade+1)
-            if reconnected:
-                return True
-            self.error_stream("In __doReconnect() no more retries")
-            return False
-        except PyTango.DevFailed as e:
-            try:
-                self.error_stream("In __doReconnect() DevFailed Exception: %s"
-                                  % (e))
-                self.change_state(PyTango.DevState.FAULT)
-                self.cleanAllImportantLogs()
-                self.addStatusMsg("Reconnection procedure not possible",
-                                  important=True)
-                return False
-            except:
-                traceback.print_exc()
-        except Exception as e:
-            try:
-                self.error_stream("In __doReconnect() Exception: %s" % (e))
-                self.change_state(PyTango.DevState.FAULT)
-                self.cleanAllImportantLogs()
-                self.addStatusMsg("Reconnection procedure not possible",
-                                  important=True)
-                return False
-            except:  # !!we've seen an exception in this lines
-                traceback.print_exc()
-        self.info_stream("Reconnection procedure End")
+#     def __doReconnect(self):
+#         '''To reconnect to the instrument, and this often happens due to the
+#            drowning in the instrument response, after disconnect delay the
+#            reconnection following the algorithm:
+#            1.- if more than N errors during the last M seconds:
+#                then delay the recovery by S seconds.
+#            2.- if last delayed recovery comes from less than R seconds:
+#                then double the S time.
+#         '''
+#         try:
+#             self.info_stream("Reconnection thread started")
+#             now = time.time()
+#             # 1.- if more than N errors during the last M seconds:
+#             #     then delay the recovery by S seconds.
+#             if self.__communicationErrors(now, self._lastMSeconds) > \
+#                     self._lastNErrorsThreshold:
+#                 self.info_stream("In __doReconnect() found more than "
+#                                  "%d errors" % (self._lastNErrorsThreshold))
+#                 # 2.- if last delayed recovery comes from less than R seconds:
+#                 #     then double the S time.
+#                 if self._lastRecovery is not None and \
+#                         now-self._lastRecovery < \
+#                         self._recoverThreshold + self._recoveryDelay:
+#                     self.warn_stream("In __doReconnect() doubling the "
+#                                      "time to recover because the error "
+#                                      "happened less than %6.3f seconds after "
+#                                      "the previous recover delay of %6.3f "
+#                                      "seconds" % (self._recoverThreshold,
+#                                                   self._recoveryDelay))
+#                     if self._recoveryDelay <= self._lastMSeconds:
+#                         # maximum delay
+#                         self._recoveryDelay = self._recoveryDelay * 2
+#                 elif self._recoveryDelay > MINIMUM_RECOVERY_DELAY:
+#                     self._recoveryDelay = self._recoveryDelay / 2
+#                 self.warn_stream("In __doReconnect() delay reconnection "
+#                                  "by %6.3f seconds" % (self._recoveryDelay))
+#                 time.sleep(self._recoveryDelay)
+#             self.__appendToCommunicationLost(now)
+#             reconnected = self.__reconnectLoop(tries=5)
+#             if reconnected:
+#                 return True
+#             retriesMade = 5
+#             self.info_stream("Could not reconnect, check the instrument")
+#             self.change_state(PyTango.DevState.FAULT)
+#             self.addStatusMsg("Reconnection procedure not possible",
+#                               important=True)
+#             reconnected = self.__reconnectLoop(tries=retriesMade+10,
+#                                                fixTime2retry=60,
+#                                                starttry=retriesMade+1)
+#             retriesMade += 10
+#             if reconnected:
+#                 return True
+#             self.info_stream("Extend the time for reconnect tries")
+#             reconnected = self.__reconnectLoop(tries=retriesMade+12,
+#                                                fixTime2retry=600,
+#                                                starttry=retriesMade+1)
+#             if reconnected:
+#                 return True
+#             self.error_stream("In __doReconnect() no more retries")
+#             return False
+#         except PyTango.DevFailed as e:
+#             try:
+#                 self.error_stream("In __doReconnect() DevFailed Exception: %s"
+#                                   % (e))
+#                 self.change_state(PyTango.DevState.FAULT)
+#                 self.cleanAllImportantLogs()
+#                 self.addStatusMsg("Reconnection procedure not possible",
+#                                   important=True)
+#                 return False
+#             except:
+#                 traceback.print_exc()
+#         except Exception as e:
+#             try:
+#                 self.error_stream("In __doReconnect() Exception: %s" % (e))
+#                 self.change_state(PyTango.DevState.FAULT)
+#                 self.cleanAllImportantLogs()
+#                 self.addStatusMsg("Reconnection procedure not possible",
+#                                   important=True)
+#                 return False
+#             except:  # !!we've seen an exception in this lines
+#                 traceback.print_exc()
+#         self.info_stream("Reconnection procedure End")
 
-    def __reconnectLoop(self, tries, fixTime2retry=None, starttry=None):
-        i = starttry or 1
-        self.debug_stream("Start a reconnection loop between %d and %d"
-                          % (i, tries))
-        if fixTime2retry is not None:
-            time2retry = fixTime2retry
-            self.info_stream("Reconnection will be tried every %d seconds"
-                             % time2retry)
-        while i <= tries:
-            if self.__reconnectInstrumentObj():
-                self.info_stream("Reconnection work in the %d retry" % (i))
-                return True
-            if fixTime2retry is None:
-                time2retry = self._recoveryDelay * i
-            msg = "Reconnection try didn't work (%dth), "\
-                "retry in %6.3f seconds" % (i, time2retry)
-            self.warn_stream(msg)
-            self.addStatusMsg(msg)
-            self._reconnectAwaker.wait(time2retry)
-            if self._reconnectAwaker.isSet():
-                self.info_stream("Abort reconnection")
-                return False
-            i += 1
-        return False
+#     def __reconnectLoop(self, tries, fixTime2retry=None, starttry=None):
+#         i = starttry or 1
+#         self.debug_stream("Start a reconnection loop between %d and %d"
+#                           % (i, tries))
+#         if fixTime2retry is not None:
+#             time2retry = fixTime2retry
+#             self.info_stream("Reconnection will be tried every %d seconds"
+#                              % time2retry)
+#         while i <= tries:
+#             if self.__reconnectInstrumentObj():
+#                 self.info_stream("Reconnection work in the %d retry" % (i))
+#                 return True
+#             if fixTime2retry is None:
+#                 time2retry = self._recoveryDelay * i
+#             msg = "Reconnection try didn't work (%dth), "\
+#                 "retry in %6.3f seconds" % (i, time2retry)
+#             self.warn_stream(msg)
+#             self.addStatusMsg(msg)
+#             self._reconnectAwaker.wait(time2retry)
+#             if self._reconnectAwaker.isSet():
+#                 self.info_stream("Abort reconnection")
+#                 return False
+#             i += 1
+#         return False
 
-    def __communicationErrors(self, now, mseconds):
-        '''This collects information about transitory communication errors.
-        '''
-        nErrors = 0
-        for each in self._commLost:
-            if each <= now-mseconds:
-                nErrors += 1
-            else:
-                self.info_stream("In __communicationErrors(%6.3f) remove "
-                                 "%6.3f from the list of communication "
-                                 "errors because it is too old."
-                                 % (mseconds, each))
-                self._commLost.pop(self._commLost.index(each))
-        self.info_stream("In __communicationErrors(%6.3f) found %d errors"
-                         % (mseconds, nErrors))
-        return nErrors
+#     def __communicationErrors(self, now, mseconds):
+#         '''This collects information about transitory communication errors.
+#         '''
+#         nErrors = 0
+#         for each in self._commLost:
+#             if each <= now-mseconds:
+#                 nErrors += 1
+#             else:
+#                 self.info_stream("In __communicationErrors(%6.3f) remove "
+#                                  "%6.3f from the list of communication "
+#                                  "errors because it is too old."
+#                                  % (mseconds, each))
+#                 self._commLost.pop(self._commLost.index(each))
+#         self.info_stream("In __communicationErrors(%6.3f) found %d errors"
+#                          % (mseconds, nErrors))
+#         return nErrors
 
-    def __appendToCommunicationLost(self, now):
-        self._commLost.append(now)
+#     def __appendToCommunicationLost(self, now):
+#         self._commLost.append(now)
 
     def prepareMutex(self):
         '''If needed create all the mutex requested (first execution) and if
@@ -433,8 +435,8 @@ class Skippy (PyTango.Device_4Impl):
             else:
                 msg = "identification error: %s" % (e)
             self.error_stream("%s %s" % (self.get_name(), msg))
-            self.change_state(PyTango.DevState.FAULT)
-            self.addStatusMsg(msg)
+            self.change_state_status(newstate=PyTango.DevState.FAULT,
+                                     newline=msg)
             return False
         else:
             return True
@@ -665,13 +667,17 @@ class Skippy (PyTango.Device_4Impl):
             self.error_stream("In __hardwareRead() MemoryError exception: %s"
                               % (e))
             traceback.print_exc()
-            self.change_state(PyTango.DevState.FAULT)
-            self.addStatusMsg("Device memory error!")
+            self.change_state_status(newstate=PyTango.DevState.FAULT,
+                                     newLine="Device memory error!")
             return None
         except Exception as e:
             self.error_stream("In __hardwareRead() Exception: %s" % (e))
             traceback.print_exc()
-            self.__reconnectProcedure()
+            # self.__reconnectProcedure()
+            self.change_state_status(newstate=PyTango.DevState.FAULT,
+                                     newline="Fatal error and communications "
+                                     "lost with the instrument!",
+                                     important=True)
             return None
 
     # @hardwareMutex
@@ -685,13 +691,17 @@ class Skippy (PyTango.Device_4Impl):
             self.error_stream("In __hardwareWrite() MemoryError exception: %s"
                               % (e))
             traceback.print_exc()
-            self.change_state(PyTango.DevState.FAULT)
-            self.addStatusMsg("Device memory error!")
+            self.change_state_status(newstate=PyTango.DevState.FAULT,
+                                     newline="Device memory error!")
             return None
         except Exception as e:
             self.error_stream("In __hardwareWrite() Exception: %s" % (e))
             traceback.print_exc()
-            self.__reconnectProcedure()
+            # self.__reconnectProcedure()
+            self.change_state_status(newstate=PyTango.DevState.FAULT,
+                                     newLine="Fatal error and communications "
+                                     "lost with the instrument!",
+                                     important=True)
 
     def __postHardwareScalarRead(self, indexes, answers):
         '''Given the answers organise them in the self.attributes dictionary.
@@ -1099,8 +1109,9 @@ class Skippy (PyTango.Device_4Impl):
         self.info_stream("In _rampStepper(%s)" % (attrName))
         # prepare
         backup_state = self.get_state()
-        self.change_state(PyTango.DevState.MOVING)
-        self.rebuildStatus()
+        self.change_state_status(newstate=PyTango.DevState.MOVING,
+                                 rebuild=True)
+        # self.rebuildStatus()
         attrReadCmd = self.attributes[attrName].readCmd
         # move
         self.attributes[attrName].lastReadValue = \
@@ -1128,8 +1139,8 @@ class Skippy (PyTango.Device_4Impl):
         self.info_stream("In _rampSteeper(): finished the movement at %f"
                          % (current_pos))
         # close
-        self.change_state(backup_state)
-        self.rebuildStatus()
+        self.change_state_status(newstate=backup_state, rebuild=True)
+        # self.rebuildStatus()
         self.attributes[attrName].rampThread = None
 
     # done dynamic attributes builder section ---
@@ -1153,8 +1164,27 @@ class Skippy (PyTango.Device_4Impl):
                                   "attribute %s: %s" % (attrEvent[0], e))
     # @todo: clean the important logs when they loose importance.
 
-    @stateMutex
+    #@stateMutex
     def change_state(self, newstate):
+        self._change_state(newstate)
+
+    #@stateMutex
+    def change_status(self, newstatus):
+        self._change_status(newstatus)
+
+    #@stateMutex
+    def change_state_status(self, newstate=None, newstatus=None,
+                            newLine=None, important=False, rebuild=False):
+        if newstate is not None:
+            self._change_state(newstate)
+        if newstatus is not None:
+            self._change_status(newstatus)
+        if newLine is not None:
+            self._addStatusMsg(newLine, important)
+        if rebuild:
+            self._rebuildStatus()
+
+    def _change_state(self, newstate):
         try:
             self.info_stream("In change_state(%s)" % (str(newstate)))
             if newstate != self.get_state():
@@ -1173,8 +1203,7 @@ class Skippy (PyTango.Device_4Impl):
         except Exception as e:
             self.error_stream("In change_state() Exception: %s" % (e))
 
-    @stateMutex
-    def change_status(self, newstatus):
+    def _change_status(self, newstatus):
         try:
             self.info_stream("In change_status(): %r" % (str(newstatus)))
             if newstatus != self.get_status():
@@ -1197,20 +1226,20 @@ class Skippy (PyTango.Device_4Impl):
         try:
             self.debug_stream("In cleanAllImportantLogs()")
             self._important_logs = []
-            self.addStatusMsg("")
+            self._addStatusMsg("")
         except PyTango.DevFailed as e:
             self.error_stream("In cleanAllImportantLogs() Exception: %s" % (e))
             traceback.print_exc()
         except Exception as e:
             self.error_stream("In cleanAllImportantLogs() Exception: %s" % (e))
 
-    def addStatusMsg(self, newStatusLine, important=False):
+    def _addStatusMsg(self, newStatusLine, important=False):
         self.debug_stream("In addStatusMsg()")
         msg = "The device is in %s state.\n" % (self.get_state())
         for ilog in self._important_logs:
             msg = "%s%s\n" % (msg, ilog)
         status = "%s%s"%(msg, newStatusLine)
-        self.change_status(status)
+        self._change_status(status)
         try:
             if important and newStatusLine not in self._important_logs:
                 self._important_logs.append(newStatusLine)
@@ -1218,15 +1247,15 @@ class Skippy (PyTango.Device_4Impl):
             self.warn_stream("In addStatusMsg() cannot append the new "
                              "important log '%s'" % (newStatusLine))
 
-    def rebuildStatus(self):
+    def _rebuildStatus(self):
         try:
             self.cleanAllImportantLogs()
             if len(self.MonitoredAttributes) > 0:
-                self.addStatusMsg("Attributes monitored: %r"
+                self._addStatusMsg("Attributes monitored: %r"
                                   % (self.MonitoredAttributes), important=True)
             if hasattr(self, '_alarmDueToMonitoring') and \
                     len(self._alarmDueToMonitoring) > 0:
-                self.addStatusMsg("Attributes %r required too much time "
+                self._addStatusMsg("Attributes %r required too much time "
                                   "to be read"
                                   % (self._alarmDueToMonitoring),
                                   important=True)
@@ -1313,8 +1342,9 @@ class Skippy (PyTango.Device_4Impl):
                 for attrName in self._monitorThreads[monitorTag]['AttrList']:
                     self.set_change_event(attrName, True, False)
                 self._monitorThreads[monitorTag]['Thread'].start()
-            self.change_state(PyTango.DevState.RUNNING)
-            self.rebuildStatus()
+            self.change_state_status(newstate=PyTango.DevState.RUNNING,
+                                     rebuild=True)
+            # self.rebuildStatus()
         except Exception as e:
             self.error_stream("In __startMonitoring() Exception: %s" % (e))
 
@@ -1327,8 +1357,8 @@ class Skippy (PyTango.Device_4Impl):
             self.info_stream("In __endMonitoring() waiting for %d"
                              % (len(self._monitorThreads.keys())))
             time.sleep(0.5)
-        self.change_state(PyTango.DevState.ON)
-        self.rebuildStatus()
+        self.change_state_status(newstate=PyTango.DevState.ON, rebuild=True)
+        # self.rebuildStatus()
         self.__prepareMonitor()
 
     def __buildIdList(self, attrList):
@@ -1420,14 +1450,14 @@ class Skippy (PyTango.Device_4Impl):
         for attrName in attrList:
             if attrName not in self._alarmDueToMonitoring:
                 self._alarmDueToMonitoring.append(attrName)
-        self.rebuildStatus()
+        self.change_state_status(rebuild=True)  # self.rebuildStatus()
 
     def __removeFromAlarmCausingList(self, attrList):
         for attrName in attrList:
             if self._alarmDueToMonitoring.count(attrName):
                 self._alarmDueToMonitoring.pop(
                     self._alarmDueToMonitoring.index(attrName))
-        self.rebuildStatus()
+        self.change_state_status(rebuild=True)  # self.rebuildStatus()
 
     def __appendPropertyElement(self, propertyName, element):
         db = PyTango.Database()
@@ -1516,14 +1546,19 @@ class Skippy (PyTango.Device_4Impl):
         self.attr_QueryWindow_read = 0
         self.attr_TimeStampsThreshold_read = 0.0
         #----- PROTECTED REGION ID(Skippy.init_device) ENABLED START -----#
+        if self.get_state() in [PyTango.DevState.FAULT]:
+            self.warn_stream("Init() call from a fault state")
+        # else:
+            # self.info_stream("Init() call from %s state"
+            #                  % (self.get_state()))
+        self.prepareMutex()
+        self.change_state_status(newstate=PyTango.DevState.INIT,
+                                 newstatus="Initializing...")
         self.attr_TimeStampsThreshold_read = 0.1
         self._idn = None
         self.set_change_event('State', True, False)
         self.set_change_event('Status', True, False)
         self._important_logs = []
-        self.prepareMutex()
-        self.change_state(PyTango.DevState.INIT)
-        self.change_status("Initializing...")
         self.attr_QueryWindow_read = 1  # Not allow 0
         # tools for the Exec() cmd
         DS_MODULE = __import__(self.__class__.__module__)
@@ -1772,8 +1807,9 @@ class Skippy (PyTango.Device_4Impl):
             self.Standby()
         if self.__builder():
             self.__prepareMonitor()
-            self.change_state(PyTango.DevState.ON)
-            self.rebuildStatus()
+            self.change_state_status(newstatus=PyTango.DevState.ON,
+                                     rebuild=True)
+            # self.rebuildStatus()
             argout = True
         #----- PROTECTED REGION END -----#  //  Skippy.On
         return argout
@@ -1808,15 +1844,16 @@ class Skippy (PyTango.Device_4Impl):
             self.error_stream("Cannot disconnect from the instrument "
                               "due to: %s" % (e))
             traceback.print_exc()
-            self.change_state(PyTango.DevState.FAULT)
-            self.addStatusMsg("Off command failed")
+            self.change_state_status(newstate=PyTango.DevState.FAULT,
+                                     newLine="Off command failed")
         else:
             self._idn = ""
             self.info_stream("disconnected to the instrument %s"
                              % (self.Instrument))
             if self._builder is None or self.__unbuilder():
-                self.change_state(PyTango.DevState.OFF)
-                self.rebuildStatus()
+                self.change_state_status(newstate=PyTango.DevState.OFF,
+                                         rebuild=True)
+                # self.rebuildStatus()
                 argout = True
         #----- PROTECTED REGION END -----#  //  Skippy.Off
         return argout
@@ -1919,7 +1956,7 @@ class Skippy (PyTango.Device_4Impl):
                     append(attrName)
                 self.set_change_event(attrName, True, False)
                 argout = True
-                self.rebuildStatus()
+                self.change_state_status(rebuild=True)  # self.rebuildStatus()
                 self.Start()
         except Exception as e:
             self.error_stream("In AddMonitoring(%s) exception: %s"
@@ -1978,7 +2015,7 @@ class Skippy (PyTango.Device_4Impl):
                                       "from the property: %s"
                                       % (argin, e))
                     raise e
-                self.rebuildStatus()
+                self.change_state_status(rebuild=True)  # self.rebuildStatus()
         except Exception as e:
             self.error_stream("In RemoveMonitoring(%s) exception: %s"
                               % (argin, e))
@@ -2161,9 +2198,10 @@ class Skippy (PyTango.Device_4Impl):
         except Exception as e:
             self.error_stream("In CMD(%r) Exception: %s" % (argin, e))
             argout = ""
-            self.change_state(PyTango.DevState.FAULT)
-            self.addStatusMsg("Exception while executing CMDfloat()")
-            self.__reconnectInstrumentObj()
+            self.change_state_status(newstate=PyTango.DevState.FAULT,
+                                     newline="Exception while executing "
+                                     "CMDfloat()")
+            # self.__reconnectInstrumentObj()
         #----- PROTECTED REGION END -----#  //  Skippy.CMD
         return argout
         
@@ -2201,9 +2239,10 @@ class Skippy (PyTango.Device_4Impl):
         except Exception as e:
             self.error_stream("In CMDfloat(%r) Exception: %s" % (argin, e))
             argout = ""
-            self.change_state(PyTango.DevState.FAULT)
-            self.addStatusMsg("Exception while executing CMDfloat()")
-            self.__reconnectInstrumentObj()
+            self.change_state_status(newstate=PyTango.DevState.FAULT,
+                                     newline="Exception while executing "
+                                     "CMDfloat()")
+            # self.__reconnectInstrumentObj()
         #----- PROTECTED REGION END -----#  //  Skippy.CMDfloat
         return argout
         
@@ -2230,16 +2269,18 @@ class Skippy (PyTango.Device_4Impl):
         if self.get_state() == PyTango.DevState.OFF:
             #if self.__buildInstrumentObj():
                 if self.__connectInstrumentObj():
-                    self.change_state(PyTango.DevState.STANDBY)
-                    self.rebuildStatus()
+                    self.change_state_status(newstate=PyTango.DevState.STANDBY,
+                                             rebuild=True)
+                    # self.rebuildStatus()
                     argout = True
                 else:
-                    self.__reconnectProcedure()
+                    # self.__reconnectProcedure()
                     argout = False
         elif self.get_state() == PyTango.DevState.ON:
             if self._builder is None or self.__unbuilder():
-                self.change_state(PyTango.DevState.STANDBY)
-                self.rebuildStatus()
+                self.change_state_status(newState=PyTango.DevState.STANDBY,
+                                         rebuild=True)
+                # self.rebuildStatus()
                 argout = True
         #----- PROTECTED REGION END -----#  //  Skippy.Standby
         return argout
