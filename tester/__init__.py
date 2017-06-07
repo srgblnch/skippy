@@ -26,8 +26,7 @@ __status__ = "Production"
 from fakeInstrument import FakeInstrument, TestManager
 
 # From a python console, in the package directory one can call:
-# >>> from tester.fakeInstrument import FakeInstrument, TestManager
-# >>> instrument = FakeInstrument()
+# >>> from tester.fakeInstrument import TestManager
 # >>> manager = TestManager()
 # and have in a python console the two objects of the Testbench.
 # Then it can be manually tested what happens when an instrument goes down,

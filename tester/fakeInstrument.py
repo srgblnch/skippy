@@ -142,6 +142,7 @@ class TestManager(object):
 
     def __init__(self, *args, **kwargs):
         super(TestManager, self).__init__(*args, **kwargs)
+        self._instrument = FakeInstrument()
         self._createTestDevice()
         self._startTestDevice()
 
@@ -197,7 +198,7 @@ class TestManager(object):
                              % (child.pid))
                     self.__killProcess(child)
         process.terminate()
-        for i in range(30):  # 3 seconds waiting
+        for i in range(10):  # 1 second waiting
             if not process.is_running():
                 return True
             print(".", end='')  # , flush=True) # it is not that future
@@ -243,7 +244,8 @@ class TestManager(object):
         deviceProxy = PyTango.DeviceProxy(DevName)
         testMethods = [self.test_communications,
                        self.test_readings,
-                       self.test_writes]
+                       self.test_writes,
+                       self.test_glitch]
         for i, test in enumerate(testMethods):
             if not test(deviceProxy):
                 break
@@ -305,6 +307,17 @@ class TestManager(object):
         self.log("Writes:\t%s" % msg)
         return result
 
+    def test_glitch(self, device):
+        if device['State'].value in [PyTango.DevState.ON]:
+            self._instrument.close()
+            sleep(1)  # FIXME: enough time to the device reaction
+            if device['State'].value not in [PyTango.DevState.FAULT]:
+                self.log("Glitch:\tTEST FAILED:\n\tNo device reaction")
+                return False
+        self.log("Glitch:\tTEST PASSED")
+        return True
+
+
 def signalHandler(signum, frame):
     if signum == signal.SIGINT:
         print("\nCaptured a Ctrl+c: terminating the execution...")
@@ -318,7 +331,6 @@ def signalHandler(signum, frame):
 def main():
     try:
         global manager
-        instrument = FakeInstrument()
         manager = TestManager()
         signal.signal(signal.SIGINT, signalHandler)
         print("\n\tPress Ctrl+c to finish the fake device")
