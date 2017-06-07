@@ -299,6 +299,9 @@ class TestManager(object):
                 elif device[attrName].type == PyTango.DevShort:
                     wvalue = rvalue+1
                 device[attrName] = wvalue
+                # Time between those two reads must be below the
+                # 'TimeStampsThreshold' to check that, even the time hasn't
+                # passed, it has been change by the write.
                 if device[attrName].value == wvalue:
                     values.append(None)
                 else:
@@ -313,6 +316,11 @@ class TestManager(object):
             sleep(1)  # FIXME: enough time to the device reaction
             if device['State'].value not in [PyTango.DevState.FAULT]:
                 self.log("Glitch:\tTEST FAILED:\n\tNo device reaction")
+                return False
+            self._instrument.open()
+            sleep(1)  # FIXME: enough time to the device reaction
+            if device['State'].value not in [PyTango.DevState.ON]:
+                self.log("Glitch:\tTEST FAILED:\n\tNo device recovery")
                 return False
         self.log("Glitch:\tTEST PASSED")
         return True
