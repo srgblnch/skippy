@@ -114,17 +114,17 @@ class Skippy (PyTango.Device_4Impl):
                                                               terminator)
         except SyntaxError as e:
             self.error_stream("Error in the instrument name: %s" % (e))
-            self.change_state_status(PyTango.DevState.FAULT,
+            self.change_state_status(newState=PyTango.DevState.FAULT,
                                      newLine="%s: review the 'instrument' "
                                      "property" % (e))
             return False
         except Exception as e:
             self.error_stream("Generic exception: %s" % (e))
-            self.change_state_status(newstate=PyTango.DevState.FAULT,
+            self.change_state_status(newState=PyTango.DevState.FAULT,
                                      newLine="initialisation exception: %s"
                                      % (e))
             return False
-        self.change_state_status(newstate=PyTango.DevState.OFF, rebuild=True)
+        self.change_state_status(newState=PyTango.DevState.OFF, rebuild=True)
         # self.rebuildStatus()
         return True
 
@@ -143,9 +143,9 @@ class Skippy (PyTango.Device_4Impl):
                 self._idn = self._instrument.ask("*IDN?", waittimefactor=i)
                 if len(self._idn) > 0:
                     break
-                if self._reconnectAwaker.isSet():
-                    self.info_stream("Abort reconnection to the instrument")
-                    return False
+                # if self._reconnectAwaker.isSet():
+                #     self.info_stream("Abort reconnection to the instrument")
+                #     return False
                 self.warn_stream("In __connectInstrumentObj() no answer to the"
                                  " identification request (try %d)" % (i))
                 time.sleep(communicator.TIME_BETWEEN_SENDANDRECEIVE*10)
@@ -160,8 +160,8 @@ class Skippy (PyTango.Device_4Impl):
             self.error_stream("In __connectInstrumentObj() %s due to: %s"
                               % (msg, e))
             traceback.print_exc()
-            self.change_state_status(newstate=PyTango.DevState.FAULT,
-                                     newstatus=msg)
+            self.change_state_status(newState=PyTango.DevState.FAULT,
+                                     newStatus=msg)
             return False
         else:
             self.info_stream("In __connectInstrumentObj() Connected to "
@@ -438,8 +438,8 @@ class Skippy (PyTango.Device_4Impl):
             else:
                 msg = "identification error: %s" % (e)
             self.error_stream("%s %s" % (self.get_name(), msg))
-            self.change_state_status(newstate=PyTango.DevState.FAULT,
-                                     newline=msg)
+            self.change_state_status(newState=PyTango.DevState.FAULT,
+                                     newLine=msg)
             return False
         else:
             return True
@@ -482,9 +482,9 @@ class Skippy (PyTango.Device_4Impl):
                     if answer is None:
                         self.error_stream("In __read_attr_procedure() "
                                           "Uou, we've got a null answer!")
-                        self.change_state_status(newstate=
+                        self.change_state_status(newState=
                                                  PyTango.DevState.FAULT,
-                                                 newstatus="Communication "
+                                                 newStatus="Communication "
                                                  "error to the instrument",
                                                  important=True)
                         return
@@ -669,23 +669,23 @@ class Skippy (PyTango.Device_4Impl):
                 answer = self._instrument.ask(query)
             self.debug_stream("Answer: %r" % (answer))
             if answer == '':
-                return None
+                raise Exception("No answer from the instrument")
             return answer
         except MemoryError as e:
             self.error_stream("In __hardwareRead() MemoryError exception: %s"
                               % (e))
             traceback.print_exc()
-            self.change_state_status(newstate=PyTango.DevState.FAULT,
+            self.change_state_status(newState=PyTango.DevState.FAULT,
                                      newLine="Device memory error!")
             return None
         except Exception as e:
-            self.error_stream("In __hardwareRead() Exception: %s" % (e))
+            self.error_stream("In __hardwareRead() Exception: %r" % (e))
             traceback.print_exc()
-            # self.__reconnectProcedure()
-            self.change_state_status(newstate=PyTango.DevState.FAULT,
-                                     newline="Fatal error and communications "
+            self.change_state_status(newState=PyTango.DevState.FAULT,
+                                     newLine="Fatal error and communications "
                                      "lost with the instrument!",
                                      important=True)
+            # TODO: self.__reconnectProcedure()
             return None
 
     # @hardwareMutex
@@ -699,14 +699,14 @@ class Skippy (PyTango.Device_4Impl):
             self.error_stream("In __hardwareWrite() MemoryError exception: %s"
                               % (e))
             traceback.print_exc()
-            self.change_state_status(newstate=PyTango.DevState.FAULT,
-                                     newline="Device memory error!")
+            self.change_state_status(newState=PyTango.DevState.FAULT,
+                                     newLine="Device memory error!")
             return None
         except Exception as e:
             self.error_stream("In __hardwareWrite() Exception: %s" % (e))
             traceback.print_exc()
             # self.__reconnectProcedure()
-            self.change_state_status(newstate=PyTango.DevState.FAULT,
+            self.change_state_status(newState=PyTango.DevState.FAULT,
                                      newLine="Fatal error and communications "
                                      "lost with the instrument!",
                                      important=True)
@@ -1117,7 +1117,7 @@ class Skippy (PyTango.Device_4Impl):
         self.info_stream("In _rampStepper(%s)" % (attrName))
         # prepare
         backup_state = self.get_state()
-        self.change_state_status(newstate=PyTango.DevState.MOVING,
+        self.change_state_status(newState=PyTango.DevState.MOVING,
                                  rebuild=True)
         # self.rebuildStatus()
         attrReadCmd = self.attributes[attrName].readCmd
@@ -1147,7 +1147,7 @@ class Skippy (PyTango.Device_4Impl):
         self.info_stream("In _rampSteeper(): finished the movement at %f"
                          % (current_pos))
         # close
-        self.change_state_status(newstate=backup_state, rebuild=True)
+        self.change_state_status(newState=backup_state, rebuild=True)
         # self.rebuildStatus()
         self.attributes[attrName].rampThread = None
 
@@ -1181,12 +1181,12 @@ class Skippy (PyTango.Device_4Impl):
         self._change_status(newstatus)
 
     #@stateMutex
-    def change_state_status(self, newstate=None, newstatus=None,
+    def change_state_status(self, newState=None, newStatus=None,
                             newLine=None, important=False, rebuild=False):
-        if newstate is not None:
-            self._change_state(newstate)
-        if newstatus is not None:
-            self._change_status(newstatus)
+        if newState is not None:
+            self._change_state(newState)
+        if newStatus is not None:
+            self._change_status(newStatus)
         if newLine is not None:
             self._addStatusMsg(newLine, important)
         if rebuild:
@@ -1354,7 +1354,7 @@ class Skippy (PyTango.Device_4Impl):
                 for attrName in self._monitorThreads[monitorTag]['AttrList']:
                     self.set_change_event(attrName, True, False)
                 self._monitorThreads[monitorTag]['Thread'].start()
-            self.change_state_status(newstate=PyTango.DevState.RUNNING,
+            self.change_state_status(newState=PyTango.DevState.RUNNING,
                                      rebuild=True)
             # self.rebuildStatus()
         except Exception as e:
@@ -1565,8 +1565,8 @@ class Skippy (PyTango.Device_4Impl):
             fromScratch = True
         if fromScratch:
             self.prepareMutex()
-        self.change_state_status(newstate=PyTango.DevState.INIT,
-                                 newstatus="Initializing...")
+        self.change_state_status(newState=PyTango.DevState.INIT,
+                                 newStatus="Initializing...")
         self.attr_TimeStampsThreshold_read = 0.1
         self._idn = None
         if fromScratch:
@@ -1729,7 +1729,10 @@ class Skippy (PyTango.Device_4Impl):
             self.warn_stream("In IDN(): current identity %r has changed to %r"
                              % (self._idn, idn))
             self._idn = idn
-        argout = self._idn
+        if self._idn:
+            argout = self._idn
+        else:
+            argout = ''
         #----- PROTECTED REGION END -----#  //  Skippy.IDN
         return argout
         
@@ -1822,7 +1825,7 @@ class Skippy (PyTango.Device_4Impl):
             self.Standby()
         if self.__builder():
             self.__prepareMonitor()
-            self.change_state_status(newstate=PyTango.DevState.ON,
+            self.change_state_status(newState=PyTango.DevState.ON,
                                      rebuild=True)
             # self.rebuildStatus()
             argout = True
@@ -1859,14 +1862,14 @@ class Skippy (PyTango.Device_4Impl):
             self.error_stream("Cannot disconnect from the instrument "
                               "due to: %s" % (e))
             traceback.print_exc()
-            self.change_state_status(newstate=PyTango.DevState.FAULT,
+            self.change_state_status(newState=PyTango.DevState.FAULT,
                                      newLine="Off command failed")
         else:
             self._idn = ""
             self.info_stream("disconnected to the instrument %s"
                              % (self.Instrument))
             if self._builder is None or self.__unbuilder():
-                self.change_state_status(newstate=PyTango.DevState.OFF,
+                self.change_state_status(newState=PyTango.DevState.OFF,
                                          rebuild=True)
                 # self.rebuildStatus()
                 argout = True
@@ -2213,8 +2216,8 @@ class Skippy (PyTango.Device_4Impl):
         except Exception as e:
             self.error_stream("In CMD(%r) Exception: %s" % (argin, e))
             argout = ""
-            self.change_state_status(newstate=PyTango.DevState.FAULT,
-                                     newline="Exception while executing "
+            self.change_state_status(newState=PyTango.DevState.FAULT,
+                                     newLine="Exception while executing "
                                      "CMDfloat()")
             # self.__reconnectInstrumentObj()
         #----- PROTECTED REGION END -----#  //  Skippy.CMD
@@ -2254,8 +2257,8 @@ class Skippy (PyTango.Device_4Impl):
         except Exception as e:
             self.error_stream("In CMDfloat(%r) Exception: %s" % (argin, e))
             argout = ""
-            self.change_state_status(newstate=PyTango.DevState.FAULT,
-                                     newline="Exception while executing "
+            self.change_state_status(newState=PyTango.DevState.FAULT,
+                                     newLine="Exception while executing "
                                      "CMDfloat()")
             # self.__reconnectInstrumentObj()
         #----- PROTECTED REGION END -----#  //  Skippy.CMDfloat
@@ -2284,7 +2287,7 @@ class Skippy (PyTango.Device_4Impl):
         if self.get_state() == PyTango.DevState.OFF:
             #if self.__buildInstrumentObj():
                 if self.__connectInstrumentObj():
-                    self.change_state_status(newstate=PyTango.DevState.STANDBY,
+                    self.change_state_status(newState=PyTango.DevState.STANDBY,
                                              rebuild=True)
                     # self.rebuildStatus()
                     argout = True
