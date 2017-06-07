@@ -26,6 +26,7 @@ __status__ = "Production"
 
 from instrAttrs import ROinteger, RWinteger, ROfloat, RWfloat
 from instrIdn import InstrumentIdentification
+from psutil import process_iter
 import PyTango
 import signal
 import scpi
@@ -168,9 +169,12 @@ class TestManager(object):
         tangodb.put_device_property(DevName, property)
 
     def _startTestDevice(self):
-        self._deviceProcess = Popen([DevServer, DevInstance, "-v4"])
-        self.log("Launched the device server has pid %d"
-                 % (self._deviceProcess.pid))
+        if not self._isAlreadyRunning():
+            self._deviceProcess = Popen([DevServer, DevInstance, "-v4"])
+            self.log("Launched the device server has pid %d"
+                     % (self._deviceProcess.pid))
+        else:
+            self.log("Test device already running!")
 
     def _stopTestDevice(self):
         if self._deviceProcess is None:
@@ -195,6 +199,21 @@ class TestManager(object):
         except Exception as e:
             self.log("* Deletion failed, please review manually "
                      "for garbage *\n")
+
+    def _isAlreadyRunning(self):
+        procs = []
+        for proc in process_iter():
+            if proc.name() == 'python':
+                cmd = proc.cmdline()
+                if cmd[1].lower().startswith(DevServer.lower()) and\
+                        cmd[2].lower() == DevInstance.lower():
+                    self.log("found process %d" % (proc.pid))
+                    procs.append(proc)
+        if len(procs) == 0:
+            return False
+        if len(procs) > 1:
+            self.log("ALERT: the device seems to be running more than once")
+        return True
 
 
 def signalHandler(signum, frame):
