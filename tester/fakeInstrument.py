@@ -1,3 +1,4 @@
+from __future__ import print_function
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
@@ -26,7 +27,7 @@ __status__ = "Production"
 
 from instrAttrs import ROinteger, RWinteger, ROfloat, RWfloat
 from instrIdn import InstrumentIdentification
-from psutil import process_iter
+from psutil import process_iter, Process
 import PyTango
 import signal
 import scpi
@@ -179,15 +180,37 @@ class TestManager(object):
     def _stopTestDevice(self):
         if self._deviceProcess is None:
             return
-        self._deviceProcess.terminate()
-        sleep(1)
-        if self._deviceProcess.poll() is not None:
-            self.log("device server process %d terminated (signal %d)"
-                     % (self._deviceProcess.pid,
-                        abs(self._deviceProcess.returncode)))
-        else:
-            self._deviceProcess.kill()
-            self.log("device server process needed to be killed")
+        process = Process(self._deviceProcess.pid)
+        if not self.__stopProcess(process):
+            self.log(" Process %d needs to be killed" % (process.pid))
+            self.__killProcess(process)
+        self.log("Test device stopped")
+
+    def __stopProcess(self, process):
+        nChildren = len(process.children())
+        if nChildren > 0:
+            self.log("Process %d has %d children to be stopped"
+                     % (process.pid, nChildren))
+            for child in process.children():
+                if not self.__stopProcess(child):
+                    self.log("Process %d still running, proceed to kill"
+                             % (child.pid))
+                    self.__killProcess(child)
+        process.terminate()
+        for i in range(30):  # 3 seconds waiting
+            if not process.is_running():
+                return True
+            print(".", end='')  # , flush=True) # it is not that future
+            sys.stdout.flush()
+            process.terminate()
+            sleep(0.1)
+        return False
+
+    def __killProcess(self, process):
+        try:
+            process.kill()
+        except:
+            pass
 
     def _deleteTestDevice(self):
         try:
@@ -213,6 +236,53 @@ class TestManager(object):
             return False
         if len(procs) > 1:
             self.log("ALERT: the device seems to be running more than once")
+        return True
+
+    # Tests ---
+    def launchTest(self):
+        deviceProxy = PyTango.DeviceProxy(DevName)
+        testMethods = [self.test_communications,
+                       self.test_readings]
+        for i, test in enumerate(testMethods):
+            if not test(deviceProxy):
+                break
+
+    def _checkTest(self, names, values):
+        nones = [value is None for value in values]
+        if any(nones):
+            msg = "TEST FAILED:\n"
+            for i, name in enumerate(names):
+                msg = ''.join("%s\t%s = %r\n" % (msg, name, values[i]))
+            return (False, msg)
+        else:
+            return (True, "TEST PASSED")
+
+    def test_communications(self, device):
+        attrNames = ['QueryWindow', 'TimeStampsThreshold', 'State', 'Status']
+        attrs = device.read_attributes(attrNames)
+        values = [attr.value for attr in attrs]
+        result, msg = self._checkTest(attrNames, values)
+        self.log("Communications:\t%s" % msg)
+        return result
+
+    def test_readings(self, device):
+        exclude = ['QueryWindow', 'TimeStampsThreshold', 'State', 'Status']
+        attrNames = []
+        results = []
+        for attrName in device.get_attribute_list():
+            if attrName not in exclude:
+                attrNames.append(attrName)
+            # TODO: special attributes like ramps descriptors or spectra
+        for i in range(1, len(attrNames)+1):
+            device['QueryWindow'] = i
+            attrs = device.read_attributes(attrNames)
+            values = [attr.value for attr in attrs]
+            nones = [value is None for value in values]
+            result, msg = self._checkTest(attrNames, values)
+            self.log("Readings[%d]\t%s" % (i, msg))
+            if not result:
+                return False
+            sleep(1.1*device['TimeStampsThreshold'].value)
         return True
 
 
