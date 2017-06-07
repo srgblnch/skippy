@@ -242,7 +242,8 @@ class TestManager(object):
     def launchTest(self):
         deviceProxy = PyTango.DeviceProxy(DevName)
         testMethods = [self.test_communications,
-                       self.test_readings]
+                       self.test_readings,
+                       self.test_writes]
         for i, test in enumerate(testMethods):
             if not test(deviceProxy):
                 break
@@ -285,6 +286,24 @@ class TestManager(object):
             sleep(1.1*device['TimeStampsThreshold'].value)
         return True
 
+    def test_writes(self, device):
+        attrNames = []
+        values = []
+        for attrName in device.get_attribute_list():
+            if attrName.endswith('_rw'):
+                rvalue = device[attrName].value
+                if device[attrName].type == PyTango.DevFloat:
+                    wvalue = rvalue/1.1
+                elif device[attrName].type == PyTango.DevShort:
+                    wvalue = rvalue+1
+                device[attrName] = wvalue
+                if device[attrName].value == wvalue:
+                    values.append(None)
+                else:
+                    values.append(wvalue)
+        result, msg = self._checkTest(attrNames, values)
+        self.log("Writes:\t%s" % msg)
+        return result
 
 def signalHandler(signum, frame):
     if signum == signal.SIGINT:
