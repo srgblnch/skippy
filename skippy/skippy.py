@@ -1600,13 +1600,13 @@ class Skippy (PyTango.Device_4Impl):
             # #     then double the S time.
             # self._recoverThreshold = 120.0
             # self._lastRecovery = None
-            # # conversion of the MonitoredAttributes property, 
-            # # from string list to list
-            # try:
-            #     attrLst = str(self.MonitoredAttributes[0])
-            #     self.MonitoredAttributes = self.__str2listProperty(attrLst)
-            # except:
-            #     self.info_stream("No monitored attributes defined")
+            # conversion of the MonitoredAttributes property, 
+            # from string list to list
+            try:
+                attrLst = str(self.MonitoredAttributes[0])
+                self.MonitoredAttributes = self.__str2listProperty(attrLst)
+            except:
+                self.info_stream("No monitored attributes defined")
         #---- once initialized, begin the process to connect with the instrument
         self._instrument = None
         self._builder = None
