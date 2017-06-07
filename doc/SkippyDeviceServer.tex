@@ -21,14 +21,14 @@
 \maketitle
 
 \begin{abstract}
-Following the \href{https://en.wikipedia.org/wiki/Standard_Commands_for_Programmable_Instruments}{wikipedia}'s definition:  the SCPI ``\emph{defines a standard for syntax and commands to use in controlling programmable test and measurement devices}''. Many scientific instrumentation uses this schema for the configuration and operation of the instrument of its purpose.
+Following the \href{https://en.wikipedia.org/wiki/Standard_Commands_for_Programmable_Instruments}{wikipedia}'s definition:  the \texttt{SCPI} ``\emph{defines a standard for syntax and commands to use in controlling programmable test and measurement devices}''. Many scientific instrumentation uses this schema for the configuration and operation of the instrument of its purpose.
 
-Alba has used an specific Device Server, under the name \emph{PyVisaInstrWrapper}, to communicate with instruments like scopes, radio frequency generators, arbitrary signal generators and spectrum analyser. This device was an extension from the original PyScope, becoming it one of the internal device classes. Many improvements has been introduced to this Device Server, but nowadays it is showing the limit of this design. A complete refactoring is needed.
+\texttt{Alba} has used an specific Device Server, under the name \emph{PyVisaInstrWrapper}, to communicate with instruments like scopes, radio frequency generators, arbitrary signal generators and spectrum analyser. This device was an extension from the original \emph{PyScope}, becoming it one of the internal device classes. Before that, there was a \texttt{C++} device server called \emph{TekDPO7000}. This is a long background on this protocol that helps to provide many improvements to this Device Server. By the way it has start showing certain limitations that may advice bounds of the design. But how this has been developed allows a \emph{refactoring} of the internalities to save those constrains.
 \end{abstract}
 
 \section{Design}
 
-The main restriction that the PyVisaInstrWrapper shows is the dependency on the PyVisa subdevice to manage the communications with the instrument. Also the growing number of query commands to the instrument has reach the limit of the basic design.
+The main restriction that the \emph{PyVisaInstrWrapper} shows is the dependency on the \emph{PyVisa} subdevice to manage the communications with the instrument. The main issue was the impossibility to define alternatives to the subdevice. Also the growing number of query commands to the instrument has reach the limit of the basic design.
 
 \subsection{Machine state}
 
@@ -39,7 +39,15 @@ The main restriction that the PyVisaInstrWrapper shows is the dependency on the 
     }
 \end{figure}
 
-\todo{explain the figure \ref{fig:stateMachine}}
+% \todo{explain the figure \ref{fig:stateMachine}}
+
+When a device of an instance of the \emph{Skippy} device server is launched, the first state it has is \texttt{INIT}, on the left side of the picture \ref{fig:stateMachine}. When all the internal elements are well initialised, then it changes its state to \texttt{OFF}. At this state, the device has an internal object with the responsibility of the communications with an instrument.
+
+Then, if the properties configuration does not say the contrary, the device will try to stablish communication with the instrument. This is reported with the state change to \texttt{STANDBY}. The instrument will receive a request to identify itself, and the answer will allow the device to know which instructions set is necessary to talk further with the instrument.
+
+Again, if the properties does not say the contrary, the device create the specific attributes for the identified instrument. Reporting this succeed with a state change to \texttt{ON}. If there are attributes to have their value monitored and pushing events, and for the last time, if the properties does not avoid this state change, the \emph{Start()} process will be launched to have an specific thread in charge of this monitoring. This state corresponds with \texttt{RUNNING}.
+
+The figure \ref{fig:stateMachine} show other state-change edges with the command name that produces the change. In any case, if something goes wrong, its state will decay to \texttt{FAULT}. To recover from fault, the \emph{Init()} command should be called, apart from cases where the device itself can recover the situation to then do the necessary steps to recover normal operation.
 
 \subsection{Device Properties}
 
@@ -47,16 +55,20 @@ The main restriction that the PyVisaInstrWrapper shows is the dependency on the 
     \item {\tt Instrument}: mandatory property to configure the instrument that will be introduced to the distributed system via the device.
     \begin{itemize}
         \item If the content string is a host name, use sockets to communicate with the instrument
-        \item If the content string is a device name and the class of it is a PyVisa, use it as the bridge to the instrument.
+        \item If the content string is a device name if the class of this subdevice is \emph{PyVisa} or even \emph{[Py]Serial}, it will be used as a bridge to the instrument.
+        \item If the content string is a serial line file descriptor (for example a \emph{/dev/ttySn} or a \emph{/dev/ttyrNN}), it will be the way the instrument will be accessed.
         \item else, decay to fault state with the appropriate status message
     \end{itemize}
     \item {\tt Port}: optional property to specify a port, in the socket communication, when it should be different than the default 5025.
+    \item {\tt SerialBaudrate}, {\tt SerialBytesize}, {\tt SerialParity}, {\tt SerialStopbits}, {\tt SerialTimeout}, {\tt SerialXonXoff}: optional properties to define the serial line communications when the instrument is accessed by a serial line in the machine where it runs.
     \item {\tt NumChannels}: optional property to define, in case the instrument has channels, the number of them available.
     \item {\tt NumFunctions}: optional property to define, in case the instrument has functions, the number of them available.
+    \item {\tt NumMultiple}: more generic than the previous to, and made because of the limitations they have. It is a generalisation for channels and functions. It must be composed by a list of pairs with the \emph{scpiPrefix} (equivalent to the 'ch' or 'fn') followed by the number of them that shall be build.
     \item {\tt MonitoredAttributes}: When the device is in RUNNING state, the attributes listed here will be monitored (having events) with a period said in the attribute TimeStampsThreashold (or different if specified with a : separator after the attrName).
     \item {\tt AutoStandby}: When device startup, try an standby() to connect to the instrument authomatically. Default True.
     \item {\tt AutoOn}: When device startup, try an on() begin communication with the instrument. Default True.
     \item {\tt AutoStart}: When device startup, try an Start() to launch the necessary monitor threads (if {\tt MonitoredAttributes} is configured), authomatically. Default True.
+    \item {\tt TxTerminator}: by default the instruments uses '$\backslash${\tt n}' as a Transmission terminator, but there are instruments that requires to use '$\backslash${\tt r}', or both in a certain order like '$\backslash${\tt r}$\backslash${\tt n}'.
 \end{itemize}
 
 \subsection{Device Commands}
@@ -129,7 +141,22 @@ Attribute('Waveform',
          })
 \end{lstlisting}
 
-With this attribute is broken a backward compatibility with PyVisaInstrWrapper because there those spectrum attributes did not follow the naming of name. There is a naming convention in attribute definitions with channels and functions, to the name given in the definition is concatenated at the end two characters ({\tt Ch} or {\tt Fn}) followed by the number of the channel.
+With this attribute is broken a backward compatibility with \emph{PyVisaInstrWrapper} because there those spectrum attributes did not follow the naming of name. There is a naming convention in attribute definitions with channels and functions, to the name given in the definition is concatenated at the end two characters ({\tt Ch} or {\tt Fn}) followed by the number of the channel.
+
+There is an alternative that allow to stablish the naming with a bigger flexibility (but not full-free). 
+
+\begin{lstlisting}[language=python,basicstyle=\footnotesize]
+Attribute('IO',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': lambda mult, num: "%s%.2d:VALU?" % (mult, num),
+           'writeCmd': lambda mult, num: (lambda value: "%s%.2d:VALU %s"
+                                          % (mult, num, value)),
+           'multiple': {'scpiPrefix': 'IOPOrt', 'attrSuffix': 'Port'}
+           })
+\end{lstlisting}
+
+This attribute description will generate some attributes under the name patter '\emph{IOPort}NN', and there will be as many as specified in the \texttt{NumMultiple} attribute where one of the pairs shall have as first element 'IOPOrt'.
 
 \subsection{Class Diagram}
 
@@ -149,9 +176,9 @@ In figure \ref{fig:classDiagram} can be found a UML draw with the class diagram.
     \begin{itemize}
         \item Supported Scalar and Spectrum (1 dimension arrays) attribute definition. Image (2 dimension arrays) are not currently developed, neither in the schedule because they are not needed by any of the current supported instruments. Although the device is prepared to sopport them if need be. (Perhaps the frequencies spectra in SpectrumAnalyser).
         \item The dynamic attributes build after the instrument identification can be Memorized if this has been configured this way in the file with the instruction set.
-        \item Reconnect after network cut (or PyVisa)
+        \item Reconnect after network cut (or \emph{PyVisa}) \fixme{This has been temporally disabled to bug fix it.}
     \end{itemize}
-    \item Multiple request of data to the instrument: As figure \ref{fig:groupedRequests} describes, when the device receives a request for reading to the instrument it can manage to cut those requests in subsets to avoid stress in the instrument. The communication itself supports a direct socket connection to the instrument and the use of the PyVisa device as a bridge in the communication.
+    \item Multiple request of data to the instrument: As figure \ref{fig:groupedRequests} describes, when the device receives a request for reading to the instrument it can manage to cut those requests in subsets to avoid stress in the instrument. The communication itself supports a direct socket connection to the instrument and the use of the \emph{PyVisa} device as a bridge in the communication. 
 \end{itemize}
 
 \begin{figure}[h]
@@ -162,15 +189,15 @@ In figure \ref{fig:classDiagram} can be found a UML draw with the class diagram.
 \end{figure}
 
 \begin{itemize}
-    \item Write process to some attributes would require a smooth ramp. As an example, to change the frequency in the RFGenerator, the change would not be set directly (or the timing system will suffer). Then in the build process of an specific attribute with a certain flag of "movability" (name to be determined) two extra attributes, internals in the device, must be built also: a Step and a StepSpeed. On the write operation a thread should be launched and every "StepSpeed" seconds change the value by the content in "Step" in the direction to the final setpoint. This was already implemented in PyRfSignalGenerator Class.
+    \item Write process to some attributes would require a smooth ramp. As an example, to change the frequency in the \emph{RFGenerator}, the change would not be set directly (or the timing system will suffer). Then in the build process of an specific attribute with a certain flag of "movability" (name to be determined) two extra attributes, internals in the device, must be built also: a \texttt{Step} and a \texttt{StepSpeed}. On the write operation a thread is launched and every "StepSpeed" seconds change the value by the content in "Step" in the direction to the final setpoint. This was already implemented in \emph{PyRfSignalGenerator} Class. \fixme{This will require a refactoring in order to encapsulate the functionality in a \emph{responsible object}}.
     \item Monitor attributes. Having a property with a list of attributes, if they exist in the instrument definition, configure them in events and do a separated thread polling that will emit events on this attributes. This feature is different that setting up a "polling" from tango to the attribute because this fails to use the multiple reading.
     \begin{itemize}
         \item In the definition of the attribute to be monitored, the \emph{MonitoredAttributes} property, using an specific notation (a ':' followed by a number of seconds) can set up an specific monitoring period for it in particular.
         \begin{itemize}
             \item When the monitoring is by the specific period, different attributes with the same period, should be read by the same monitor thread.
         \end{itemize}
-        \item A command way feature is required to add and remove elements from this monitoring list. Together with a set of commands to setup specific monitoring periods.
-        \item \fixme{When an attribute is being monitored, a {\tt read\_attr()} should return cached value and not force a hardware read.}
+        \item The use of the commands (\emph{add} and \emph{remove}) to setup this feature is recommended. Together with a set of commands to setup specific monitoring periods.
+        \item When an attribute is monitored, a {\tt read\_attr()} returns the cached value (no hardware read).
     \end{itemize}
     \item \todo{Once this monitoring feature is available, other attributes not monitored that have reached some reading frequency, would be included in the monitoring loop (not emitting events) in order to reduce the load of the readings. The frequency reading should be monitored to notice when this has reduced over another threshold to avoid unnecessary readings.}
     \item \fixme{When many attributes are being read, and not by {\tt read\_attributes([])}, prioritise. (This happens, for example, when opens the device with \emph{Atkpanel}) }
@@ -179,8 +206,11 @@ In figure \ref{fig:classDiagram} can be found a UML draw with the class diagram.
 \subsection{Known bugs}
 
 \begin{itemize}
-    \item \fixme{It have seen, when the read frequency is very fast, like read a waveform above $5Hz$, some exceptions that suggest a responses cross between spectrum and scalar. This is potentially critical, because is undetectable if it happens between scalars.}
-    \item \fixme{When a function is not defined (not when if off like a channel, this is like ask for a channel that doesn't exist physically), the device hangs due to an exception from the instrument and a very long time out.}
+    \item \fixme{When all the monitored attributes are removed, the list ends inconsistent and dirty when newer attributes are added to this list.}
+    \item \fixme{The timestamp of an attribute come from when it was read from the hardware. But in case of an \texttt{INVALID} value, it will point forever to when it has decay: this produces issues when a plot show this and other attributes with different time scale.}
+    \item \fixme{The an instrument is powered off, if there is no attribute monitor the device will not see it until access the hardware. That is, request the \emph{state} before write will not update the information.}
+    %\item \fixme{It have seen, when the read frequency is very fast, like read a waveform above $5Hz$, some exceptions that suggest a responses cross between spectrum and scalar. This is potentially critical, because is undetectable if it happens between scalars.}
+    %\item \fixme{When a function is not defined (not when if off like a channel, this is like ask for a channel that doesn't exist physically), the device hangs due to an exception from the instrument and a very long time out.}
 \end{itemize}
 
 \end{document}
