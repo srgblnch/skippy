@@ -26,13 +26,12 @@ __status__ = "Production"
 
 
 from instrAttrs import ROinteger, RWinteger, ROfloat, RWfloat
-from instrIdn import InstrumentIdentification
+from instrIdn import InstrumentIdentification, __version__
 from psutil import process_iter, Process
 import PyTango
 import signal
 import scpi
 from select import select
-from skippy import version as skippyVersion
 from subprocess import Popen, PIPE
 import sys
 from time import sleep
@@ -57,7 +56,7 @@ class FakeInstrument(object):
     def _buildFakeSCPI(self):
         self._identity = InstrumentIdentification('FakeInstruments. Inc',
                                                   'Tester', 0,
-                                                  skippyVersion())
+                                                  __version__)
         self._scpiObj = scpi.scpi(local=True, debug=True, log2File=True)
         self._buildSpecialCommands()
         self._buildNormalCommands()
