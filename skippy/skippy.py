@@ -61,6 +61,7 @@ import time
 import traceback
 from types import StringType
 from version import version
+from watchDog import WatchDog
 
 MINIMUM_RECOVERY_DELAY = 3.0
 DEFAULT_RECOVERY_DELAY = 600.0
@@ -84,7 +85,7 @@ class Skippy (PyTango.Device_4Impl):
 
     ######
     # section to resolve instrument property ---
-    def __buildInstrumentObj(self):
+    def _buildInstrumentObj(self):
         '''Builder of object that will manage the communications with the
            specified instrument in the properties.
            To have this object made only means that this device has recognized
@@ -93,7 +94,7 @@ class Skippy (PyTango.Device_4Impl):
            The expected result of this method is to have the skippy tango
            device in OFF state.
         '''
-        self.info_stream("In __buildInstrumentObj()")
+        self.info_stream("In _buildInstrumentObj()")
         try:
             self._instrument = None
             if self.SerialTimeout == -1:
@@ -193,7 +194,7 @@ class Skippy (PyTango.Device_4Impl):
 #             self.change_state(PyTango.DevState.FAULT)
 #             self.rebuildStatus()
 #             return False
-#         if self.__buildInstrumentObj():
+#         if self._buildInstrumentObj():
 #             if self.Off():
 #                 self.warn_stream("In __reconnectInstrumentObj() "
 #                                  "delay reconnection by %6.3f seconds"
@@ -1610,7 +1611,9 @@ class Skippy (PyTango.Device_4Impl):
         #---- once initialized, begin the process to connect with the instrument
         self._instrument = None
         self._builder = None
-        self.__buildInstrumentObj()
+        self._buildInstrumentObj()
+        self._watchDog = WatchDog(self)
+        self._watchDog.start()
         if not self.AutoStandby:
             self.debug_stream("Configured to NOT progress to StandBy")
             return
@@ -2285,7 +2288,7 @@ class Skippy (PyTango.Device_4Impl):
         argout = False
         #----- PROTECTED REGION ID(Skippy.Standby) ENABLED START -----#
         if self.get_state() == PyTango.DevState.OFF:
-            #if self.__buildInstrumentObj():
+            #if self._buildInstrumentObj():
                 if self.__connectInstrumentObj():
                     self.change_state_status(newState=PyTango.DevState.STANDBY,
                                              rebuild=True)
