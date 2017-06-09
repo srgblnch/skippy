@@ -3,3 +3,9 @@
 .settings/
 skippy.egg-info/
 *.pyc
+
+# documentation latex extra files
+doc/*.aux
+doc/*.log
+doc/*.out
+doc/*.backup
