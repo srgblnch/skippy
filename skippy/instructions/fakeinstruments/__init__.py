@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
@@ -16,24 +17,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-__author__ = "Sergi Blanch-Torne"
+__author__ = "Sergi Blanch-Torné"
 __email__ = "sblanch@cells.es"
-__copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
+__copyright__ = "Copyright 2016, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 
-__version__ = '1.2.10-alpha'
-
-
-def VERSION():
-    if '-' in __version__:
-        _v, _rel = __version__.split('-')
-    else:
-        _v, _rel = __version__, ''
-    _v = [int(n) for n in _v.split('.')]
-    if len(_rel) > 0:
-        _v += [_rel]
-    return tuple(_v)
-
-
-def version():
-    return __version__

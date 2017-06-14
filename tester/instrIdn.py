@@ -24,7 +24,8 @@ __license__ = "GPLv3+"
 __status__ = "Production"
 
 import scpi
-import skippy
+__version__ = '1.2.10-alpha'
+
 
 class InstrumentIdentification(object):
     def __init__(self, manufacturer, instrument, serialNumber,
@@ -71,8 +72,9 @@ class InstrumentIdentification(object):
         return "%s,%s,%s,%s" % (self.manufacturer, self.instrument,
                                 self.serialNumber, self.firmwareVersion)
 
+
 def main():
-    instrument = InstrumentIdentification('ALBA', 'test', 0, skippy.version())
+    instrument = InstrumentIdentification('ALBA', 'test', 0, __version__)
     print instrument.idn()
 
 if __name__ == '__main__':

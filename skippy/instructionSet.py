@@ -41,10 +41,12 @@ def identifier(idn, deviceObj):
             'rohde&schwarz': rohdeschwarz,
             'arroyo': arroyo,
             'albasynchrotron': albasynchrotron,
-            'keithley instruments inc.': keithley}[company](model)
-    attrBuilder = AttributeBuilder(deviceObj)
-    attrBuilder.parseFile(file)
-    return attrBuilder
+            'keithley instruments inc.': keithley,
+            'fakeinstruments. inc': fakeinstrument,
+            }[company](model)
+    builder = Builder(deviceObj)
+    builder.parseFile(file)
+    return builder
 
 
 def splitIDN(idn):
@@ -120,6 +122,12 @@ def keithley(model):
     elif model == 'model 2635a':
         return _getFilePath("instructions/sourcemeter/keithley2635.py")
     raise EnvironmentError("Keithley %s model not supported" % (model))
+
+
+def fakeinstrument(model):
+    if model == 'tester':
+        return _getFilePath("instructions/fakeinstruments/tester.py")
+    raise EnvironmentError("Fake Instrument %s model not supported" % (model))
 # done supported companies methods
 ##################################
 
@@ -173,6 +181,7 @@ class AttributeFunctionality(object):
             else:
                 repr += "\t%s: %s\n" % (key, attr)
         return repr
+
 
 class RampObj(AttributeFunctionality):
     def __init__(self, *args, **kwargs):
@@ -280,6 +289,7 @@ class AttributeObj(object):
             else:
                 self.debug_stream("In _buildrepr_() doesn't have %s" % (key))
         return repr
+
 
 class ROAttributeObj(AttributeObj):
     def __init__(self, readCmd, readFormula=None,
@@ -474,7 +484,7 @@ class RWAttributeObj(ROAttributeObj):
         self._writeValues = writeValues
 
 
-class AttributeBuilder:
+class Builder:
     def __init__(self, parent):
         '''parent: device object to who apply the dynamic attributes
         '''
@@ -491,11 +501,12 @@ class AttributeBuilder:
         # self.__device.debug_stream('%30s\t%10s\t%5s\t%6s\t%6s'
         #                            % ("attrName", "Type", 'RO/RW', "read",
         #                               "write"))
-        self.__device.info_stream("Start parsing the attribute file")
+        self.__device.info_stream("Start parsing the attribute file: %s"
+                                  % (fName))
         try:
-            execfile(fName, self.globals_, self.locals_)
+            execfile(str(fName), self.globals_, self.locals_)
         except Exception as e:
-            self.__device.debug_stream("AttributeBuilder.parseFile Exception: "
+            self.__device.debug_stream("Builder.parseFile Exception: "
                                        "%s\n%s" % (e, traceback.format_exc()))
         self.__device.debug_stream('Parse of the attribute file done.')
 
@@ -570,15 +581,17 @@ class AttributeBuilder:
             if self.__device.NumChannels <= 0:
                 raise ValueError("Could not prepare channels for %s because "
                                  "not well defined the device property about"
-                                 "how many have to be created" % (attributeName))
+                                 "how many have to be created"
+                                 % (attributeName))
             self.__buildGroup(attributeName, attributeDefinition,
                               self.__device.NumChannels, "Ch")
         if 'functions' in attributeDefinition and \
-               attributeDefinition['functions']:
+                attributeDefinition['functions']:
             if self.__device.NumFunctions <= 0:
                 raise ValueError("Could not prepare functions for %s because "
                                  "not well defined the device property about"
-                                 "how many have to be created" % (attributeName))
+                                 "how many have to be created"
+                                 % (attributeName))
             self.__buildGroup(attributeName, attributeDefinition,
                               self.__device.NumFunctions, "Fn")
         if 'multiple' in attributeDefinition and \
@@ -620,13 +633,13 @@ class AttributeBuilder:
             else:
                 return number
         else:
-             e += "because not well defined the device property about "\
+            e += "because not well defined the device property about "\
                 "how many have to be created."
         raise ValueError(e)
 
     def __buildGroup(self, name, definition, number, attrSuffix):
         attrName = "%s%s" % (name, attrSuffix)
-        for i in range(1,number+1):
+        for i in range(1, number+1):
             defcopy = copy(definition)
             if attrSuffix in ['Ch', 'Fn']:
                 if attrSuffix == 'Ch':
@@ -640,7 +653,7 @@ class AttributeBuilder:
                                          defcopy, channel=ch, function=fn,
                                          multiple=multiple)
                 self.__device.debug_stream("Added attribute: %s"
-                                               % (attr.get_name()))
+                                           % (attr.get_name()))
             except Exception as e:
                 self.__device.error_stream("NOT added attribute: "
                                            "%s%d due to exception: "

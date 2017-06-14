@@ -110,7 +110,8 @@ class Communicator:
             print("ERROR: "+msg)
 
     def ask(self, commandList, waittimefactor=1):
-        '''Prepare the command list and do a combination of send(msg) and recv()
+        '''Prepare the command list and do a combination of
+           send(msg) and recv()
         '''
         waittime = TIME_BETWEEN_SENDANDRECEIVE * waittimefactor
         with self.mutex:
