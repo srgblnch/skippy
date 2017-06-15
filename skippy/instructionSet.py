@@ -71,7 +71,7 @@ def splitIDN(idn):
 
 def _getFilePath(filename):
     path = os.path.dirname(__file__)
-    full_path = path + '/' + filename
+    full_path = os.path.join(path, filename)
     return full_path
 
 
