@@ -147,7 +147,7 @@ Attribute('MeasureFunction',
            "[int(float(VALUE))]",
            'writeCmd': lambda value: "smua.measure.func=smua.OUTPUT_%s"
            % ("DC%s" % value if value in ['AMPS', 'VOLTS'] else value),
-           'writeValues': ['AMPS', 'VOLTS','OHMS','WATTS']
+           'writeValues': ['AMPS', 'VOLTS', 'OHMS', 'WATTS']
            })
 
 Attribute('MeasureCurrentRange',
