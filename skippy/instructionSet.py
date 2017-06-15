@@ -119,8 +119,8 @@ def albasynchrotron(model):
 def keithley(model):
     if model == 'model 2000':
         return _getFilePath("instructions/multimeter/keithley2000.py")
-    elif model == 'model 2635a':
-        return _getFilePath("instructions/sourcemeter/keithley2635.py")
+    elif model in ['model 2635a', 'model 2611']:
+        return _getFilePath("instructions/sourcemeter/keithley26XX.py")
     raise EnvironmentError("Keithley %s model not supported" % (model))
 
 
