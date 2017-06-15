@@ -132,6 +132,13 @@ Attribute('AcqTime',
            'writeCmd': lambda value: "ACQU:TIME %s" % (value),
            })
 
+Attribute('NTrig',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "ACQU:NTRIggers?",
+           'writeCmd': lambda value: "ACQU:NTRIggers %s" % (value),
+           })
+
 # Channels ---
 Attribute('InstantCurrent',
           {'type': PyTango.CmdArgType.DevDouble,
