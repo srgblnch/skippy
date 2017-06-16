@@ -31,6 +31,7 @@ Attribute('Frequency',
            'readCmd': ":FREQ?",
            'writeCmd': lambda value: ":FREQ %s" % (str(value)),
            'rampeable': True,
+           'memorized': True,
            })
 
 Attribute('PowerLevel',
@@ -38,6 +39,7 @@ Attribute('PowerLevel',
            'dim': [0],
            'readCmd': ":POW?",
            'writeCmd': lambda value: ":POW %s" % (str(value)),
+           'memorized': True,
            })
 
 Attribute('RfState',
@@ -107,6 +109,8 @@ Attribute('OscillatorExternalLostRFoff',
            'readCmd': ":ROSCillator:EXTernal:RFOff?",
            # 'writeCmd': ":ROSCillator:EXTernal:RFOff %s" % (str(value))
            })
+            # FIXME: the reading of this attribute should only be allowed
+            #        when OscillatorSource is 'EXT' (external).
 
 Attribute('OscillatorExternalFrequency',
           {'type': PyTango.CmdArgType.DevString,
