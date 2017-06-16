@@ -657,6 +657,9 @@ class Skippy (PyTango.Device_4Impl):
             self.error_stream("In __preHardwareRead() Exception: %s" % (e))
             return None, None
 
+    def doHardwareRead(self, query):
+        return self.__hardwareRead(query)
+
     # @hardwareMutex
     def __hardwareRead(self, query, ask_for_values=False):
         '''Given a string with a ';' separated list of scpi commands 'ask'
@@ -689,6 +692,9 @@ class Skippy (PyTango.Device_4Impl):
             # TODO: self.__reconnectProcedure()
             return None
 
+    def doHardwareWrite(self, cmd):
+        self.__hardwareWrite(cmd)
+
     # @hardwareMutex
     def __hardwareWrite(self, cmd):
         '''
@@ -702,7 +708,6 @@ class Skippy (PyTango.Device_4Impl):
             traceback.print_exc()
             self.change_state_status(newState=PyTango.DevState.FAULT,
                                      newLine="Device memory error!")
-            return None
         except Exception as e:
             self.error_stream("In __hardwareWrite() Exception: %s" % (e))
             traceback.print_exc()
@@ -1043,35 +1048,37 @@ class Skippy (PyTango.Device_4Impl):
         attrName = attr.get_name()
         data = []
         attr.get_write_value(data)
+        value = data[0]
         if attrName in self.attributes:
-            self.__write_instrument_attr(attr, attrName, data)
+            self.__write_instrument_attr(attr, attrName, value)
         elif attrName.endswith("Step"):
             parentAttrName = attrName.split('Step')[0]
-            self.attributes[parentAttrName].rampStep = data[0]
+            self.attributes[parentAttrName].rampStep = value
         elif attrName.endswith("StepSpeed"):
             parentAttrName = attrName.split('StepSpeed')[0]
-            self.attributes[parentAttrName].rampStepSpeed = data[0]
+            self.attributes[parentAttrName].rampStepSpeed = value
         else:
             raise AttributeError("Invalid write of the attribute %s"
                                  % (attrName))
 
-    def __write_instrument_attr(self, attr, attrName, data):
-        self.attributes[attrName].lastWriteValue = data[0]
+    def __write_instrument_attr(self, attr, attrName, value):
+        self.attributes[attrName].lastWriteValue = value
         # Normal case, non rampeable attribute
         if not self.attributes[attrName].isWritable():
             raise AttributeError("%s is not writable attribute"
                                  % (attr.get_name()))
         if not self.attributes[attrName].isRampeable():
-            cmd = self.attributes[attrName].writeCmd(data[0])
+            cmd = self.attributes[attrName].writeCmd(value)
             # filter the write value if the attribute was configured this way
             if self.attributes[attrName].hasWriteValues() and \
-                    not str(data[0]).upper() in \
+                    not str(value).upper() in \
                     self.attributes[attrName].writeValues:
                 self.error_stream("In __write_instrument_attr() avoid to "
                                   "send: %s because it is not in %s"
-                                  % (cmd, self.attributes[attrName].writeValues))
+                                  % (cmd,
+                                     self.attributes[attrName].writeValues))
                 raise AttributeError("Invalid write value %r of the "
-                                     "attribute %s" % (data[0], attrName))
+                                     "attribute %s" % (value, attrName))
             else:
                 self.info_stream("In __write_instrument_attr() sending: %s "
                                  "= %r" % (attrName, cmd))
@@ -1083,24 +1090,30 @@ class Skippy (PyTango.Device_4Impl):
                 self.warn_stream("In __write_instrument_attr() No ramp "
                                  "parameters defined, direct setpoint for %s"
                                  % (attrName))
-                cmd = self.attributes[attrName].writeCmd(data[0])
+                cmd = self.attributes[attrName].writeCmd(value)
                 self.info_stream("In __write_instrument_attr() sending: %s"
                                  % (cmd))
                 self.__hardwareWrite(cmd)
             else:
                 # rampeable and create a thread, if it doesn't exist
-                if self.attributes[attrName].isRampeable() is None:
-                    self.info_stream("In __write_instrument_attr() launching "
+                if not self.attributes[attrName].isRamping():
+                    if not self.attributes[attrName].prepareRamping():
+                        self.error_stream("In __write_instrument_attr() "
+                                          "ramping procedure cannot be "
+                                          "prepared")
+                        raise RuntimeError("Ramp construction failed in "
+                                           "preparation")
+                    if not self.attributes[attrName].launchRamp():
+                        self.error_stream("In __write_instrument_attr() "
+                                          "ramping procedure cannot be "
+                                          "started")
+                        raise RuntimeError("Ramp construction failed in "
+                                           "start")
+                    self.info_stream("In __write_instrument_attr() launched "
                                      "ramp procedure for %s to setpoint %g"
                                      % (attrName,
                                         self.attributes[attrName].
                                         lastWriteValue))
-                    self.attributes[attrName].rampThread = \
-                        threading.Thread(target=self._rampStepper,
-                                         name="%s_ramp" % (attrName),
-                                         args=([attrName]))
-                    self.attributes[attrName].rampThread.setDaemon(True)
-                    self.attributes[attrName].rampThread.start()
                 else:
                     self.info_stream("In __write_instrument_attr(), attribute"
                                      "%s already with an ongoing ramp. Final "
@@ -1110,47 +1123,6 @@ class Skippy (PyTango.Device_4Impl):
                                         lastWriteValue))
                 # no else need because during the ramp the it goes to
                 # 'lastWriteValue' and it has been already updated.
-
-    def _rampStepper(self, attrName):
-        # Remember the arguments when this is called as thread target, is a
-        # tuple and the content of this tuple is a list with one string
-        # element.
-        self.info_stream("In _rampStepper(%s)" % (attrName))
-        # prepare
-        backup_state = self.get_state()
-        self.change_state_status(newState=PyTango.DevState.MOVING,
-                                 rebuild=True)
-        # self.rebuildStatus()
-        attrReadCmd = self.attributes[attrName].readCmd
-        # move
-        self.attributes[attrName].lastReadValue = \
-            float(self.__hardwareRead(attrReadCmd))
-        current_pos = self.attributes[attrName].lastReadValue
-        self.info_stream("In _rampSteeper(): started the movement from %f"
-                         % (current_pos))
-        while not current_pos == self.attributes[attrName].lastWriteValue:
-            if current_pos > self.attributes[attrName].lastWriteValue:
-                if current_pos - self.attributes[attrName].lastWriteValue <\
-                        self.attributes[attrName].rampStep:
-                    current_pos = self.attributes[attrName].lastWriteValue
-                else:
-                    current_pos -= self.attributes[attrName].rampStep
-            elif current_pos < self.attributes[attrName].lastWriteValue:
-                if self.attributes[attrName].lastWriteValue -\
-                        current_pos < self.attributes[attrName].rampStep:
-                    current_pos = self.attributes[attrName].lastWriteValue
-                else:
-                    current_pos += self.attributes[attrName].rampStep
-            attrWriteCmd = self.attributes[attrName].writeCmd(current_pos)
-            self.info_stream("In write_attr() sending: %s" % (attrWriteCmd))
-            self.__hardwareWrite(attrWriteCmd)
-            time.sleep(self.attributes[attrName].rampStepSpeed)
-        self.info_stream("In _rampSteeper(): finished the movement at %f"
-                         % (current_pos))
-        # close
-        self.change_state_status(newState=backup_state, rebuild=True)
-        # self.rebuildStatus()
-        self.attributes[attrName].rampThread = None
 
     # done dynamic attributes builder section ---
     ######
