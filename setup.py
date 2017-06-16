@@ -19,41 +19,61 @@
 # ##### END GPL LICENSE BLOCK #####
 
 
-from setuptools import setup, find_packages
-from skippy import version
-
 __author__ = "Sergi Blanch-Torne"
 __email__ = "sblanch@cells.es"
 __copyright__ = "Copyright 2016, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 
+__project__ = 'skippy'
+__description__ = "Tango Device Server to control instruments that support "\
+                  "the scpi protocol"
+__longDesc__ = """
+This Tango Device Server has been developed to provide access to instruments
+that listen for SCPI protocol connections.
 
-setup(name='skippy',
-      license="GPLv3+",
-      description="Tango Device Server to control instruments that support "
-                  "the scpi protocol",
-      version=version(),
-      author="Sergi Blanch-Torn\'e",
-      author_email="sblanch@cells.es",
-      classifiers=['Development Status :: 5 - Production/Stable',
-                   'Intended Audience :: Developers',
-                   'Intended Audience :: Science/Research',
-                   'License :: OSI Approved :: '\
-                   'GNU General Public License v3 or later (GPLv3+)',
-                   'Operating System :: POSIX',
-                   # 'Programming Language :: Cython',
-                   'Programming Language :: Python',
-                   'Topic :: Scientific/Engineering :: '\
-                   'Interface Engine/Protocol Translator',
-                   'Topic :: Software Development :: Embedded Systems',
-                   'Topic :: Software Development :: Libraries :: '\
-                   'Python Modules',
-                   ''],
+This code is the natural evolution of previous device servers that had provided
+many functionalities to, with this device, merge them together and make easy
+to develop many more.
+
+See more details in the doc directory of the sources repository.
+"""
+__url__ = "https://github.com/srgblnch/skippy"
+# we use semantic versioning (http://semver.org/) and we update it using the
+# bumpversion script (https://github.com/peritus/bumpversion)
+__version__ = '1.2.11-alpha'
+
+
+from setuptools import setup, find_packages
+
+
+classifiers = [
+    'Development Status :: 5 - Production/Stable',
+    'Intended Audience :: Developers',
+    'Intended Audience :: Science/Research',
+    'License :: OSI Approved :: '
+    'GNU General Public License v3 or later (GPLv3+)',
+    'Operating System :: POSIX',
+    'Programming Language :: Python',
+    'Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator',
+    'Topic :: Software Development :: Embedded Systems',
+    'Topic :: Software Development :: Libraries :: Python Modules',
+    ''],
+
+
+setup(name=__project__,
+      license=__license__,
+      description=__description__,
+      long_description=__longDesc__,
+      version=__version__,
+      author=__author__,
+      author_email=__email__,
+      classifiers=classifiers,
       packages=find_packages(),
-      url="https://github.com/srgblnch/skippy",
+      url=__url__,
       entry_points={
           'console_scripts': ['Skippy=skippy.skippy:main']
-          })
+          }
+      )
 
 # for the classifiers review see:
 # https://pypi.python.org/pypi?%3Aaction=list_classifiers

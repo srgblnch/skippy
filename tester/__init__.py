@@ -17,23 +17,23 @@
 # ##### END GPL LICENSE BLOCK #####
 
 __author__ = "Sergi Blanch-Torne"
+__maintainer__ = "Sergi Blanch-Torne"
 __email__ = "sblanch@cells.es"
 __copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
+__status__ = "Production"
 
-__version__ = '1.2.11-alpha'
+from fakeInstrument import FakeInstrument, TestManager
 
-
-def VERSION():
-    if '-' in __version__:
-        _v, _rel = __version__.split('-')
-    else:
-        _v, _rel = __version__, ''
-    _v = [int(n) for n in _v.split('.')]
-    if len(_rel) > 0:
-        _v += [_rel]
-    return tuple(_v)
-
-
-def version():
-    return __version__
+# From a python console, in the package directory one can call:
+# >>> from tester.fakeInstrument import TestManager
+# >>> manager = TestManager()
+# and have in a python console the two objects of the Testbench.
+# Then it can be manually tested what happens when an instrument goes down,
+# simulated by a call:
+# >>> instrument.close()
+# Having a device proxy, an interaction with the instrument will produce a
+# decay to fault. Calling instrument.open() and Init() the proxy should
+# recover the communication.
+# TODO: the device proxy will have the functionality (back, temporally removed)
+# to auto-recover by checking from time to time if the instrument is back.

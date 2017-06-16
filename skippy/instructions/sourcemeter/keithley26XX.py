@@ -58,7 +58,8 @@ Attribute('SourceFunction',
            'dim': [0],
            'readCmd': "print(smua.source.func)\n?",
            'readFormula': "{0: 'AMPS', 1: 'VOLTS'}[int(float(VALUE))]",
-           'writeCmd': lambda value: "smua.source.func=smua.OUTPUT_DC%s" % value,
+           'writeCmd': lambda value: "smua.source.func=smua.OUTPUT_DC%s"
+           % value,
            'writeValues': ['AMPS', 'VOLTS']
            })
 
@@ -123,7 +124,8 @@ Attribute('MeasureCurrentAutoRange',
            'dim': [0],
            'readCmd': "print(smua.measure.autorangei)\n?",
            'readFormula': "bool(float(VALUE))",
-           'writeCmd': lambda value: "smua.measure.autorangei=smua.AUTORANGE_%s"
+           'writeCmd': lambda value:
+           "smua.measure.autorangei=smua.AUTORANGE_%s"
            % ("ON" if value else "OFF"),
            })
 
@@ -132,7 +134,8 @@ Attribute('MeasureVoltageAutoRange',
            'dim': [0],
            'readCmd': "print(smua.measure.autorangev)\n?",
            'readFormula': "bool(float(VALUE))",
-           'writeCmd': lambda value: "smua.measure.autorangev=smua.AUTORANGE_%s"
+           'writeCmd': lambda value:
+           "smua.measure.autorangev=smua.AUTORANGE_%s"
            % ("ON" if value else "OFF"),
            })
 
@@ -213,14 +216,16 @@ Attribute('MeasureAutoZero',
           {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
            'readCmd': "print(smua.measure.autozero)\n?",
-           'readFormula': "{0: 'OFF', 1: 'ONCE', 2: 'AUTO'}[int(float(VALUE))]",
-           'writeCmd': lambda value: "smua.measure.autozero=smua.AUTOZERO_%s" % value,
+           'readFormula': "{0: 'OFF', 1: 'ONCE', 2: 'AUTO'}"
+           "[int(float(VALUE))]",
+           'writeCmd': lambda value: "smua.measure.autozero=smua.AUTOZERO_%s"
+           % value,
            'writeValues': ['OFF', 'ONCE', 'AUTO']
            })
 
 # Others ---
 Attribute('LineFrequency',
-	  {'type': PyTango.CmdArgType.DevDouble,
+          {'type': PyTango.CmdArgType.DevDouble,
            'format': '%e',
            'dim': [0],
            'readCmd': "print(localnode.linefreq)\n?",
