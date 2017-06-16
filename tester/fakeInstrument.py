@@ -116,6 +116,18 @@ class FakeInstrument(object):
                                  readcb=rwfloat.lowerLimit,
                                  writecb=rwfloat.lowerLimit)
         self._attrObjs['rwfloat'] = rwfloat
+        rampeable = RWfloat()
+        self._scpiObj.addCommand('rampeable:value',
+                                 readcb=rampeable.value,
+                                 writecb=rampeable.value,
+                                 default=True)
+        self._scpiObj.addCommand('rampeable:upper',
+                                 readcb=rampeable.upperLimit,
+                                 writecb=rampeable.upperLimit)
+        self._scpiObj.addCommand('rampeable:lower',
+                                 readcb=rampeable.lowerLimit,
+                                 writecb=rampeable.lowerLimit)
+        self._attrObjs['rampeable'] = rampeable
 #         rointegerarray = ROintegerArray()
 #         self._scpiObj.addCommand('source:readable:array:short:value',
 #                                  readcb=rointegerarray.value, default=True)
