@@ -843,10 +843,10 @@ class Skippy (PyTango.Device_4Impl):
     def __isRamping(self, attrName):
         isRamping = False
         try:
-            if self.attributes[attrName].isRampeable() and \
-                    self.attributes[attrName].rampThread is not None and \
-                    self.attributes[attrName].rampThread.isAlive():
-                isRamping = True
+            if self.attributes[attrName].isRampeable():
+                rampObj = self.attributes[attrName].getRampObj()
+                if rampObj.isRamping():
+                    isRamping = True
         except Exception as e:
             self.warn_stream("%s ramping question exception: %s"
                              % (attrName, e))
@@ -1014,7 +1014,7 @@ class Skippy (PyTango.Device_4Impl):
                 # when there has been no read (yet) avoid the Non-initialised.
         elif attrName.endswith("Step"):
             parentAttrName = attrName.split('Step')[0]
-            value = self.attributes[parentAttrName].rampStep
+            value = self.attributes[parentAttrName].getRampObj().rampStep
             if value is None:
                 attr.set_value_date_quality(0, time.time(),
                                             PyTango.AttrQuality.ATTR_INVALID)
@@ -1022,7 +1022,7 @@ class Skippy (PyTango.Device_4Impl):
                 attr.set_value(value)
         elif attrName.endswith("StepSpeed"):
             parentAttrName = attrName.split('StepSpeed')[0]
-            value = self.attributes[parentAttrName].rampStepSpeed
+            value = self.attributes[parentAttrName].getRampObj().rampStepSpeed
             if value is None:
                 attr.set_value_date_quality(0, time.time(),
                                             PyTango.AttrQuality.ATTR_INVALID)
@@ -1053,10 +1053,10 @@ class Skippy (PyTango.Device_4Impl):
             self.__write_instrument_attr(attr, attrName, value)
         elif attrName.endswith("Step"):
             parentAttrName = attrName.split('Step')[0]
-            self.attributes[parentAttrName].rampStep = value
+            self.attributes[parentAttrName].getRampObj().rampStep = value
         elif attrName.endswith("StepSpeed"):
             parentAttrName = attrName.split('StepSpeed')[0]
-            self.attributes[parentAttrName].rampStepSpeed = value
+            self.attributes[parentAttrName].getRampObj().rampStepSpeed = value
         else:
             raise AttributeError("Invalid write of the attribute %s"
                                  % (attrName))
@@ -1085,8 +1085,10 @@ class Skippy (PyTango.Device_4Impl):
                 self.__hardwareWrite(cmd)
         else:
             # rampeable but invalid ramp
-            if self.attributes[attrName].rampStep in [None, 0.0] or \
-                    self.attributes[attrName].rampStepSpeed in [None, 0.0]:
+            rampObj = self.attributes[attrName].getRampObj()
+            rampStep = rampObj.rampStep
+            rampStepSpeed = rampObj.rampStepSpeed
+            if rampStep in [None, 0.0] or rampStepSpeed in [None, 0.0]:
                 self.warn_stream("In __write_instrument_attr() No ramp "
                                  "parameters defined, direct setpoint for %s"
                                  % (attrName))
@@ -1096,14 +1098,14 @@ class Skippy (PyTango.Device_4Impl):
                 self.__hardwareWrite(cmd)
             else:
                 # rampeable and create a thread, if it doesn't exist
-                if not self.attributes[attrName].isRamping():
-                    if not self.attributes[attrName].prepareRamping():
+                if not self.attributes[attrName].getRampObj().isRamping():
+                    if not rampObj.prepareRamping():
                         self.error_stream("In __write_instrument_attr() "
                                           "ramping procedure cannot be "
                                           "prepared")
                         raise RuntimeError("Ramp construction failed in "
                                            "preparation")
-                    if not self.attributes[attrName].launchRamp():
+                    if not rampObj.launchRamp():
                         self.error_stream("In __write_instrument_attr() "
                                           "ramping procedure cannot be "
                                           "started")

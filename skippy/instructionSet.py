@@ -179,16 +179,16 @@ class AttributeFunctionality(object):
         return "%s (%s)" % (self.name, self.__class__.__name__)
 
     def debug_stream(self, msg):
-        self._owner.debug_stream(msg)
+        self._owner.debug_stream("[%s] %s" % (self.name,msg))
 
     def info_stream(self, msg):
-        self._owner.info_stream(msg)
+        self._owner.info_stream("[%s] %s" % (self.name,msg))
 
     def warn_stream(self, msg):
-        self._owner.warn_stream(msg)
+        self._owner.warn_stream("[%s] %s" % (self.name,msg))
 
     def error_stream(self, msg):
-        self._owner.error_stream(msg)
+        self._owner.error_stream("[%s] %s" % (self.name,msg))
 
     def _buildrepr_(self, attributes):
         repr = "%s:\n" % self
@@ -247,6 +247,11 @@ class RampObj(AttributeFunctionality):
 #     def rampThread(self, value):
 #         self._rampThread = value
 
+    def isRamping(self):
+        if self.rampThread is not None and self.rampThread.isAlive():
+            return True
+        return False
+
     def prepareRamping(self):
         try:
             thread = Thread(target=self._rampProcedure,
@@ -282,6 +287,11 @@ class RampObj(AttributeFunctionality):
              # FIXME: run condition if there are two ramps and the second
              ends later. The first will restore the state, when the second is
              working and when this seconds finish will restore a moving state!
+           TODO: future improvements for ramps:
+           - Current ramp is like an step scan. There are other ramps possible:
+             - On each step move a percentage of the distance (like move 2/3th
+               until close enough).
+             - Acceleration - motion - deceleration.
         '''
         # prepare
         backup_state = self.get_state()
@@ -560,27 +570,6 @@ class RWAttributeObj(ROAttributeObj):
     def isWritable(self):
         return True
 
-    def isRampeable(self):
-        if self._ramp is None:
-            return False
-        return True
-
-    def isRamping(self):
-        if self.isRampeable():
-            if self.rampThread is not None and self.rampThread.isAlive():
-                return True
-        return False
-
-    def prepareRamping(self):
-        if self.isRampeable():
-            return self._ramp.prepareRamping()
-        return False
-
-    def launchRamp(self):
-        if self.isRampeable():
-            return self._ramp.launchRamp()
-        return False
-
     def hasWriteValues(self):
         return self._writeValues is not None
 
@@ -609,34 +598,17 @@ class RWAttributeObj(ROAttributeObj):
     def lastWriteValue(self, value):
         self._lastWriteValue = value
 
+    def isRampeable(self):
+        if self._ramp is None:
+            return False
+        return True
+
     def makeRampeable(self):
         if self._ramp is None:
             self._ramp = RampObj("ramp", self)
 
-    @property
-    def rampStep(self):
-        if self._ramp is not None:
-            return self._ramp.rampStep
-
-    @rampStep.setter
-    def rampStep(self, value):
-        if self._ramp is not None:
-            self._ramp.rampStep = value
-
-    @property
-    def rampStepSpeed(self):
-        if self._ramp is not None:
-            return self._ramp.rampStepSpeed
-
-    @rampStepSpeed.setter
-    def rampStepSpeed(self, value):
-        if self._ramp is not None:
-            self._ramp.rampStepSpeed = value
-
-    @property
-    def rampThread(self):
-        if self._ramp is not None:
-            return self._ramp.rampThread
+    def getRampObj(self):
+        return self._ramp
 
     @property
     def writeValues(self):
@@ -982,9 +954,11 @@ class Builder:
                                                         stepAttrName)
             propertyValueStr = attrProp[stepAttrName]['__value'][0]
             value = float(propertyValueStr)
-            self.__device.attributes[attrName].rampStep = value
+            rampObj = self.__device.attributes[attrName].getRampObj()
+            rampObj.rampStep = value
         except:
-            self.__device.attributes[attrName].rampStep = None
+            rampObj = self.__device.attributes[attrName].getRampObj()
+            rampObj.rampStep = None
         stepspeed = PyTango.Attr(attrName+"StepSpeed",
                                  PyTango.CmdArgType.DevDouble,
                                  PyTango.READ_WRITE)
@@ -1000,9 +974,11 @@ class Builder:
                                                         stepSpeedAttrName)
             propertyValueStr = attrProp[attrName+"StepSpeed"]['__value'][0]
             value = float(propertyValueStr)
-            self.__device.attributes[attrName].rampStepSpeed = value
+            rampObj = self.__device.attributes[attrName].getRampObj()
+            rampObj.rampStepSpeed = value
         except:
-            self.__device.attributes[attrName].rampStepSpeed = None
+            rampObj = self.__device.attributes[attrName].getRampObj()
+            rampObj.rampStepSpeed = None
 
     # remove dynamic attributes
     def remove_attribute(self, attrName):
