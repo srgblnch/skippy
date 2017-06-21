@@ -1,0 +1,17 @@
+The Skippy Tango device server was originally written by Sergi Blanch-Torné as an ALBA synchotron's contribution to the Tango control system community. From the MAX IV Laboratory, Antonio Milán Otero has contributed in an important way with code, as well as other people has contributed reporting problems, suggesting improvements, instruments instructions sets and/or device code.
+
+Antonio Milán Otero		antonio.milan_otero at maxiv.lu.se
+Fulvio Becheri			fbecheri at cells.es
+Jairo Moldes			jmoldes at cells.es
+Jesus Alvarez 			jealvarez at axt.email
+Manuel Broseta 			mbroseta at cells.es
+Sergi Blanch-Torné		sblanch at cells.es
+
+ This file is free software; as a special exception the author gives
+ unlimited permission to copy and/or distribute it, with or without
+ modifications, as long as this notice is preserved.
+
+ This file is distributed in the hope that it will be useful, but
+ WITHOUT ANY WARRANTY, to the extent permitted by law; without even the
+ implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
