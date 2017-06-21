@@ -49,13 +49,23 @@ Attribute("float_scalar_rw",
            'writeCmd': lambda value: "source:writable:float:value %s"
            % (value)})
 
+# Test rampeable attributes ---
+Attribute('Rampeable',
+          {'type': PyTango.CmdArgType.DevDouble,
+           'dim': [0],
+           'readCmd': "rampeable?",
+           'writeCmd': lambda value: "rampeable %s" % (str(value)),
+           'rampeable': True,
+           'memorized': True,
+           })
+
 # Attribute('short_spectrum_ro',
 #           {'type': PyTango.CmdArgType.DevDouble,
 #            'format': '%9.6f',
 #            'dim': [1, 40000000],
 #            'readCmd': "source:readable:array:short:value?",
 #            })
-# 
+
 # Attribute('WaveformDataFormat',
 #           {'type': PyTango.CmdArgType.DevString,
 #            'dim': [0],
