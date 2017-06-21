@@ -481,27 +481,32 @@ class ROAttributeObj(AttributeObj):
 
     @property
     def rvalue(self):
-        self._lastReadValue = self.doHardwareRead(self.readCmd)
+        newReadValue = self.doHardwareRead(self.readCmd)
         if self._readFormula:
             self.debug_stream("Evaluating %r with VALUE=%r"
-                              % (self._readFormula, self._lastReadValue))
+                              % (self._readFormula, newReadValue))
             try:
-                formula = self._readFormula.replace("VALUE",
-                                                    "%r" % self._lastReadValue)
+                formula = self._readFormula.replace("VALUE", "%r"
+                                                    % newReadValue)
                 self.debug_stream("eval(%r)" % (formula))
                 return eval(formula)
             except Exception as e:
                 self.warn_stream("Exception evaluating formula: %s" % (e))
         else:
-            if self.type in [PyTango.DevDouble, PyTango.DevFloat]:
-                self._lastReadValue = float(self._lastReadValue)
-            elif self.type in [PyTango.DevShort, PyTango.DevUShort,
-                               PyTango.DevInt, PyTango.DevLong,
-                               PyTango.DevULong, PyTango.DevLong64,
-                               PyTango.DevULong64]:
-                self._lastReadValue = int(self._lastReadValue)
-            elif self.type in [PyTango.DevBoolean]:
-                self._lastReadValue = bool(self._lastReadValue)
+            try:
+                if self.type in [PyTango.DevDouble, PyTango.DevFloat]:
+                    self._lastReadValue = float(newReadValue)
+                elif self.type in [PyTango.DevShort, PyTango.DevUShort,
+                                   PyTango.DevInt, PyTango.DevLong,
+                                   PyTango.DevULong, PyTango.DevLong64,
+                                   PyTango.DevULong64]:
+                    self._lastReadValue = int(newReadValue)
+                elif self.type in [PyTango.DevBoolean]:
+                    self._lastReadValue = bool(newReadValue)
+            except Exception as e:
+                self.error_stream("Exception converting string to type %s"
+                                  % (self.type))
+                return None
         return self._lastReadValue
 
     @property

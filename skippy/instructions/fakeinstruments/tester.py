@@ -59,6 +59,11 @@ Attribute('Rampeable',
            'memorized': True,
            })
 
+Attribute("Fallible",
+          {'type': PyTango.CmdArgType.DevShort,
+           'dim': [0],
+           'readCmd': "fallible?"})
+
 # Attribute('short_spectrum_ro',
 #           {'type': PyTango.CmdArgType.DevDouble,
 #            'format': '%9.6f',

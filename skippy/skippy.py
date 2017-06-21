@@ -793,9 +793,14 @@ class Skippy (PyTango.Device_4Impl):
     def __isScalarBoolean(self, attrName, attrValue):
         if self.attributes[attrName].type in \
                 [PyTango.CmdArgType.DevBoolean]:
-            self.attributes[attrName].lastReadValue = bool(int(attrValue))
-            self.attributes[attrName].quality = \
-                PyTango.AttrQuality.ATTR_VALID
+            try:
+                self.attributes[attrName].lastReadValue = bool(int(attrValue))
+                self.attributes[attrName].quality = \
+                    PyTango.AttrQuality.ATTR_VALID
+            except:
+                self.attributes[attrName].lastReadValue = None
+                self.attributes[attrName].quality = \
+                    PyTango.AttrQuality.ATTR_INVALID
             return True
         else:
             return False
@@ -808,9 +813,14 @@ class Skippy (PyTango.Device_4Impl):
                                               PyTango.CmdArgType.DevLong,
                                               PyTango.CmdArgType.DevULong64,
                                               PyTango.CmdArgType.DevLong64]:
-            self.attributes[attrName].lastReadValue = int(attrValue)
-            self.attributes[attrName].quality = \
-                PyTango.AttrQuality.ATTR_VALID
+            try:
+                self.attributes[attrName].lastReadValue = int(attrValue)
+                self.attributes[attrName].quality = \
+                    PyTango.AttrQuality.ATTR_VALID
+            except:
+                self.attributes[attrName].lastReadValue = None
+                self.attributes[attrName].quality = \
+                    PyTango.AttrQuality.ATTR_INVALID
             return True
         else:
             return False
@@ -818,24 +828,34 @@ class Skippy (PyTango.Device_4Impl):
     def __isScalarFloat(self, attrName, attrValue):
         if self.attributes[attrName].type in [PyTango.CmdArgType.DevFloat,
                                               PyTango.CmdArgType.DevDouble]:
-            if attrValue == '9.99999E+37':
-                # this is the instrument tag for non measurable
-                self.attributes[attrName].lastReadValue = float('NaN')
+            try:
+                if attrValue == '9.99999E+37':
+                    # this is the instrument tag for non measurable
+                    self.attributes[attrName].lastReadValue = float('NaN')
+                    self.attributes[attrName].quality = \
+                        PyTango.AttrQuality.ATTR_WARNING
+                else:
+                    self.attributes[attrName].lastReadValue = float(attrValue)
+                    self.attributes[attrName].quality = \
+                        PyTango.AttrQuality.ATTR_VALID
+            except:
+                self.attributes[attrName].lastReadValue = None
                 self.attributes[attrName].quality = \
-                    PyTango.AttrQuality.ATTR_WARNING
-            else:
-                self.attributes[attrName].lastReadValue = float(attrValue)
-                self.attributes[attrName].quality = \
-                    PyTango.AttrQuality.ATTR_VALID
+                    PyTango.AttrQuality.ATTR_INVALID
             return True
         else:
             return False
 
     def __isScalarString(self, attrName, attrValue):
         if self.attributes[attrName].type in [PyTango.CmdArgType.DevString]:
-            self.attributes[attrName].lastReadValue = str(attrValue)
-            self.attributes[attrName].quality = \
-                PyTango.AttrQuality.ATTR_VALID
+            try:
+                self.attributes[attrName].lastReadValue = str(attrValue)
+                self.attributes[attrName].quality = \
+                    PyTango.AttrQuality.ATTR_VALID
+            except:
+                self.attributes[attrName].lastReadValue = None
+                self.attributes[attrName].quality = \
+                    PyTango.AttrQuality.ATTR_INVALID
             return True
         else:
             return False
@@ -1135,16 +1155,21 @@ class Skippy (PyTango.Device_4Impl):
         timestamp = time.time()
         for attrEvent in eventsAttrList:
             try:
-                if len(attrEvent) == 3:  # if it specifies quality
-                    self.push_change_event(attrEvent[0], attrEvent[1],
-                                           timestamp, attrEvent[2])
+                attrName = attrEvent[0]
+                value = attrEvent[1]
+                if value == None:
+                    value = 0
+                    quality = PyTango.AttrQuality.ATTR_INVALID
+                elif len(attrEvent) == 3:  # if it specifies quality
+                    quality = attrEvent[2]
                 else:
-                    self.push_change_event(attrEvent[0], attrEvent[1],
-                                           timestamp,
-                                           PyTango.AttrQuality.ATTR_VALID)
+                    quality = PyTango.AttrQuality.ATTR_VALID
+                self.push_change_event(attrName, value, timestamp, quality)
             except Exception as e:
                 self.error_stream("In fireEventsList() Exception with "
-                                  "attribute %s: %s" % (attrEvent[0], e))
+                                  "attribute %s (value %s, timestamp %s, "
+                                  "quality %s): %s" % (attrEvent[0], value,
+                                                       timestamp, quality, e))
     # @todo: clean the important logs when they loose importance.
 
     #@stateMutex
@@ -1431,7 +1456,8 @@ class Skippy (PyTango.Device_4Impl):
                          % (monitorDict['Name']))
         for AttrName in monitorDict['AttrList']:
             self.set_change_event(AttrName, False, False)
-        self._monitorThreads.pop(monitorDict['Name'])
+        if monitorDict['Name'] in self._monitorThreads:
+            self._monitorThreads.pop(monitorDict['Name'])
 
     def __appendToAlarmCausingList(self, attrList):
         for attrName in attrList:

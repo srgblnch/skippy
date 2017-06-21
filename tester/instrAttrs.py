@@ -135,6 +135,18 @@ class RWfloat(FakeFloat):
             self._value = value
 
 
+class ROIntegerFallible(ROinteger):
+    """ with a certain probability the value will not be a valid one """
+    def __init__(self, *args, **kwargs):
+        super(ROIntegerFallible, self).__init__(*args, **kwargs)
+        self._threshold = 0.5
+
+    def value(self):
+        r = random()
+        if r < self._threshold:
+            return ROinteger.value(self)
+
+
 # class ROintegerArray(FakeIntegerArray):
 #     def __init__(self, *args, **kwargs):
 #         super(ROintegerArray, self).__init__(*args, **kwargs)

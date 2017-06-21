@@ -25,7 +25,8 @@ __license__ = "GPLv3+"
 __status__ = "Production"
 
 
-from instrAttrs import ROinteger, RWinteger, ROfloat, RWfloat
+from instrAttrs import (ROinteger, RWinteger, ROfloat, RWfloat,
+                        ROIntegerFallible)
 from instrIdn import InstrumentIdentification, __version__
 from psutil import process_iter, Process
 import PyTango
@@ -128,6 +129,18 @@ class FakeInstrument(object):
                                  readcb=rampeable.lowerLimit,
                                  writecb=rampeable.lowerLimit)
         self._attrObjs['rampeable'] = rampeable
+        fallible = ROIntegerFallible()
+        self._scpiObj.addCommand('fallible:value',
+                                 readcb=fallible.value,
+                                 writecb=fallible.value,
+                                 default=True)
+        self._scpiObj.addCommand('fallible:upper',
+                                 readcb=fallible.upperLimit,
+                                 writecb=fallible.upperLimit)
+        self._scpiObj.addCommand('fallible:lower',
+                                 readcb=fallible.lowerLimit,
+                                 writecb=fallible.lowerLimit)
+        self._attrObjs['fallible'] = fallible
 #         rointegerarray = ROintegerArray()
 #         self._scpiObj.addCommand('source:readable:array:short:value',
 #                                  readcb=rointegerarray.value, default=True)
