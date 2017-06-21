@@ -16,4 +16,43 @@ The detail here is that a new attribute to an existing instrument is not conside
 
 ## Quick deploy guide
 
-**TODO**
+It is assumed that one have a tango database where it is wanted to have a new Skippy device server. First is needed to have a python object representing the tango database:
+
+```python
+import PyTango
+tangodb = PyTango.Database()
+```
+
+One can find an example in the *fakeInstrument* test, and here will be explained the main actions executed on the mentioned example:
+
+```python
+DevServer = 'Skippy'
+DevInstance = 'FakeInstrument'
+DevClass = 'Skippy'
+DevName = 'fake/skyppy/instrument-01'
+
+devInfo = PyTango.DbDevInfo()
+devInfo.name = DevName
+devInfo._class = DevClass
+devInfo.server = DevServer+"/"+DevInstance
+tangodb.add_device(devInfo)
+```
+
+The device server is created, but don't get confused: it is not running. Before that, one have to setup the device properties (the distributed system agent construction parameters). For the *fakeInstrument* the instrument is accessed using loopback network interface:
+
+```python
+propertyName = 'Instrument'
+propertyValue = 'localhost'
+property = PyTango.DbDatum(propertyName)
+property.value_string.append(propertyValue)
+tangodb.put_device_property(DevName, property)
+```
+
+At this point the device server is ready to be launched for the first time. One can use [Astor](http://www.esrf.eu/computing/cs/tango/tango_doc/tools_doc/astor_doc/index.html) or console launcher, but also from the same *python* console can be launched.
+
+```python
+from subprocess import Popen
+Popen([DevServer, DevInstance, "-v4"])
+```
+
+But have on mind that existing the *python* console the device server will exit.
