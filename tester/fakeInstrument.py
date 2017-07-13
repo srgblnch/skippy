@@ -17,14 +17,7 @@ from __future__ import print_function
 #
 # ##### END GPL LICENSE BLOCK #####
 
-__author__ = "Sergi Blanch-Torne"
-__maintainer__ = "Sergi Blanch-Torne"
-__email__ = "sblanch@cells.es"
-__copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
-__license__ = "GPLv3+"
-__status__ = "Production"
-
-
+import argparse
 from instrAttrs import (ROinteger, RWinteger, ROfloat, RWfloat,
                         ROIntegerFallible)
 from instrIdn import InstrumentIdentification, __version__
@@ -37,6 +30,14 @@ from subprocess import Popen, PIPE
 import sys
 from time import sleep
 import traceback
+
+__author__ = "Sergi Blanch-Torne"
+__maintainer__ = "Sergi Blanch-Torne"
+__email__ = "sblanch@cells.es"
+__copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
+__license__ = "GPLv3+"
+__status__ = "Production"
+
 
 DevServer = 'Skippy'
 DevInstance = 'FakeInstrument'
@@ -169,6 +170,8 @@ class FakeInstrument(object):
 
 global manager
 manager = None
+global exitCode
+exitCode = -1
 
 
 class TestManager(object):
@@ -283,8 +286,22 @@ class TestManager(object):
                      color=bcolors.FAIL)
         return True
 
+    def _isDeviceReady(self):
+        if self._deviceProcess is None:
+            return False
+        try:
+            deviceProxy = PyTango.DeviceProxy(DevName)
+            self.log("Device is in %s state" % deviceProxy.State())
+            return True
+        except:
+            return False
+
     # Tests ---
     def launchTest(self):
+        while not self._isDeviceReady():
+            self.log("Waiting the device", color=bcolors.WARNING)
+            sleep(1)
+        self.log("Start the test", color=bcolors.HEADER)
         deviceProxy = PyTango.DeviceProxy(DevName)
         testMethods = [self.test_communications,
                        self.test_readings,
@@ -292,7 +309,8 @@ class TestManager(object):
                        self.test_glitch]
         for i, test in enumerate(testMethods):
             if not test(deviceProxy):
-                break
+                return i+1
+        return 0
 
     def _checkTest(self, names, values):
         nones = [value is None for value in values]
@@ -362,24 +380,26 @@ class TestManager(object):
             self._instrument.close()
             self.log("Instrument closed", color=bcolors.OKBLUE)
             reactiontime = float(device.Exec("self._watchDog._checkPeriod"))
-            sleep(reactiontime+1)  # FIXME: enough time to the device reaction
+            sleep(reactiontime*2)  # FIXME: enough time to the device reaction
             if device['State'].value not in [PyTango.DevState.FAULT,
                                              PyTango.DevState.DISABLE,
                                              PyTango.DevState.OFF]:
-                self.log("Glitch:\t"+bcolors.FAIL+
-                         "TEST FAILED"+bcolors.ENDC+
-                         ":\n\t"+bcolors.WARNING+
-                         "No device reaction"+bcolors.ENDC)
+                self.log("Glitch:\t" + bcolors.FAIL +
+                         "TEST FAILED" + bcolors.ENDC +
+                         ":\n\t" + bcolors.WARNING +
+                         "No device reaction" + bcolors.ENDC)
                 return False
+            self.log("Device has reacted", color=bcolors.OKBLUE)
             self._instrument.open()
             self.log("Instrument reopened", color=bcolors.OKBLUE)
-            sleep(reactiontime+1)  # FIXME: enough time to the device reaction
+            sleep(reactiontime*2)  # FIXME: enough time to the device reaction
             if device['State'].value not in [PyTango.DevState.ON]:
-                self.log("Glitch:\t"+bcolors.FAIL+
-                         "TEST FAILED"+bcolors.ENDC+
-                         ":\n\t"+bcolors.WARNING+
-                         "No device recovery"+bcolors.ENDC)
+                self.log("Glitch:\t" + bcolors.FAIL +
+                         "TEST FAILED" + bcolors.ENDC +
+                         ":\n\t" + bcolors.WARNING +
+                         "No device recovery" + bcolors.ENDC)
                 return False
+            self.log("Device has recovered", color=bcolors.OKBLUE)
         self.log("Glitch:\t"+bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC)
         return True
 
@@ -387,24 +407,37 @@ class TestManager(object):
 def signalHandler(signum, frame):
     if signum == signal.SIGINT:
         print("\nCaptured a Ctrl+c: terminating the execution...")
-        global manager
-        del manager
-        sys.exit(0)
     else:
         print("Unmanaged signal received (%d)" % (signum))
 
 
 def main():
+    global exitCode
+    parser = argparse.ArgumentParser(description='Test the Skippy device '
+                                     'server using a fake instrument.')
+    parser.add_argument('--no-remove', dest='no_remove',
+                        action="store_true",
+                        #default=False,
+                        help="don't destroy the test until the user say")
+    args = parser.parse_args()
     try:
         global manager
         manager = TestManager()
+        sleep(3)
+        manager.log("\n\tThe test is going to be launched",
+                    color=bcolors.UNDERLINE)
         signal.signal(signal.SIGINT, signalHandler)
-        print("\n\tPress Ctrl+c to finish the fake device")
-        signal.pause()
+        sleep(3)
+        exitCode = manager.launchTest()
+        if args.no_remove:
+            print("\n\tPress Ctrl+c to finish the fake device")
+            signal.pause()
     except Exception as e:
         print("\nCannot complete the test: %s\n" % e)
         traceback.print_exc()
+    finally:
         del manager
+    sys.exit(exitCode)
 
 
 if __name__ == '__main__':
