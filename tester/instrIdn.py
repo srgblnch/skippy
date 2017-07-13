@@ -24,7 +24,7 @@ __license__ = "GPLv3+"
 __status__ = "Production"
 
 # import scpi
-__version__ = '1.2.13-alpha'
+__version__ = '1.2.14-alpha'
 
 
 class InstrumentIdentification(object):
