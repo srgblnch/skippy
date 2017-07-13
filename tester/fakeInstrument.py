@@ -31,7 +31,7 @@ from instrIdn import InstrumentIdentification, __version__
 from psutil import process_iter, Process
 import PyTango
 import signal
-import scpi
+import scpilib
 from select import select
 from subprocess import Popen, PIPE
 import sys
@@ -42,6 +42,17 @@ DevServer = 'Skippy'
 DevInstance = 'FakeInstrument'
 DevClass = 'Skippy'
 DevName = 'fake/skyppy/instrument-01'
+
+
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
 
 
 class FakeInstrument(object):
@@ -58,7 +69,7 @@ class FakeInstrument(object):
         self._identity = InstrumentIdentification('FakeInstruments. Inc',
                                                   'Tester', 0,
                                                   __version__)
-        self._scpiObj = scpi.scpi(local=True, debug=True, log2File=True)
+        self._scpiObj = scpilib.scpi(local=True, debug=True, log2File=True)
         self._buildSpecialCommands()
         self._buildNormalCommands()
         self.open()
@@ -174,40 +185,47 @@ class TestManager(object):
         self._stopTestDevice()
         self._deleteTestDevice()
 
-    def log(self, msg):
-        print("%s" % (msg))
+    def log(self, msg, color=None):
+        if color:
+            print(color+"%s" % (msg)+bcolors.ENDC)
+        else:
+            print("%s" % (msg))
 
     def _createTestDevice(self):
         tangodb = PyTango.Database()
         self.log("Creating a %s device in %s:%s"
-                 % (DevName, tangodb.get_db_host(), tangodb.get_db_port()))
+                 % (DevName, tangodb.get_db_host(), tangodb.get_db_port()),
+                 color=bcolors.HEADER)
         devInfo = PyTango.DbDevInfo()
         devInfo.name = DevName
         devInfo._class = DevClass
         devInfo.server = DevServer+"/"+DevInstance
         tangodb.add_device(devInfo)
-        self.log("Server %s added" % (DevServer+"/"+DevInstance))
+        self.log("Server %s added" % (DevServer+"/"+DevInstance),
+                 color=bcolors.OKBLUE)
         propertyName = 'Instrument'
         propertyValue = 'localhost'
         property = PyTango.DbDatum(propertyName)
         property.value_string.append(propertyValue)
-        self.log("Set property %s: %s" % (propertyName, propertyValue))
+        self.log("Set property %s: %s" % (propertyName, propertyValue),
+                 color=bcolors.OKBLUE)
         tangodb.put_device_property(DevName, property)
 
     def _startTestDevice(self):
         if not self._isAlreadyRunning():
             self._deviceProcess = Popen([DevServer, DevInstance, "-v4"])
             self.log("Launched the device server has pid %d"
-                     % (self._deviceProcess.pid))
+                     % (self._deviceProcess.pid), color=bcolors.OKBLUE)
         else:
-            self.log("Test device already running!")
+            self.log("Test device already running!", color=bcolors.WARNING)
 
     def _stopTestDevice(self):
         if self._deviceProcess is None:
             return
         process = Process(self._deviceProcess.pid)
         if not self.__stopProcess(process):
-            self.log(" Process %d needs to be killed" % (process.pid))
+            self.log(" Process %d needs to be killed" % (process.pid),
+                     color=bcolors.WARNING)
             self.__killProcess(process)
         self.log("Test device stopped")
 
@@ -215,11 +233,11 @@ class TestManager(object):
         nChildren = len(process.children())
         if nChildren > 0:
             self.log("Process %d has %d children to be stopped"
-                     % (process.pid, nChildren))
+                     % (process.pid, nChildren), color=bcolors.OKBLUE)
             for child in process.children():
                 if not self.__stopProcess(child):
                     self.log("Process %d still running, proceed to kill"
-                             % (child.pid))
+                             % (child.pid), color=bcolors.WARNING)
                     self.__killProcess(child)
         process.terminate()
         for i in range(10):  # 1 second waiting
@@ -241,12 +259,13 @@ class TestManager(object):
         try:
             tangodb = PyTango.Database()
             self.log("Remove a %s device in %s:%s"
-                     % (DevName, tangodb.get_db_host(), tangodb.get_db_port()))
+                     % (DevName, tangodb.get_db_host(), tangodb.get_db_port()),
+                     color=bcolors.OKBLUE)
             tangodb.delete_device(DevName)
             tangodb.delete_server(DevServer+"/"+DevInstance)
         except Exception as e:
             self.log("* Deletion failed, please review manually "
-                     "for garbage *\n")
+                     "for garbage *\n", color=bcolors.FAIL)
 
     def _isAlreadyRunning(self):
         procs = []
@@ -260,7 +279,8 @@ class TestManager(object):
         if len(procs) == 0:
             return False
         if len(procs) > 1:
-            self.log("ALERT: the device seems to be running more than once")
+            self.log("ALERT: the device seems to be running more than once",
+                     color=bcolors.FAIL)
         return True
 
     # Tests ---
@@ -277,12 +297,12 @@ class TestManager(object):
     def _checkTest(self, names, values):
         nones = [value is None for value in values]
         if any(nones):
-            msg = "TEST FAILED:\n"
+            msg = bcolors.FAIL+"TEST FAILED"+bcolors.ENDC+":\n"
             for i, name in enumerate(names):
                 msg = ''.join("%s\t%s = %r\n" % (msg, name, values[i]))
             return (False, msg)
         else:
-            return (True, "TEST PASSED")
+            return (True, bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC)
 
     def test_communications(self, device):
         attrNames = ['QueryWindow', 'TimeStampsThreshold', 'State', 'Status']
@@ -293,7 +313,8 @@ class TestManager(object):
         return result
 
     def test_readings(self, device):
-        exclude = ['QueryWindow', 'TimeStampsThreshold', 'State', 'Status']
+        exclude = ['QueryWindow', 'TimeStampsThreshold', 'State', 'Status',
+                   'RampeableStep', 'RampeableStepSpeed', 'Fallible']
         attrNames = []
         results = []
         for attrName in device.get_attribute_list():
@@ -326,7 +347,9 @@ class TestManager(object):
                 # Time between those two reads must be below the
                 # 'TimeStampsThreshold' to check that, even the time hasn't
                 # passed, it has been change by the write.
-                if device[attrName].value == wvalue:
+                if device[attrName].value == rvalue:
+                    self.log("for %s: %s == %s"
+                             % (attrName, device[attrName].value, rvalue))
                     values.append(None)
                 else:
                     values.append(wvalue)
@@ -337,16 +360,27 @@ class TestManager(object):
     def test_glitch(self, device):
         if device['State'].value in [PyTango.DevState.ON]:
             self._instrument.close()
-            sleep(1)  # FIXME: enough time to the device reaction
-            if device['State'].value not in [PyTango.DevState.FAULT]:
-                self.log("Glitch:\tTEST FAILED:\n\tNo device reaction")
+            self.log("Instrument closed", color=bcolors.OKBLUE)
+            reactiontime = float(device.Exec("self._watchDog._checkPeriod"))
+            sleep(reactiontime+1)  # FIXME: enough time to the device reaction
+            if device['State'].value not in [PyTango.DevState.FAULT,
+                                             PyTango.DevState.DISABLE,
+                                             PyTango.DevState.OFF]:
+                self.log("Glitch:\t"+bcolors.FAIL+
+                         "TEST FAILED"+bcolors.ENDC+
+                         ":\n\t"+bcolors.WARNING+
+                         "No device reaction"+bcolors.ENDC)
                 return False
             self._instrument.open()
-            sleep(1)  # FIXME: enough time to the device reaction
+            self.log("Instrument reopened", color=bcolors.OKBLUE)
+            sleep(reactiontime+1)  # FIXME: enough time to the device reaction
             if device['State'].value not in [PyTango.DevState.ON]:
-                self.log("Glitch:\tTEST FAILED:\n\tNo device recovery")
+                self.log("Glitch:\t"+bcolors.FAIL+
+                         "TEST FAILED"+bcolors.ENDC+
+                         ":\n\t"+bcolors.WARNING+
+                         "No device recovery"+bcolors.ENDC)
                 return False
-        self.log("Glitch:\tTEST PASSED")
+        self.log("Glitch:\t"+bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC)
         return True
 
 
