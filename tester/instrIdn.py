@@ -23,7 +23,7 @@ __copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 __status__ = "Production"
 
-import scpi
+# import scpi
 __version__ = '1.2.13-alpha'
 
 
