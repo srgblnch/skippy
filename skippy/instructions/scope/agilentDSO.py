@@ -70,6 +70,15 @@ Attribute('Amplitude',
            'functions': True,
            })
 
+Attribute('Area',
+          {'type': PyTango.CmdArgType.DevDouble,
+           'format': '%9.6f',
+           'dim': [0],
+           'readCmd': lambda ch, num: ":MEAS:AREA? DISP,%s%d" % (ch, num),
+           'channels': True,
+           'functions': True,
+          })
+
 Attribute('ByteOrder',
           {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
@@ -251,6 +260,24 @@ Attribute('VPeakToPeak',
            'channels': True,
            'functions': True,
            })
+
+Attribute('VoltageRMSac',
+          {'type': PyTango.CmdArgType.DevDouble,
+           'format': '%9.6f',
+           'dim': [0],
+           'readCmd': lambda ch, num: ":MEAS:VRMS? DISP,AC,%s%d" % (ch, num),
+           'channels': True,
+           'functions': True,
+          })
+
+Attribute('VoltageRMSdc',
+          {'type': PyTango.CmdArgType.DevDouble,
+           'format': '%9.6f',
+           'dim': [0],
+           'readCmd': lambda ch, num: ":MEAS:VRMS? DISP,DC,%s%d" % (ch, num),
+           'channels': True,
+           'functions': True,
+          })
 
 Attribute('Waveform',
           {'type': PyTango.CmdArgType.DevDouble,
