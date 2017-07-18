@@ -170,225 +170,6 @@ class Skippy (PyTango.Device_4Impl):
                              % (self._idn))
             return True
 
-#     def __reconnectInstrumentObj(self):
-#         '''This method contains a procedure to reconnect to the instrument, if
-#            it is possible. It uses the state DISABLE to report that it is
-#            temporally out of service and automatically trying to recover.
-#            If the connection can be restablished the state goes to ON or
-#            RUNNING depending on the monitoring procedure.
-#            Else, in case the communication cannot be restablished by itself,
-#            then the state changes to FAULT to report the malfunction.
-#         '''
-#         self.info_stream("In __reconnectInstrumentObj()")
-#         if not hasattr(self, '_instrument') or self._instrument is None:
-#             self.error_stream("In __reconnectInstrumentObj(): instrument "
-#                               "object not build yet")
-#             return False
-#         try:
-#             self._instrument.disconnect()
-#             self.change_state(PyTango.DevState.DISABLE)
-#             self.rebuildStatus()
-#         except Exception as e:
-#             self.error_stream("In __reconnectInstrumentObj(): disconnect "
-#                               "exception: %s" % (e))
-#             self.change_state(PyTango.DevState.FAULT)
-#             self.rebuildStatus()
-#             return False
-#         if self._buildInstrumentObj():
-#             if self.Off():
-#                 self.warn_stream("In __reconnectInstrumentObj() "
-#                                  "delay reconnection by %6.3f seconds"
-#                                  % (self._recoveryDelay))
-#                 time.sleep(self._recoveryDelay)
-#                 if self.Standby() and self.On():
-#                     if self.AutoStart and self.Start():
-#                         print("....")
-#                         self.info_stream("In __reconnectInstrumentObj(): "
-#                                          "reconnected and started.")
-#                         self._lastRecovery = time.time()
-#                         return True
-#                     else:
-#                         print("...,")
-#                         self.info_stream("In __reconnectInstrumentObj(): "
-#                                          "reconnection done.")
-#                         self._lastRecovery = time.time()
-#                         return True
-#         self.change_state(PyTango.DevState.DISABLE)
-#         self.rebuildStatus()
-#         self.error_stream("In __reconnectInstrumentObj(): "
-#                           "Cannot rebuild the InstrumentObj.")
-#         return False
-
-#     def __reconnectProcedure(self):
-#         '''The procedure of reconnect, because it takes time, is executed by
-#            a separeated thread. This avoids timeout issues from the thread
-#            that comes from the read_attribute() call.
-#         '''
-#         try:
-#             self.change_state(PyTango.DevState.FAULT)
-#             self.addStatusMsg("Fatal error and communications lost with "
-#                               "the instrument!", important=True)
-#             #self.warn_stream("Starting a reconnect procedure.")
-#             #if self._reconnectThread is not None and \
-#             #        self._reconnectThread.isAlive():
-#             #    self.warn_stream("Past reconnection thread is still alive...")
-#             #    self._reconnectAwaker.set()
-#             #    self._reconnectThread.join(1)
-#             #    while self._reconnectThread.isAlive():
-#             #        self.warn_stream("Waiting the past reconnection thread "
-#             #                         "to finish")
-#             #        self._reconnectThread.join(1)
-#             #    self.info_stream("Past reconnection thread finish")
-#             #    # how to check if a the past reconnection was active and has
-#             #    # already fixed the issue?
-#             #    if self._instrument.isConnected():
-#             #        self.info_stream("Communication recovered by "
-#             #                         "past reconnection thread")
-#             #        return
-#             #if self._reconnectThread is None:
-#             #    self.info_stream("Creating a reconnection thread")
-#             #    self._reconnectThread = \
-#             #        threading.Thread(target=self.__doReconnect,
-#             #                         name="reconnect")
-#             #    self._reconnectThread.setDaemon(True)
-#             #if not self._reconnectThread.isAlive():
-#             #    self.info_stream("Launching the reconnection thread")
-#             #    self._reconnectThread.start()
-#         except Exception as e:
-#             self.error_stream("Reconnect procedure cannot be started: %s"
-#                               % (e))
-#             self.change_state(PyTango.DevState.FAULT)
-#             self.addStatusMsg("Fatal error and communications lost with "
-#                               "the instrument!", important=True)
-
-#     def __doReconnect(self):
-#         '''To reconnect to the instrument, and this often happens due to the
-#            drowning in the instrument response, after disconnect delay the
-#            reconnection following the algorithm:
-#            1.- if more than N errors during the last M seconds:
-#                then delay the recovery by S seconds.
-#            2.- if last delayed recovery comes from less than R seconds:
-#                then double the S time.
-#         '''
-#         try:
-#             self.info_stream("Reconnection thread started")
-#             now = time.time()
-#             # 1.- if more than N errors during the last M seconds:
-#             #     then delay the recovery by S seconds.
-#             if self.__communicationErrors(now, self._lastMSeconds) > \
-#                     self._lastNErrorsThreshold:
-#                 self.info_stream("In __doReconnect() found more than "
-#                                  "%d errors" % (self._lastNErrorsThreshold))
-#                 # 2.- if last delayed recovery comes from less than R seconds:
-#                 #     then double the S time.
-#                 if self._lastRecovery is not None and \
-#                         now-self._lastRecovery < \
-#                         self._recoverThreshold + self._recoveryDelay:
-#                     self.warn_stream("In __doReconnect() doubling the "
-#                                      "time to recover because the error "
-#                                      "happened less than %6.3f seconds after "
-#                                      "the previous recover delay of %6.3f "
-#                                      "seconds" % (self._recoverThreshold,
-#                                                   self._recoveryDelay))
-#                     if self._recoveryDelay <= self._lastMSeconds:
-#                         # maximum delay
-#                         self._recoveryDelay = self._recoveryDelay * 2
-#                 elif self._recoveryDelay > MINIMUM_RECOVERY_DELAY:
-#                     self._recoveryDelay = self._recoveryDelay / 2
-#                 self.warn_stream("In __doReconnect() delay reconnection "
-#                                  "by %6.3f seconds" % (self._recoveryDelay))
-#                 time.sleep(self._recoveryDelay)
-#             self.__appendToCommunicationLost(now)
-#             reconnected = self.__reconnectLoop(tries=5)
-#             if reconnected:
-#                 return True
-#             retriesMade = 5
-#             self.info_stream("Could not reconnect, check the instrument")
-#             self.change_state(PyTango.DevState.FAULT)
-#             self.addStatusMsg("Reconnection procedure not possible",
-#                               important=True)
-#             reconnected = self.__reconnectLoop(tries=retriesMade+10,
-#                                                fixTime2retry=60,
-#                                                starttry=retriesMade+1)
-#             retriesMade += 10
-#             if reconnected:
-#                 return True
-#             self.info_stream("Extend the time for reconnect tries")
-#             reconnected = self.__reconnectLoop(tries=retriesMade+12,
-#                                                fixTime2retry=600,
-#                                                starttry=retriesMade+1)
-#             if reconnected:
-#                 return True
-#             self.error_stream("In __doReconnect() no more retries")
-#             return False
-#         except PyTango.DevFailed as e:
-#             try:
-#                 self.error_stream("In __doReconnect() DevFailed Exception: %s"
-#                                   % (e))
-#                 self.change_state(PyTango.DevState.FAULT)
-#                 self.cleanAllImportantLogs()
-#                 self.addStatusMsg("Reconnection procedure not possible",
-#                                   important=True)
-#                 return False
-#             except:
-#                 traceback.print_exc()
-#         except Exception as e:
-#             try:
-#                 self.error_stream("In __doReconnect() Exception: %s" % (e))
-#                 self.change_state(PyTango.DevState.FAULT)
-#                 self.cleanAllImportantLogs()
-#                 self.addStatusMsg("Reconnection procedure not possible",
-#                                   important=True)
-#                 return False
-#             except:  # !!we've seen an exception in this lines
-#                 traceback.print_exc()
-#         self.info_stream("Reconnection procedure End")
-
-#     def __reconnectLoop(self, tries, fixTime2retry=None, starttry=None):
-#         i = starttry or 1
-#         self.debug_stream("Start a reconnection loop between %d and %d"
-#                           % (i, tries))
-#         if fixTime2retry is not None:
-#             time2retry = fixTime2retry
-#             self.info_stream("Reconnection will be tried every %d seconds"
-#                              % time2retry)
-#         while i <= tries:
-#             if self.__reconnectInstrumentObj():
-#                 self.info_stream("Reconnection work in the %d retry" % (i))
-#                 return True
-#             if fixTime2retry is None:
-#                 time2retry = self._recoveryDelay * i
-#             msg = "Reconnection try didn't work (%dth), "\
-#                 "retry in %6.3f seconds" % (i, time2retry)
-#             self.warn_stream(msg)
-#             self.addStatusMsg(msg)
-#             self._reconnectAwaker.wait(time2retry)
-#             if self._reconnectAwaker.isSet():
-#                 self.info_stream("Abort reconnection")
-#                 return False
-#             i += 1
-#         return False
-
-#     def __communicationErrors(self, now, mseconds):
-#         '''This collects information about transitory communication errors.
-#         '''
-#         nErrors = 0
-#         for each in self._commLost:
-#             if each <= now-mseconds:
-#                 nErrors += 1
-#             else:
-#                 self.info_stream("In __communicationErrors(%6.3f) remove "
-#                                  "%6.3f from the list of communication "
-#                                  "errors because it is too old."
-#                                  % (mseconds, each))
-#                 self._commLost.pop(self._commLost.index(each))
-#         self.info_stream("In __communicationErrors(%6.3f) found %d errors"
-#                          % (mseconds, nErrors))
-#         return nErrors
-
-#     def __appendToCommunicationLost(self, now):
-#         self._commLost.append(now)
-
     def prepareMutex(self):
         '''If needed create all the mutex requested (first execution) and if
            any already exist free all the threads waiting in order to clean up
@@ -657,6 +438,9 @@ class Skippy (PyTango.Device_4Impl):
             self.error_stream("In __preHardwareRead() Exception: %s" % (e))
             return None, None
 
+    def doHardwareRead(self, query):
+        return self.__hardwareRead(query)
+
     # @hardwareMutex
     def __hardwareRead(self, query, ask_for_values=False):
         '''Given a string with a ';' separated list of scpi commands 'ask'
@@ -689,6 +473,9 @@ class Skippy (PyTango.Device_4Impl):
             # TODO: self.__reconnectProcedure()
             return None
 
+    def doHardwareWrite(self, cmd):
+        self.__hardwareWrite(cmd)
+
     # @hardwareMutex
     def __hardwareWrite(self, cmd):
         '''
@@ -702,7 +489,6 @@ class Skippy (PyTango.Device_4Impl):
             traceback.print_exc()
             self.change_state_status(newState=PyTango.DevState.FAULT,
                                      newLine="Device memory error!")
-            return None
         except Exception as e:
             self.error_stream("In __hardwareWrite() Exception: %s" % (e))
             traceback.print_exc()
@@ -788,9 +574,14 @@ class Skippy (PyTango.Device_4Impl):
     def __isScalarBoolean(self, attrName, attrValue):
         if self.attributes[attrName].type in \
                 [PyTango.CmdArgType.DevBoolean]:
-            self.attributes[attrName].lastReadValue = bool(int(attrValue))
-            self.attributes[attrName].quality = \
-                PyTango.AttrQuality.ATTR_VALID
+            try:
+                self.attributes[attrName].lastReadValue = bool(int(attrValue))
+                self.attributes[attrName].quality = \
+                    PyTango.AttrQuality.ATTR_VALID
+            except:
+                self.attributes[attrName].lastReadValue = None
+                self.attributes[attrName].quality = \
+                    PyTango.AttrQuality.ATTR_INVALID
             return True
         else:
             return False
@@ -803,9 +594,14 @@ class Skippy (PyTango.Device_4Impl):
                                               PyTango.CmdArgType.DevLong,
                                               PyTango.CmdArgType.DevULong64,
                                               PyTango.CmdArgType.DevLong64]:
-            self.attributes[attrName].lastReadValue = int(attrValue)
-            self.attributes[attrName].quality = \
-                PyTango.AttrQuality.ATTR_VALID
+            try:
+                self.attributes[attrName].lastReadValue = int(attrValue)
+                self.attributes[attrName].quality = \
+                    PyTango.AttrQuality.ATTR_VALID
+            except:
+                self.attributes[attrName].lastReadValue = None
+                self.attributes[attrName].quality = \
+                    PyTango.AttrQuality.ATTR_INVALID
             return True
         else:
             return False
@@ -813,24 +609,34 @@ class Skippy (PyTango.Device_4Impl):
     def __isScalarFloat(self, attrName, attrValue):
         if self.attributes[attrName].type in [PyTango.CmdArgType.DevFloat,
                                               PyTango.CmdArgType.DevDouble]:
-            if attrValue == '9.99999E+37':
-                # this is the instrument tag for non measurable
-                self.attributes[attrName].lastReadValue = float('NaN')
+            try:
+                if attrValue == '9.99999E+37':
+                    # this is the instrument tag for non measurable
+                    self.attributes[attrName].lastReadValue = float('NaN')
+                    self.attributes[attrName].quality = \
+                        PyTango.AttrQuality.ATTR_WARNING
+                else:
+                    self.attributes[attrName].lastReadValue = float(attrValue)
+                    self.attributes[attrName].quality = \
+                        PyTango.AttrQuality.ATTR_VALID
+            except:
+                self.attributes[attrName].lastReadValue = None
                 self.attributes[attrName].quality = \
-                    PyTango.AttrQuality.ATTR_WARNING
-            else:
-                self.attributes[attrName].lastReadValue = float(attrValue)
-                self.attributes[attrName].quality = \
-                    PyTango.AttrQuality.ATTR_VALID
+                    PyTango.AttrQuality.ATTR_INVALID
             return True
         else:
             return False
 
     def __isScalarString(self, attrName, attrValue):
         if self.attributes[attrName].type in [PyTango.CmdArgType.DevString]:
-            self.attributes[attrName].lastReadValue = str(attrValue)
-            self.attributes[attrName].quality = \
-                PyTango.AttrQuality.ATTR_VALID
+            try:
+                self.attributes[attrName].lastReadValue = str(attrValue)
+                self.attributes[attrName].quality = \
+                    PyTango.AttrQuality.ATTR_VALID
+            except:
+                self.attributes[attrName].lastReadValue = None
+                self.attributes[attrName].quality = \
+                    PyTango.AttrQuality.ATTR_INVALID
             return True
         else:
             return False
@@ -838,10 +644,10 @@ class Skippy (PyTango.Device_4Impl):
     def __isRamping(self, attrName):
         isRamping = False
         try:
-            if self.attributes[attrName].isRampeable() and \
-                    self.attributes[attrName].rampThread is not None and \
-                    self.attributes[attrName].rampThread.isAlive():
-                isRamping = True
+            if self.attributes[attrName].isRampeable():
+                rampObj = self.attributes[attrName].getRampObj()
+                if rampObj.isRamping():
+                    isRamping = True
         except Exception as e:
             self.warn_stream("%s ramping question exception: %s"
                              % (attrName, e))
@@ -1009,7 +815,7 @@ class Skippy (PyTango.Device_4Impl):
                 # when there has been no read (yet) avoid the Non-initialised.
         elif attrName.endswith("Step"):
             parentAttrName = attrName.split('Step')[0]
-            value = self.attributes[parentAttrName].rampStep
+            value = self.attributes[parentAttrName].getRampObj().rampStep
             if value is None:
                 attr.set_value_date_quality(0, time.time(),
                                             PyTango.AttrQuality.ATTR_INVALID)
@@ -1017,7 +823,7 @@ class Skippy (PyTango.Device_4Impl):
                 attr.set_value(value)
         elif attrName.endswith("StepSpeed"):
             parentAttrName = attrName.split('StepSpeed')[0]
-            value = self.attributes[parentAttrName].rampStepSpeed
+            value = self.attributes[parentAttrName].getRampObj().rampStepSpeed
             if value is None:
                 attr.set_value_date_quality(0, time.time(),
                                             PyTango.AttrQuality.ATTR_INVALID)
@@ -1043,64 +849,74 @@ class Skippy (PyTango.Device_4Impl):
         attrName = attr.get_name()
         data = []
         attr.get_write_value(data)
+        value = data[0]
         if attrName in self.attributes:
-            self.__write_instrument_attr(attr, attrName, data)
+            self.__write_instrument_attr(attr, attrName, value)
         elif attrName.endswith("Step"):
             parentAttrName = attrName.split('Step')[0]
-            self.attributes[parentAttrName].rampStep = data[0]
+            self.attributes[parentAttrName].getRampObj().rampStep = value
         elif attrName.endswith("StepSpeed"):
             parentAttrName = attrName.split('StepSpeed')[0]
-            self.attributes[parentAttrName].rampStepSpeed = data[0]
+            self.attributes[parentAttrName].getRampObj().rampStepSpeed = value
         else:
             raise AttributeError("Invalid write of the attribute %s"
                                  % (attrName))
 
-    def __write_instrument_attr(self, attr, attrName, data):
-        self.attributes[attrName].lastWriteValue = data[0]
+    def __write_instrument_attr(self, attr, attrName, value):
+        self.attributes[attrName].lastWriteValue = value
         # Normal case, non rampeable attribute
         if not self.attributes[attrName].isWritable():
             raise AttributeError("%s is not writable attribute"
                                  % (attr.get_name()))
         if not self.attributes[attrName].isRampeable():
-            cmd = self.attributes[attrName].writeCmd(data[0])
+            cmd = self.attributes[attrName].writeCmd(value)
             # filter the write value if the attribute was configured this way
             if self.attributes[attrName].hasWriteValues() and \
-                    not str(data[0]).upper() in \
+                    not str(value).upper() in \
                     self.attributes[attrName].writeValues:
                 self.error_stream("In __write_instrument_attr() avoid to "
                                   "send: %s because it is not in %s"
-                                  % (cmd, self.attributes[attrName].writeValues))
+                                  % (cmd,
+                                     self.attributes[attrName].writeValues))
                 raise AttributeError("Invalid write value %r of the "
-                                     "attribute %s" % (data[0], attrName))
+                                     "attribute %s" % (value, attrName))
             else:
                 self.info_stream("In __write_instrument_attr() sending: %s "
                                  "= %r" % (attrName, cmd))
                 self.__hardwareWrite(cmd)
         else:
             # rampeable but invalid ramp
-            if self.attributes[attrName].rampStep in [None, 0.0] or \
-                    self.attributes[attrName].rampStepSpeed in [None, 0.0]:
+            rampObj = self.attributes[attrName].getRampObj()
+            rampStep = rampObj.rampStep
+            rampStepSpeed = rampObj.rampStepSpeed
+            if rampStep in [None, 0.0] or rampStepSpeed in [None, 0.0]:
                 self.warn_stream("In __write_instrument_attr() No ramp "
                                  "parameters defined, direct setpoint for %s"
                                  % (attrName))
-                cmd = self.attributes[attrName].writeCmd(data[0])
+                cmd = self.attributes[attrName].writeCmd(value)
                 self.info_stream("In __write_instrument_attr() sending: %s"
                                  % (cmd))
                 self.__hardwareWrite(cmd)
             else:
                 # rampeable and create a thread, if it doesn't exist
-                if self.attributes[attrName].isRampeable() is None:
-                    self.info_stream("In __write_instrument_attr() launching "
+                if not self.attributes[attrName].getRampObj().isRamping():
+                    if not rampObj.prepareRamping():
+                        self.error_stream("In __write_instrument_attr() "
+                                          "ramping procedure cannot be "
+                                          "prepared")
+                        raise RuntimeError("Ramp construction failed in "
+                                           "preparation")
+                    if not rampObj.launchRamp():
+                        self.error_stream("In __write_instrument_attr() "
+                                          "ramping procedure cannot be "
+                                          "started")
+                        raise RuntimeError("Ramp construction failed in "
+                                           "start")
+                    self.info_stream("In __write_instrument_attr() launched "
                                      "ramp procedure for %s to setpoint %g"
                                      % (attrName,
                                         self.attributes[attrName].
                                         lastWriteValue))
-                    self.attributes[attrName].rampThread = \
-                        threading.Thread(target=self._rampStepper,
-                                         name="%s_ramp" % (attrName),
-                                         args=([attrName]))
-                    self.attributes[attrName].rampThread.setDaemon(True)
-                    self.attributes[attrName].rampThread.start()
                 else:
                     self.info_stream("In __write_instrument_attr(), attribute"
                                      "%s already with an ongoing ramp. Final "
@@ -1111,47 +927,6 @@ class Skippy (PyTango.Device_4Impl):
                 # no else need because during the ramp the it goes to
                 # 'lastWriteValue' and it has been already updated.
 
-    def _rampStepper(self, attrName):
-        # Remember the arguments when this is called as thread target, is a
-        # tuple and the content of this tuple is a list with one string
-        # element.
-        self.info_stream("In _rampStepper(%s)" % (attrName))
-        # prepare
-        backup_state = self.get_state()
-        self.change_state_status(newState=PyTango.DevState.MOVING,
-                                 rebuild=True)
-        # self.rebuildStatus()
-        attrReadCmd = self.attributes[attrName].readCmd
-        # move
-        self.attributes[attrName].lastReadValue = \
-            float(self.__hardwareRead(attrReadCmd))
-        current_pos = self.attributes[attrName].lastReadValue
-        self.info_stream("In _rampSteeper(): started the movement from %f"
-                         % (current_pos))
-        while not current_pos == self.attributes[attrName].lastWriteValue:
-            if current_pos > self.attributes[attrName].lastWriteValue:
-                if current_pos - self.attributes[attrName].lastWriteValue <\
-                        self.attributes[attrName].rampStep:
-                    current_pos = self.attributes[attrName].lastWriteValue
-                else:
-                    current_pos -= self.attributes[attrName].rampStep
-            elif current_pos < self.attributes[attrName].lastWriteValue:
-                if self.attributes[attrName].lastWriteValue -\
-                        current_pos < self.attributes[attrName].rampStep:
-                    current_pos = self.attributes[attrName].lastWriteValue
-                else:
-                    current_pos += self.attributes[attrName].rampStep
-            attrWriteCmd = self.attributes[attrName].writeCmd(current_pos)
-            self.info_stream("In write_attr() sending: %s" % (attrWriteCmd))
-            self.__hardwareWrite(attrWriteCmd)
-            time.sleep(self.attributes[attrName].rampStepSpeed)
-        self.info_stream("In _rampSteeper(): finished the movement at %f"
-                         % (current_pos))
-        # close
-        self.change_state_status(newState=backup_state, rebuild=True)
-        # self.rebuildStatus()
-        self.attributes[attrName].rampThread = None
-
     # done dynamic attributes builder section ---
     ######
 
@@ -1161,16 +936,21 @@ class Skippy (PyTango.Device_4Impl):
         timestamp = time.time()
         for attrEvent in eventsAttrList:
             try:
-                if len(attrEvent) == 3:  # if it specifies quality
-                    self.push_change_event(attrEvent[0], attrEvent[1],
-                                           timestamp, attrEvent[2])
+                attrName = attrEvent[0]
+                value = attrEvent[1]
+                if value == None:
+                    value = 0
+                    quality = PyTango.AttrQuality.ATTR_INVALID
+                elif len(attrEvent) == 3:  # if it specifies quality
+                    quality = attrEvent[2]
                 else:
-                    self.push_change_event(attrEvent[0], attrEvent[1],
-                                           timestamp,
-                                           PyTango.AttrQuality.ATTR_VALID)
+                    quality = PyTango.AttrQuality.ATTR_VALID
+                self.push_change_event(attrName, value, timestamp, quality)
             except Exception as e:
                 self.error_stream("In fireEventsList() Exception with "
-                                  "attribute %s: %s" % (attrEvent[0], e))
+                                  "attribute %s (value %s, timestamp %s, "
+                                  "quality %s): %s" % (attrEvent[0], value,
+                                                       timestamp, quality, e))
     # @todo: clean the important logs when they loose importance.
 
     #@stateMutex
@@ -1457,7 +1237,8 @@ class Skippy (PyTango.Device_4Impl):
                          % (monitorDict['Name']))
         for AttrName in monitorDict['AttrList']:
             self.set_change_event(AttrName, False, False)
-        self._monitorThreads.pop(monitorDict['Name'])
+        if monitorDict['Name'] in self._monitorThreads:
+            self._monitorThreads.pop(monitorDict['Name'])
 
     def __appendToAlarmCausingList(self, attrList):
         for attrName in attrList:
@@ -1558,6 +1339,7 @@ class Skippy (PyTango.Device_4Impl):
         self.attr_Idn_read = ''
         self.attr_QueryWindow_read = 0
         self.attr_TimeStampsThreshold_read = 0.0
+        self.attr_Version_read = ''
         #----- PROTECTED REGION ID(Skippy.init_device) ENABLED START -----#
         if self.get_state() in [PyTango.DevState.FAULT]:
             self.warn_stream("Init() call from a fault state")
@@ -1575,6 +1357,7 @@ class Skippy (PyTango.Device_4Impl):
             self.set_change_event('Status', True, False)
         self._important_logs = []
         self.attr_QueryWindow_read = 1  # Not allow 0
+        self.attr_Version_read = version()
         # tools for the Exec() cmd
         if fromScratch:
             DS_MODULE = __import__(self.__class__.__module__)
@@ -1698,7 +1481,11 @@ class Skippy (PyTango.Device_4Impl):
         #        for a lower limit or to force as unique possibility.
         #----- PROTECTED REGION END -----#  //  Skippy.TimeStampsThreshold_write
         
-    
+    def read_Version(self, attr):
+        self.debug_stream("In read_Version()")
+        #----- PROTECTED REGION ID(Skippy.Version_read) ENABLED START -----#
+        attr.set_value(self.attr_Version_read)
+        #----- PROTECTED REGION END -----#  //  Skippy.Version_read
     
         #----- PROTECTED REGION ID(Skippy.initialize_dynamic_attributes) ENABLED START -----#
     def initialize_dynamic_attributes(self):
@@ -2503,6 +2290,13 @@ class SkippyClass(PyTango.DeviceClass):
                 'description': "This value sets the threshold time to use a cached value or hardware read it",
                 'Display level': PyTango.DispLevel.EXPERT,
                 'Memorized':"true"
+            } ],
+        'Version':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ],
+            {
+                'description': "version of the sources of the device",
             } ],
         }
 

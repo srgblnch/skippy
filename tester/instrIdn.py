@@ -23,8 +23,8 @@ __copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 __status__ = "Production"
 
-import scpi
-__version__ = '1.2.11-alpha'
+# import scpi
+__version__ = '1.3.0-alpha'
 
 
 class InstrumentIdentification(object):

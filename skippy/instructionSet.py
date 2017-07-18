@@ -16,18 +16,20 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import os
-import PyTango
-import traceback
-import functools
-from copy import copy
-
 __author__ = "Sergi Blanch-Torne"
 __maintainer__ = "Sergi Blanch-Torne"
 __email__ = "sblanch@cells.es"
 __copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 __status__ = "Production"
+
+from copy import copy
+import functools
+import os
+import PyTango
+import traceback
+from threading import Thread
+from time import sleep
 
 
 def identifier(idn, deviceObj):
@@ -119,8 +121,8 @@ def albasynchrotron(model):
 def keithley(model):
     if model == 'model 2000':
         return _getFilePath("instructions/multimeter/keithley2000.py")
-    elif model == 'model 2635a':
-        return _getFilePath("instructions/sourcemeter/keithley2635.py")
+    elif model in ['model 2635a', 'model 2611']:
+        return _getFilePath("instructions/sourcemeter/keithley26XX.py")
     raise EnvironmentError("Keithley %s model not supported" % (model))
 
 
@@ -159,11 +161,34 @@ def latin1(x):
 class AttributeFunctionality(object):
     def __init__(self, name, owner, *args, **kwargs):
         super(AttributeFunctionality, self).__init__(*args, **kwargs)
+        if name is None:
+            raise AssertionError("Functionality must have a name")
+        if owner is None:
+            raise AssertionError("Functionality must have an owner")
+        if not isinstance(owner, AttributeObj):
+            raise AssertionError("Functionality owner must be an attribute "
+                                 "object")
         self._name = name
         self._owner = owner
 
+    @property
+    def name(self):
+        return self._name
+
     def __str__(self):
         return "%s (%s)" % (self.name, self.__class__.__name__)
+
+    def debug_stream(self, msg):
+        self._owner.debug_stream("[%s] %s" % (self.name,msg))
+
+    def info_stream(self, msg):
+        self._owner.info_stream("[%s] %s" % (self.name,msg))
+
+    def warn_stream(self, msg):
+        self._owner.warn_stream("[%s] %s" % (self.name,msg))
+
+    def error_stream(self, msg):
+        self._owner.error_stream("[%s] %s" % (self.name,msg))
 
     def _buildrepr_(self, attributes):
         repr = "%s:\n" % self
@@ -189,9 +214,12 @@ class RampObj(AttributeFunctionality):
         self._rampStep = None
         self._rampStepSpeep = None
         self._rampThread = None
+    # FIXME: this is only a ramping for float attributes, should also support
+    #        integers.
+    # FIXME: prevent from attributes with a set of write values to have a ramp.
 
     def __repr__(self):
-        return self._buildrepr_(['step', 'stepSpeed'])
+        return self._buildrepr_(['rampStep', 'rampStepSpeep'])
 
     @property
     def rampStep(self):
@@ -199,7 +227,8 @@ class RampObj(AttributeFunctionality):
 
     @rampStep.setter
     def rampStep(self, value):
-        self._rampStep = value
+        if value is not None:
+            self._rampStep = float(value)
 
     @property
     def rampStepSpeep(self):
@@ -207,15 +236,102 @@ class RampObj(AttributeFunctionality):
 
     @rampStepSpeep.setter
     def rampStepSpeep(self, value):
-        self._rampStepSpeep = value
+        if value is not None:
+            self._rampStepSpeep = float(value)
 
     @property
     def rampThread(self):
         return self._rampThread
 
-    @rampThread.setter
-    def rampThread(self, value):
-        self._rampThread = value
+#     @rampThread.setter
+#     def rampThread(self, value):
+#         self._rampThread = value
+
+    def isRamping(self):
+        if self.rampThread is not None and self.rampThread.isAlive():
+            return True
+        return False
+
+    def prepareRamping(self):
+        try:
+            thread = Thread(target=self._rampProcedure,
+                            name="%s_ramp" % (self._owner.name))
+            thread.setDaemon(True)
+        except Exception as e:
+            self.error_stream("Prepare ramp exception: %s" % (e))
+            return False
+        else:
+            self._rampThread = thread
+            return True
+
+    def launchRamp(self):
+        try:
+            self._rampThread.start()
+        except:
+            return False
+        else:
+            return True
+
+    def _rampProcedure(self):
+        '''Important things of the ramp procedure:
+           - before do the evaluation of the next step is always doing a new
+             read of the destination value. If the user has changed the
+             destination value, the ramp will continue to the newer place.
+           - the step and the time on each step will also be using the latest.
+             If the user changes the ramp during one, the newer configuration
+             will be used from then on.
+           - The last step can be smaller than configured if (and ony if) the
+             distance is smaller than the step.
+           - The state of the device will be preserved after the ramp, but
+             modified to MOVING while is working the ramp.
+             # FIXME: run condition if there are two ramps and the second
+             ends later. The first will restore the state, when the second is
+             working and when this seconds finish will restore a moving state!
+           TODO: future improvements for ramps:
+           - Current ramp is like an step scan. There are other ramps possible:
+             - On each step move a percentage of the distance (like move 2/3th
+               until close enough).
+             - Acceleration - motion - deceleration.
+        '''
+        # prepare
+        backup_state = self.get_state()
+        self.change_state_status(newState=PyTango.DevState.MOVING,
+                                 rebuild=True)
+        orig_pos = self._owner.rvalue
+        dest_pos = self._owner.wvalue
+        self.info_stream("In _rampProcedure(): ramp will start from %g to %g"
+                         % (orig_pos, dest_pos))
+        while not orig_pos == dest_pos:
+            diff = abs(orig_pos - dest_pos)
+            if diff < self.rampStep:
+                new_pos = dest_pos  # Last step
+            # else, do one step in the correct direction
+            elif orig_pos > dest_pos:
+                new_pos = orig_pos - self.rampStep
+            elif orig_pos < dest_pos:
+                new_pos = orig_pos + self.rampStep
+            attrWriteCmd = self._owner.writeCmd(new_pos)
+            self.info_stream("In _rampProcedure() step from %f to %f sending: "
+                             "%s" % (orig_pos, dest_pos, attrWriteCmd))
+            self.doHardwareWrite(attrWriteCmd)
+            sleep(self.rampStepSpeed)
+            # get newer values
+            orig_pos = self._owner.rvalue
+            dest_pos = self._owner.wvalue
+        self.info_stream("In _rampProcedure(): finished the movement at %f"
+                         % (dest_pos))
+        # close
+        self.change_state_status(newState=backup_state, rebuild=True)
+        self._rampThread = None
+
+    def get_state(self):
+        return self._owner.get_state()
+
+    def change_state_status(self, *args, **kwargs):
+        self._owner.change_state_status(*args, **kwargs)
+
+    def doHardwareWrite(self, cmd):
+        self._owner.doHardwareWrite(cmd)
 
 
 class RawDataObj(AttributeFunctionality):
@@ -264,11 +380,33 @@ class AttributeObj(object):
         else:
             print("DEBUG: %s" % (msg))
 
+    def info_stream(self, msg):
+        if self._parent is not None:
+            self._parent.info_stream(msg)
+        else:
+            print("INFO:  %s" % (msg))
+
     def warn_stream(self, msg):
         if self._parent is not None:
             self._parent.warn_stream(msg)
         else:
             print("WARN:  %s" % (msg))
+
+    def error_stream(self, msg):
+        if self._parent is not None:
+            self._parent.error_stream(msg)
+        else:
+            print("ERROR: %s" % (msg))
+
+    def get_state(self):
+        if self._parent is not None and\
+                hasattr(self._parent, 'get_state'):
+            return self._parent.get_state()
+
+    def change_state_status(self, *args, **kwargs):
+        if self._parent is not None and\
+                hasattr(self._parent, 'change_state_status'):
+            self._parent.change_state_status(*args, **kwargs)
 
     def _buildrepr_(self, attributes):
         repr = "%s (%s):\n" % (self.name, self.__class__.__name__)
@@ -332,22 +470,43 @@ class ROAttributeObj(AttributeObj):
     def readCmd(self):
         return self._readCmd
 
+    def doHardwareRead(self, query):
+        if self._parent is not None and hasattr(self._parent,
+                                                'doHardwareRead'):
+            return self._parent.doHardwareRead(query)
+
     @property
     def readFormula(self):
         return self._readFormula
 
     @property
     def rvalue(self):
+        newReadValue = self.doHardwareRead(self.readCmd)
         if self._readFormula:
             self.debug_stream("Evaluating %r with VALUE=%r"
-                              % (self._readFormula, self._lastReadValue))
+                              % (self._readFormula, newReadValue))
             try:
-                formula = self._readFormula.replace("VALUE",
-                                                    "%r" % self._lastReadValue)
+                formula = self._readFormula.replace("VALUE", "%r"
+                                                    % newReadValue)
                 self.debug_stream("eval(%r)" % (formula))
                 return eval(formula)
             except Exception as e:
                 self.warn_stream("Exception evaluating formula: %s" % (e))
+        else:
+            try:
+                if self.type in [PyTango.DevDouble, PyTango.DevFloat]:
+                    self._lastReadValue = float(newReadValue)
+                elif self.type in [PyTango.DevShort, PyTango.DevUShort,
+                                   PyTango.DevInt, PyTango.DevLong,
+                                   PyTango.DevULong, PyTango.DevLong64,
+                                   PyTango.DevULong64]:
+                    self._lastReadValue = int(newReadValue)
+                elif self.type in [PyTango.DevBoolean]:
+                    self._lastReadValue = bool(newReadValue)
+            except Exception as e:
+                self.error_stream("Exception converting string to type %s"
+                                  % (self.type))
+                return None
         return self._lastReadValue
 
     @property
@@ -388,6 +547,8 @@ class ROAttributeObj(AttributeObj):
 
 
 class RWAttributeObj(ROAttributeObj):
+    # FIXME: this class is getting dirty due to the ramp: too many specific
+    #        methods when the ramp should be encapsulated apart.
     def __init__(self, writeCmd=None, writeFormula=None, rampeable=False,
                  writeValues=None, *args, **kwargs):
         super(RWAttributeObj, self).__init__(*args, **kwargs)
@@ -414,17 +575,17 @@ class RWAttributeObj(ROAttributeObj):
     def isWritable(self):
         return True
 
-    def isRampeable(self):
-        if self._ramp is None:
-            return False
-        return True
-
     def hasWriteValues(self):
         return self._writeValues is not None
 
     @property
     def writeCmd(self):
         return self._writeCmd
+
+    def doHardwareWrite(self, cmd):
+        if self._parent is not None and\
+                hasattr(self._parent, 'doHardwareWrite'):
+            self._parent.doHardwareWrite(cmd)
 
     @property
     def writeFormula(self):
@@ -442,39 +603,17 @@ class RWAttributeObj(ROAttributeObj):
     def lastWriteValue(self, value):
         self._lastWriteValue = value
 
+    def isRampeable(self):
+        if self._ramp is None:
+            return False
+        return True
+
     def makeRampeable(self):
         if self._ramp is None:
             self._ramp = RampObj("ramp", self)
-            setattr(self, 'rampStep', self._makeRampStepProperty())
-            setattr(self, 'rampStepSpeed', self._makeRampStepSpeedProperty())
-            setattr(self, 'rampThread', self._makeRampThreadProperty())
 
-    def _makeRampStepProperty(self):
-        def getter(self):
-            return self._ramp.rampStep
-
-        def setter(self, value):
-            self._ramp.rampStep = value
-
-        return property(getter, setter)
-
-    def _makeRampStepSpeedProperty(self):
-        def getter(self):
-            return self._ramp.rampStepSpeed
-
-        def setter(self, value):
-            self._ramp.rampStepSpeed = value
-
-        return property(getter, setter)
-
-    def _makeRampThreadProperty(self):
-        def getter(self):
-            return self._ramp.rampThread
-
-        def setter(self, value):
-            self._ramp.rampThread = value
-
-        return property(getter, setter)
+    def getRampObj(self):
+        return self._ramp
 
     @property
     def writeValues(self):
@@ -703,6 +842,7 @@ class Builder:
         if 'label' in definition:
             aprop.set_label(latin1(definition['label']))
         if 'memorized' in definition:
+            attr.set_memorized()
             attr.set_memorized_init(True)
         attr.set_default_properties(aprop)
         self.__device.add_attribute(attr, r_meth=readmethod,
@@ -819,9 +959,11 @@ class Builder:
                                                         stepAttrName)
             propertyValueStr = attrProp[stepAttrName]['__value'][0]
             value = float(propertyValueStr)
-            self.__device.attributes[attrName].rampStep = value
+            rampObj = self.__device.attributes[attrName].getRampObj()
+            rampObj.rampStep = value
         except:
-            self.__device.attributes[attrName].rampStep = None
+            rampObj = self.__device.attributes[attrName].getRampObj()
+            rampObj.rampStep = None
         stepspeed = PyTango.Attr(attrName+"StepSpeed",
                                  PyTango.CmdArgType.DevDouble,
                                  PyTango.READ_WRITE)
@@ -837,10 +979,11 @@ class Builder:
                                                         stepSpeedAttrName)
             propertyValueStr = attrProp[attrName+"StepSpeed"]['__value'][0]
             value = float(propertyValueStr)
-            self.__device.attributes[attrName].rampStepSpeed = value
+            rampObj = self.__device.attributes[attrName].getRampObj()
+            rampObj.rampStepSpeed = value
         except:
-            self.__device.attributes[attrName].rampStepSpeed = None
-        self.__device.attributes[attrName].rampThread = None
+            rampObj = self.__device.attributes[attrName].getRampObj()
+            rampObj.rampStepSpeed = None
 
     # remove dynamic attributes
     def remove_attribute(self, attrName):

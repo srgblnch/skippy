@@ -139,6 +139,17 @@ Attribute('MeasureVoltageAutoRange',
            % ("ON" if value else "OFF"),
            })
 
+Attribute('MeasureFunction',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "print(smua.measure.func)\n?",
+           'readFormula': "{0: 'AMPS', 1: 'VOLTS', 2: 'OHMS', 3: 'WATTS'}"
+           "[int(float(VALUE))]",
+           'writeCmd': lambda value: "smua.measure.func=smua.OUTPUT_%s"
+           % ("DC%s" % value if value in ['AMPS', 'VOLTS'] else value),
+           'writeValues': ['AMPS', 'VOLTS', 'OHMS', 'WATTS']
+           })
+
 Attribute('MeasureCurrentRange',
           {'type': PyTango.CmdArgType.DevDouble,
            'format': '%e',
