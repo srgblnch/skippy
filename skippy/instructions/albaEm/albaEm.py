@@ -215,3 +215,19 @@ Attribute('CAVGain',
                                         % (ch, num, value)),
            'channels': True
            })
+
+Attribute('AOUT',
+          {'type': PyTango.CmdArgType.DevDouble,
+           'dim': [0],
+           'readCmd': lambda ch, num: "%s%.2d:AOUT?" % (ch, num),
+           'writeCmd': lambda ch, num: (lambda value: "%s%.2d:AOUT %s"
+                                        % (ch, num, value)),
+           'channels': True
+           })
+
+Attribute('CATemp',
+          {'type': PyTango.CmdArgType.DevDouble,
+           'dim': [0],
+           'readCmd': lambda ch, num: "%s%.2d:CABO:TEMP?" % (ch, num),
+           'channels': True
+           })
