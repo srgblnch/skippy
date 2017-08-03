@@ -894,6 +894,8 @@ class Builder:
         definition['readCmd'] = definition['readCmd'](scpiPrefix, number)
         if 'writeCmd' not in definition:
             definition['writeCmd'] = None
+        else:
+            definition['writeCmd'] = definition['writeCmd'](scpiPrefix, number)
         if 'manager' in definition and definition['manager'] is True:
             self.__device.attributesFlags["%s%d"
                                           % (attrSuffix, channel)] = attrName
