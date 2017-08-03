@@ -72,7 +72,8 @@ class WatchDog(object):
                 self._work.wait()
             if not self.isInhibited() and not self._isInstrumentOk():
                 self._reconnectProcedure()
-            sleep(self._checkPeriod)
+            else:
+                sleep(self._checkPeriod)
         self._debug("Watchdog ends")
 
     @property

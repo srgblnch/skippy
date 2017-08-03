@@ -991,35 +991,15 @@ class Builder:
     def remove_attribute(self, attrName):
         if self.__device:
             if attrName in self._attributeList:
-                attrIdx = self._attributeList.index(attrName)
-                self._attributeList.pop(attrIdx)
                 try:
                     self.__device.remove_attribute(attrName)
-                except PyTango.DevFailed as e:
-                    if not hasattr(e, 'message') or not hasattr(e, 'args'):
-                        self.__device.error_stream("In remove_attribute(%s) "
-                                                   "DevFailed: %s"
-                                                   % (attrName, e))
-                    else:
-                        self.__device.error_stream("In remove_attribute(%s) "
-                                                   "DevFailed: %s (%s)"
-                                                   % (attrName, e.message,
-                                                      e.args))
-                        if hasattr(e.args, 'reason') and\
-                                e.args.reason == \
-                                PyTango.constants.API_AttrNotFound:
-                            pass
-                        else:
-                            raise e
                 except Exception as e:
                     self.__device.error_stream("In remove_attribute(%s) "
-                                               "Exception: [%s] %s"
-                                               % (attrName, type(e), e))
-                    self._attributeList.append(attrName)  # append at the end
+                                               "Exception: %s"
+                                               % (attrName, e.desc))
                 else:
-                    pass
-                    # attrIdx = self._attributeList.index(attrName)
-                    # self._attributeList.pop(attrIdx)
+                    attrIdx = self._attributeList.index(attrName)
+                    self._attributeList.pop(attrIdx)
                     # self.__device.debug_stream("In remove_attribute(%s): "
                     #                            "done" %(attrName))
             else:
