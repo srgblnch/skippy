@@ -124,6 +124,7 @@ class Skippy (PyTango.Device_4Impl):
             self.change_state_status(newState=PyTango.DevState.FAULT,
                                      newLine="initialisation exception: %s"
                                      % (e))
+            traceback.print_exc()
             return False
         self.change_state_status(newState=PyTango.DevState.OFF, rebuild=True)
         # self.rebuildStatus()
@@ -1394,7 +1395,8 @@ class Skippy (PyTango.Device_4Impl):
         #---- once initialized, begin the process to connect with the instrument
         self._instrument = None
         self._builder = None
-        self._buildInstrumentObj()
+        if not self._buildInstrumentObj():
+            return
         self._watchDog = WatchDog(self)
         self._watchDog.start()
         if not self.AutoStandby:

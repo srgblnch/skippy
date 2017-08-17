@@ -28,54 +28,55 @@ import PyTango
 Attribute('State',
           {'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
-           'readCmd': ":OUTPut%d:STATE?",
-           'writeCmd': lambda num: (lambda value: ":OUTPut%d:STATE %s"
-                                    % (num, value)),
+           'readCmd': lambda ch, num: ":OUTPut%d:STATE?" % (num),
+           'writeCmd': lambda ch, num: (lambda value: ":OUTPut%d:STATE %s"
+                                        % (num, value)),
            'channels': True
            })
 
 Attribute('ModulationAM',
           {'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
-           'readCmd': ":source%d:am:state?",
-           'writeCmd': lambda num: (lambda value: ":source%d:am:state %s"
-                                    % (num, value)),
+           'readCmd': lambda ch, num: ":source%d:am:state?" % (num),
+           'writeCmd': lambda ch, num: (lambda value: ":source%d:am:state %s"
+                                        % (num, value)),
            'channels': True
            })
 
 Attribute('ModulationFM',
           {'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
-           'readCmd': ":source%d:fm:state?",
-           'writeCmd': lambda num: (lambda value: ":source%d:fm:state %s"
-                                    % (num, value)),
+           'readCmd': lambda ch, num: ":source%d:fm:state?" % (num),
+           'writeCmd': lambda ch, num: (lambda value: ":source%d:fm:state %s"
+                                        % (num, value)),
            'channels': True
            })
 
 Attribute('ModulationFSK',
           {'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
-           'readCmd': ":source%d:fsk:state?",
-           'writeCmd': lambda num: (lambda value: ":source%d:fsk:state %s"
-                                    % (num, value)),
+           'readCmd': lambda ch, num: ":source%d:fsk:state?" % (num),
+           'writeCmd': lambda ch, num: (lambda value: ":source%d:fsk:state %s"
+                                        % (num, value)),
            'channels': True
            })
 
 Attribute('ModulationPM',
           {'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
-           'readCmd': ":source%d:pm:state?",
-           'writeCmd': lambda num: (lambda value: ":source%d:pm:state %s"
-                                    % (num, value)),
+           'readCmd': lambda ch, num: ":source%d:pm:state?" % (num),
+           'writeCmd': lambda ch, num: (lambda value: ":source%d:pm:state %s"
+                                        % (num, value)),
            'channels': True
            })
 
 Attribute('Function',
           {'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
-           'readCmd': ":SOURce%d:FUNCtion:SHAPe?",
-           'writeCmd': lambda num: (lambda value: ":SOURce%d:FUNCtion:SHAPe %s"
-                                    % (num, value)),
+           'readCmd': lambda ch, num: ":SOURce%d:FUNCtion:SHAPe?" % (num),
+           'writeCmd': lambda ch, num: (lambda value:
+                                        ":SOURce%d:FUNCtion:SHAPe %s"
+                                        % (num, value)),
            'channels': True
            })
 

@@ -29,6 +29,11 @@ try:
     import serial
 except:
     serial = None
+try:
+    import visa
+    import pyvisa
+except:
+    pyvisa = None
 
 import socket
 from time import sleep
@@ -38,16 +43,25 @@ TIME_BETWEEN_SENDANDRECEIVE = 0.05
 
 
 def buildCommunicator(instrumentName, port=None, parent=None, extra_args=None,
-                      terminator=None):
+                      terminator=None, log=None):
+    if parent is not None and hasattr(parent, "debug_stream"):
+        log = parent.debug_stream
     if __isHostName(instrumentName):
+        log("identified %r as host name" % instrumentName)
         return bySocket(instrumentName, port=port, parent=parent)
     elif __isVisaDevice(instrumentName):
+        log("identified %r as visa device" % instrumentName)
         return byVisa(instrumentName, parent=parent)
+    elif __isVisaName(instrumentName):
+        log("identified %r as visa name" % instrumentName)
+        return byVisaName(instrumentName, parent=parent)
     elif __isSerialDevice(instrumentName):
+        log("identified %r as serial device" % instrumentName)
         return bySerialDevice(instumentName, parent=parent)
-    elif __isSerial(instrumentName):
-        return bySerial(instrumentName, parent=parent, serial_args=extra_args,
-                        terminator=terminator)
+    elif __isSerialName(instrumentName):
+        log("identified %r as serial name" % instrumentName)
+        return bySerialName(instrumentName, parent=parent,
+                            serial_args=extra_args, terminator=terminator)
     raise SyntaxError("Instrument name invalid or instrument unreachable")
 
 
@@ -70,7 +84,7 @@ def __isSerialDevice(name):
         return False
 
 
-def __isSerial(name):
+def __isSerialName(name):
     try:
         if serial is not None:
             serial.Serial(name)
@@ -87,6 +101,16 @@ def __isVisaDevice(devName):
             return True
         else:
             return False
+    except:
+        return False
+
+
+def __isVisaName(name):
+    try:
+        if pyvisa is not None:
+            pyvisa.visa.instrument(name)
+            return True
+        return False
     except:
         return False
 
@@ -300,8 +324,68 @@ class byVisa(Communicator):
             return answer
 
 
-class bySerial(Communicator):
+class byVisaName(Communicator):
+    def __init__(self, name, parent=None):
+        if pyvisa is None:
+            raise ImportError("soft dependency to Visa python package "
+                              "unsatisfied")
+        self.__name = name
+        self.__visa = None
+        self._parent = parent
+
+    def connect(self):
+        if self.__visa is None:
+            self.__visa = pyvisa.visa.instrument(self.__name)
+            self.debug_stream("build VISA connection with %r" % (self.__name))
+            self.__visa.timeout = SOCKET_TIMEOUT
+
+    def disconnect(self):
+        if self.__visa:
+            self.__visa.close()
+            self.__visa = None
+            self.debug_stream("disconnected from VISA %r" % (self.__name))
+
+    def close(self):
+        self.disconnect()
+
+    def isConnected(self):
+        return self.__visa is not None
+
+    def ask(self, commandList, waittimefactor=None):
+        if self.__visa:
+            self.debug_stream("ask %r to %r" % (commandList, self.__name))
+            cmdStr = commandList  # ''.join("%s;" % cmd for cmd in commandList)
+            answer = self.__visa.ask(cmdStr)
+            self.debug_stream("received %r from %r" % (answer, self.__name))
+            return answer
+
+    def ask_for_values(self, commandList, waittimefactor=None):
+        if self.__visa:
+            self.debug_stream("ask_for_values %r to %r"
+                              % (commandList, self.__name))
+            cmdStr = commandList  # ''.join("%s;" % cmd for cmd in commandList)
+            answer = self.__visa.ask_for_values(cmdStr)
+            self.debug_stream("received %r from %r" % (answer, self.__name))
+            return answer
+
+    def write(self, commandList):
+        if self.__visa:
+            self.debug_stream("write %r to %r" % (commandList, self.__name))
+            cmdStr = commandList  # ''.join("%s;" % cmd for cmd in commandList)
+            self.__visa.write(cmdStr)
+
+    def read(self):
+        if self.__visa:
+            answer = self.__visa.read()
+            self.debug_stream("read %r from %r" % (answer, self.__name))
+            return answer
+
+
+class bySerialName(Communicator):
     def __init__(self, name, parent=None, serial_args=None, terminator=None):
+        if serial is None:
+            raise ImportError("soft dependency to Serial python package "
+                              "unsatisfied")
         serial_args['port'] = name
         self.__serialName = name
         self.__serial = serial.Serial(**serial_args)
