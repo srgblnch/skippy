@@ -25,11 +25,13 @@ __status__ = "Production"
 
 from copy import copy
 import functools
+import numpy
 import os
 import PyTango
+import struct
 import traceback
 from threading import Thread
-from time import sleep
+from time import sleep, time
 
 
 def identifier(idn, deviceObj):
@@ -482,6 +484,7 @@ class ROAttributeObj(AttributeObj):
     @property
     def rvalue(self):
         newReadValue = self.doHardwareRead(self.readCmd)
+        t = time()
         if self._readFormula:
             self.debug_stream("Evaluating %r with VALUE=%r"
                               % (self._readFormula, newReadValue))
@@ -495,7 +498,12 @@ class ROAttributeObj(AttributeObj):
         else:
             try:
                 if self.type in [PyTango.DevDouble, PyTango.DevFloat]:
-                    self._lastReadValue = float(newReadValue)
+                    if self.dim == 0:
+                        self._lastReadValue = float(newReadValue)
+                    elif self.dim == 1:
+                        self._lastReadValue = self.interpretArray(newReadValue)
+                    else:
+                        raise BufferError("Unsuported multidimensional data")
                 elif self.type in [PyTango.DevShort, PyTango.DevUShort,
                                    PyTango.DevInt, PyTango.DevLong,
                                    PyTango.DevULong, PyTango.DevLong64,
@@ -504,9 +512,12 @@ class ROAttributeObj(AttributeObj):
                 elif self.type in [PyTango.DevBoolean]:
                     self._lastReadValue = bool(newReadValue)
             except Exception as e:
-                self.error_stream("Exception converting string to type %s"
-                                  % (self.type))
+                self.error_stream("Exception converting string to "
+                                  "type %s (dim %s): %s"
+                                  % (self.type, self.dim, e))
+                traceback.print_exc()
                 return None
+        self.timestamp = t
         return self._lastReadValue
 
     @property
@@ -544,6 +555,97 @@ class ROAttributeObj(AttributeObj):
             self._raw.lastReadRaw = value
 
         return property(getter, setter)
+
+    def interpretArray(self, answer):
+        if self._parent is not None and hasattr(self._parent, 'attributes'):
+            dataFormat = \
+                self._parent.attributes['WaveformDataFormat'].lastReadValue
+            if dataFormat.startswith('ASC'):
+                if self.hasRawData():
+                    self.lastReadRaw = answer
+                self.quality = PyTango.AttrQuality.ATTR_VALID
+                return numpy.fromstring(answer, dtype=float, sep=',')
+            else:
+                # process the header
+                if not answer[0] == '#':
+                    self.error_stream("Wrong data receiver for the "
+                                      "attribute %s" % (attrName))
+                    return
+                # save values for debugging
+                self.lastReadRaw = answer
+                # review the header, in answer[0] there is the '#' tag
+#                 headerSize = int(answer[1])
+#                 bodySize = int(answer[2:2+headerSize])
+#                 bodyBlock = answer[2+headerSize:
+#                                    2+headerSize+bodySize]
+#                 self.debug_stream("In __postHardwareSpectrumRead() "
+#                                   "waveform data: header size %d "
+#                                   "bytes, wave size %d bytes (%d)"
+#                                   % (2+headerSize, bodySize,
+#                                      len(bodyBlock)))
+                bodyBlock = self._headerInterpreter(answer)
+                # prepare interpretation of the raw data
+                if dataFormat.startswith('BYT'):
+                    format = 'b'  # signed char, 1byte
+                    divisor = 1
+                elif dataFormat.startswith('WORD'):
+                    format = 'h'  # signed short, 2byte
+                    divisor = 2
+                elif dataFormat.lower() in ['real,32', 'asc']:
+                    format = 'I'
+                    divisor = 4
+                else:
+                    self.error_stream("Cannot decodify data receiver "
+                                      "for the attribute %s (%s)"
+                                      % (attrName, dataFormat))
+                    self.quality = PyTango.AttrQuality.ATTR_INVALID
+                    return numpy.fromstring("", dtype=float)
+                nIncompleteBytes = (len(bodyBlock) % divisor)
+                nCompletBytes = len(bodyBlock) - nIncompleteBytes
+                completBytes = bodyBlock[:nCompletBytes]
+                self.debug_stream("With %d bytes, found %d complete packs "
+                                  "and %d incomplete. (Expected %d single "
+                                  "values)" % (len(bodyBlock), nCompletBytes,
+                                               nIncompleteBytes,
+                                               nCompletBytes/divisor))
+                # convert the received input to integers
+                try:
+                    fmt = format*(nCompletBytes/divisor)
+                    self.debug_stream("Preparing to unpack with %r format "
+                                      "(len fmt %d, len bytes %d)"
+                                      % (format, len(fmt), len(completBytes)))
+                    unpackInt = struct.unpack(fmt, completBytes)
+                    # self.debug_stream("Unpacked: %s" % unpackInt)
+                except Exception as e:
+                    self.error_stream("Data cannot be unpacked: %s"
+                                      % (e))
+                    traceback.print_exc()
+                else:
+                    # expand the input when each float is codified in
+                    # less than 4 bytes
+                    floats = numpy.array(unpackInt, dtype=float)
+                    if 'WaveformOrigin' in self._parent.attributes and \
+                            'WaveformIncrement' in self._parent.attributes:
+                        waveorigin =\
+                            self._parent.attributes['WaveformOrigin'].\
+                            lastReadValue
+                        waveincrement =\
+                            self._parent.attributes['WaveformIncrement'].\
+                            lastReadValue
+                        self.quality = PyTango.AttrQuality.ATTR_VALID
+                        return (waveorigin + (waveincrement * floats))
+                    else:
+                        return numpy.fromstring("", dtype=float)
+
+    def _headerInterpreter(self, buffer):
+        headerSize = int(buffer[1])
+        bodySize = int(buffer[2:2+headerSize])
+        bodyBlock = buffer[2+headerSize:
+                           2+headerSize+bodySize]
+        self.debug_stream("In _headerInterpreter() waveform data: "
+                          "header size %d bytes, wave size %d bytes (%d)"
+                          % (2+headerSize, bodySize, len(bodyBlock)))
+        return bodyBlock
 
 
 class RWAttributeObj(ROAttributeObj):

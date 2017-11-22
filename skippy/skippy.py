@@ -247,7 +247,7 @@ class Skippy (PyTango.Device_4Impl):
             self.debug_stream("Avoid read procedure in %s state"
                               % (self.get_state()))
             return
-        self.debug_stream("In __read_attr_procedure(%r)" % (data))
+        #self.debug_stream("In __read_attr_procedure(%r)" % (data))
         try:
             multiattr = self.get_device_attr()
             scalarList, spectrumList, imageList = \
@@ -277,8 +277,8 @@ class Skippy (PyTango.Device_4Impl):
                                           answer[len(answer)-25:])])
                     else:
                         msg = ''.join([msg, "%r" % (answer)])
-                self.debug_stream("In __read_attr_procedure() scalar answers:"
-                                  " %r" % (msg))
+                # self.debug_stream("In __read_attr_procedure() scalar answers:"
+                #                   " %r" % (msg))
                 self.__postHardwareScalarRead(indexes, answers)
             if not len(spectrumList) == 0:
                 indexes, queries = self.__preHardwareRead(spectrumList, 1)
@@ -287,8 +287,8 @@ class Skippy (PyTango.Device_4Impl):
                     answer = self.__hardwareRead(query)
                     if answer is not None:
                         answers.append(answer)
-                self.debug_stream("In __read_attr_procedure() spectrum "
-                                  "answers number: %s" % (len(answers)))
+                # self.debug_stream("In __read_attr_procedure() spectrum "
+                #                   "answers number: %s" % (len(answers)))
                 self.__postHardwareSpectrumRead(indexes, answers)
             if not len(imageList) == 0:
                 self.error_stream("Excluding 2 dimensional attributes")
@@ -453,7 +453,7 @@ class Skippy (PyTango.Device_4Impl):
                 answer = self._instrument.ask_for_values(query)
             else:
                 answer = self._instrument.ask(query)
-            self.debug_stream("Answer: %r" % (answer))
+            # self.debug_stream("Answer: %r" % (answer))
             if answer == '':
                 raise Exception("No answer from the instrument")
             return answer
@@ -735,14 +735,19 @@ class Skippy (PyTango.Device_4Impl):
                                              nIncompleteBytes,
                                              nCompletBytes/divisor))
                         # convert the received input to integers
-                        self.debug_stream("completBytes: %r" % completBytes)
                         try:
-                            unpackInt = struct.unpack(
-                                format*(nCompletBytes/divisor), completBytes)
-                            self.debug_stream("Unpacked: %s" % unpackInt)
+                            fmt = format*(nCompletBytes/divisor)
+                            self.debug_stream("Preparing to unpack with "
+                                              "%r format (len fmt %d, "
+                                              "len bytes %d)"
+                                              % (format, len(fmt),
+                                                 len(completBytes)))
+                            unpackInt = struct.unpack(fmt, completBytes)
+                            # self.debug_stream("Unpacked: %s" % unpackInt)
                         except Exception as e:
                             self.error_stream("Data cannot be unpacked: %s"
                                               % (e))
+                            traceback.print_exc()
                         else:
                             # expand the input when each float is codified in
                             # less than 4 bytes
@@ -1151,7 +1156,7 @@ class Skippy (PyTango.Device_4Impl):
             self.info_stream("In __endMonitoring() waiting for %d"
                              % (len(self._monitorThreads.keys())))
             time.sleep(0.5)
-        self.change_state_status(newstate=PyTango.DevState.ON, rebuild=True)
+        self.change_state_status(newState=PyTango.DevState.ON, rebuild=True)
         # self.rebuildStatus()
         self.__prepareMonitor()
 
