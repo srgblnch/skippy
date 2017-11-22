@@ -11,8 +11,7 @@
 #  GNU General Public License for more details.
 #
 #  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software Foundation,
-#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#  along with this program; If not, see <http://www.gnu.org/licenses/>.
 #
 # ##### END GPL LICENSE BLOCK #####
 
@@ -48,19 +47,19 @@ def buildCommunicator(instrumentName, port=None, parent=None, extra_args=None,
         log = parent.debug_stream
     if __isHostName(instrumentName):
         log("identified %r as host name" % instrumentName)
-        return bySocket(instrumentName, port=port, parent=parent)
+        return BySocket(instrumentName, port=port, parent=parent)
     elif __isVisaDevice(instrumentName):
         log("identified %r as visa device" % instrumentName)
-        return byVisa(instrumentName, parent=parent)
+        return ByVisa(instrumentName, parent=parent)
     elif __isVisaName(instrumentName):
         log("identified %r as visa name" % instrumentName)
-        return byVisaName(instrumentName, parent=parent)
+        return ByVisaName(instrumentName, parent=parent)
     elif __isSerialDevice(instrumentName):
         log("identified %r as serial device" % instrumentName)
-        return bySerialDevice(instumentName, parent=parent)
+        return BySerialDevice(instumentName, parent=parent)
     elif __isSerialName(instrumentName):
         log("identified %r as serial name" % instrumentName)
-        return bySerialName(instrumentName, parent=parent,
+        return BySerialName(instrumentName, parent=parent,
                             serial_args=extra_args, terminator=terminator)
     raise SyntaxError("Instrument name invalid or instrument unreachable")
 
@@ -115,10 +114,11 @@ def __isVisaName(name):
         return False
 
 
-class Communicator:
+class Communicator(object):
     _terminator = '\n'
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, *args, **kwargs):
+        super(Communicator, self).__init__(*args, **kwargs)
         self.mutex = threading.Lock()
         self._parent = parent
 
@@ -184,9 +184,9 @@ DEFAULT_PORT = 5025
 DEFAULT_BUFFERSIZE = 10240
 
 
-class bySocket(Communicator):
-    def __init__(self, hostName, port=DEFAULT_PORT, parent=None):
-        super(bySocket, self).__init__(parent)
+class BySocket(Communicator):
+    def __init__(self, hostName, port=DEFAULT_PORT, *args, **kwargs):
+        super(BySocket, self).__init__(*args, **kwargs)
         self.__hostName = hostName
         self.__port = port
         self._socket = None
@@ -280,9 +280,9 @@ class bySocket(Communicator):
             return answer
 
 
-class byVisa(Communicator):
-    def __init__(self, devName, parent=None):
-        super(byVisa, self).__init__(parent)
+class ByVisa(Communicator):
+    def __init__(self, devName, *args, **kwargs):
+        super(ByVisa, self).__init__(*args, **kwargs)
         self.__device = PyTango.DeviceProxy(devName)
         self.debug_stream("building a communication to %s by PyVisa"
                           % (devName))
@@ -325,9 +325,9 @@ class byVisa(Communicator):
                 return answer
 
 
-class byVisaName(Communicator):
-    def __init__(self, name, parent=None):
-        super(byVisaName, self).__init__(parent)
+class ByVisaName(Communicator):
+    def __init__(self, name, *args, **kwargs):
+        super(ByVisaName, self).__init__(*args, **kwargs)
         if pyvisa is None:
             raise ImportError("soft dependency to Visa python package "
                               "unsatisfied")
@@ -386,9 +386,10 @@ class byVisaName(Communicator):
                 return answer
 
 
-class bySerialName(Communicator):
-    def __init__(self, name, parent=None, serial_args=None, terminator=None):
-        super(bySocket, self).__init__(parent)
+class BySerialName(Communicator):
+    def __init__(self, name, serial_args=None, terminator=None,
+                 *args, **kwargs):
+        super(BySocket, self).__init__(*args, **kwargs)
         if serial is None:
             raise ImportError("soft dependency to Serial python package "
                               "unsatisfied")
@@ -419,5 +420,5 @@ class bySerialName(Communicator):
         return msg
 
 
-class bySerialDevice(Communicator):
+class BySerialDevice(Communicator):
     pass
