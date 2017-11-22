@@ -860,7 +860,7 @@ class Builder:
             else:
                 raise AttributeError("Wrong definition of multiple attribute")
             number = channel or function or multiple
-            self.__prepareChannelLikeAttr(like, number, definition)
+            self.__prepareChannelLikeAttr(like, number, definition, attrName)
         else:
             readCmd = definition['readCmd']
             if 'writeCmd' not in definition:
@@ -881,7 +881,7 @@ class Builder:
                 self.__prepareWriteValues(attrName, definition, aprop, attr)
         return attr
 
-    def __prepareChannelLikeAttr(self, like, number, definition):
+    def __prepareChannelLikeAttr(self, like, number, definition, attrName):
         if like == 'channel':
             scpiPrefix = "CHAN"
             attrSuffix = "Ch"
@@ -898,7 +898,7 @@ class Builder:
             definition['writeCmd'] = definition['writeCmd'](scpiPrefix, number)
         if 'manager' in definition and definition['manager'] is True:
             self.__device.attributesFlags["%s%d"
-                                          % (attrSuffix, channel)] = attrName
+                                          % (attrSuffix, number)] = attrName
 
     def __buildROObj(self, attrName, definition):
         self.__device.attributes[attrName] =\
