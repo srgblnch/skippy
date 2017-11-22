@@ -118,8 +118,9 @@ def __isVisaName(name):
 class Communicator:
     _terminator = '\n'
 
-    def __init__(self):
-        raise NotImplementedError("This class is pure abstract")
+    def __init__(self, parent=None):
+        self.mutex = threading.Lock()
+        self._parent = parent
 
     def debug_stream(self, msg):
         if hasattr(self._parent, 'debug_stream'):
@@ -185,13 +186,12 @@ DEFAULT_BUFFERSIZE = 10240
 
 class bySocket(Communicator):
     def __init__(self, hostName, port=DEFAULT_PORT, parent=None):
+        super(bySocket, self).__init__(parent)
         self.__hostName = hostName
         self.__port = port
-        self._parent = parent
-        self.mutex = threading.Lock()
+        self._socket = None
         self.debug_stream("building a communication to %s by socket "
                           "using port %d" % (self.__hostName, self.__port))
-        self._socket = None
         self.build()
 
     def build(self):
@@ -282,9 +282,8 @@ class bySocket(Communicator):
 
 class byVisa(Communicator):
     def __init__(self, devName, parent=None):
+        super(byVisa, self).__init__(parent)
         self.__device = PyTango.DeviceProxy(devName)
-        self._parent = parent
-        self.mutex = threading.Lock()
         self.debug_stream("building a communication to %s by PyVisa"
                           % (devName))
 
@@ -307,31 +306,33 @@ class byVisa(Communicator):
             self.__device.Close()
 
     def ask(self, commandList, waittimefactor=None):
-        if waittimefactor is not None:
-            self.warning_stream("No wait time available for "
-                                "PyVisa intermediary, ignored")
-        answer = self.__device.Ask(array.array('B', commandList).tolist())
-        return array.array('B', answer).tostring()
+        with self.mutex:
+            if waittimefactor is not None:
+                self.warning_stream("No wait time available for "
+                                    "PyVisa intermediary, ignored")
+            answer = self.__device.Ask(array.array('B', commandList).tolist())
+            return array.array('B', answer).tostring()
 
     def ask_for_values(self, commandList, waittimefactor=None):
-        if waittimefactor is not None:
-            self.warning_stream("No wait time available for "
-                                "PyVisa intermediary, ignored")
         with self.mutex:
-            answer = self.__device.AskValues(array.array('B',
-                                                         commandList).tolist())
-            self.mutex.release()
-            return answer
+            if waittimefactor is not None:
+                self.warning_stream("No wait time available for "
+                                    "PyVisa intermediary, ignored")
+            with self.mutex:
+                answer = self.__device.\
+                    AskValues(array.array('B', commandList).tolist())
+                self.mutex.release()
+                return answer
 
 
 class byVisaName(Communicator):
     def __init__(self, name, parent=None):
+        super(byVisaName, self).__init__(parent)
         if pyvisa is None:
             raise ImportError("soft dependency to Visa python package "
                               "unsatisfied")
         self.__name = name
         self.__visa = None
-        self._parent = parent
 
     def connect(self):
         if self.__visa is None:
@@ -352,37 +353,42 @@ class byVisaName(Communicator):
         return self.__visa is not None
 
     def ask(self, commandList, waittimefactor=None):
-        if self.__visa:
-            self.debug_stream("ask %r to %r" % (commandList, self.__name))
-            cmdStr = commandList  # ''.join("%s;" % cmd for cmd in commandList)
-            answer = self.__visa.ask(cmdStr)
-            self.debug_stream("received %r from %r" % (answer, self.__name))
-            return answer
+        with self.mutex:
+            if self.__visa:
+                self.debug_stream("ask %r to %r" % (commandList, self.__name))
+                answer = self.__visa.ask(commandList)
+                self.debug_stream("received %r from %r"
+                                  % (answer, self.__name))
+                return answer
 
     def ask_for_values(self, commandList, waittimefactor=None):
-        if self.__visa:
-            self.debug_stream("ask_for_values %r to %r"
-                              % (commandList, self.__name))
-            cmdStr = commandList  # ''.join("%s;" % cmd for cmd in commandList)
-            answer = self.__visa.ask_for_values(cmdStr)
-            self.debug_stream("received %r from %r" % (answer, self.__name))
-            return answer
+        with self.mutex:
+            if self.__visa:
+                self.debug_stream("ask_for_values %r to %r"
+                                  % (commandList, self.__name))
+                answer = self.__visa.ask_for_values(commandList)
+                self.debug_stream("received %r from %r"
+                                  % (answer, self.__name))
+                return answer
 
     def write(self, commandList):
-        if self.__visa:
-            self.debug_stream("write %r to %r" % (commandList, self.__name))
-            cmdStr = commandList  # ''.join("%s;" % cmd for cmd in commandList)
-            self.__visa.write(cmdStr)
+        with self.mutex:
+            if self.__visa:
+                self.debug_stream("write %r to %r"
+                                  % (commandList, self.__name))
+                self.__visa.write(commandList)
 
     def read(self):
-        if self.__visa:
-            answer = self.__visa.read()
-            self.debug_stream("read %r from %r" % (answer, self.__name))
-            return answer
+        with self.mutex:
+            if self.__visa:
+                answer = self.__visa.read()
+                self.debug_stream("read %r from %r" % (answer, self.__name))
+                return answer
 
 
 class bySerialName(Communicator):
     def __init__(self, name, parent=None, serial_args=None, terminator=None):
+        super(bySocket, self).__init__(parent)
         if serial is None:
             raise ImportError("soft dependency to Serial python package "
                               "unsatisfied")
@@ -390,8 +396,6 @@ class bySerialName(Communicator):
         self.__serialName = name
         self.__serial = serial.Serial(**serial_args)
         self._terminator = terminator or '\n'
-        self._parent = parent
-        self.mutex = threading.Lock()
         self.debug_stream("building a communication to %s by direct serial "
                           "connection" % (name))
 

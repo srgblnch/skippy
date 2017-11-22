@@ -11,8 +11,7 @@
 #  GNU General Public License for more details.
 #
 #  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software Foundation,
-#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#  along with this program; If not, see <http://www.gnu.org/licenses/>.
 #
 # ##### END GPL LICENSE BLOCK #####
 
@@ -27,6 +26,7 @@ __status__ = "Production"
 from PyTango import DevState
 from threading import Thread, Event
 from time import sleep
+import traceback
 
 MINIMUM_RECOVERY_DELAY = 3.0
 
@@ -120,16 +120,24 @@ class WatchDog(object):
         return False
 
     def _isInstrumentOk(self):
+        i = 0
         if self._instrument is not None:
             try:
-                idn = self._instrument.ask("*IDN?")
-                if idn == self._device._idn:
-                    # self._debug("Watchdog found the instrument ok")
-                    return True
+                while i <= 1:  # two tries
+                    self._debug("Watchdog check if instrument is still there")
+                    idn = self._instrument.ask("*IDN?")
+                    if idn == self._device._idn:
+                        # self._debug("Watchdog found the instrument ok")
+                        return True
+                    self._warning("Watchdog received a bad answer from the "
+                                  "instrument: %r" % (idn))
+                    sleep(self._checkPeriod)
+                    i += 1
             except Exception as e:
                 self._error("watchdog had an exception checking the "
                             "instrument: %r" % (e))
-        self._warning("Watchdog couldn't talk with the instrument")
+                traceback.print_exc()
+        self._warning("Watchdog couldn't talk with the instrument (%d)" % (i))
         return False
 
     def _reconnectProcedure(self):
