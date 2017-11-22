@@ -717,22 +717,28 @@ class Builder:
     def __prepareChannelLikeGroup(self, attributeName, attributeDefinition):
         if 'channels' in attributeDefinition and \
                 attributeDefinition['channels']:
-            if self.__device.NumChannels <= 0:
+            if self.__device.NumChannels < 0:
                 raise ValueError("Could not prepare channels for %s because "
-                                 "not well defined the device property about"
-                                 "how many have to be created"
-                                 % (attributeName))
-            self.__buildGroup(attributeName, attributeDefinition,
-                              self.__device.NumChannels, "Ch")
+                                 "not well defined the device property about "
+                                 "how many have to be created (%d)"
+                                 % (attributeName, self.__device.NumChannels))
+            elif self.__device.NumChannels == 0:
+                self.__device.debug_stream("No channels to define")
+            else:
+                self.__buildGroup(attributeName, attributeDefinition,
+                                  self.__device.NumChannels, "Ch")
         if 'functions' in attributeDefinition and \
                 attributeDefinition['functions']:
-            if self.__device.NumFunctions <= 0:
+            if self.__device.NumFunctions < 0:
                 raise ValueError("Could not prepare functions for %s because "
-                                 "not well defined the device property about"
-                                 "how many have to be created"
-                                 % (attributeName))
-            self.__buildGroup(attributeName, attributeDefinition,
-                              self.__device.NumFunctions, "Fn")
+                                 "not well defined the device property about "
+                                 "how many have to be created (%d)"
+                                 % (attributeName, self.__device.NumFunctions))
+            elif self.__device.NumFunctions == 0:
+                self.__device.debug_stream("No function to define")
+            else:
+                self.__buildGroup(attributeName, attributeDefinition,
+                                  self.__device.NumFunctions, "Fn")
         if 'multiple' in attributeDefinition and \
                 attributeDefinition['multiple']:
             try:
