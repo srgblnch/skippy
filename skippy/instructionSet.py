@@ -177,6 +177,10 @@ class AttributeFunctionality(object):
     def name(self):
         return self._name
 
+    @property
+    def owner(self):
+        return self._owner
+
     def __str__(self):
         return "%s (%s)" % (self.name, self.__class__.__name__)
 
@@ -296,8 +300,8 @@ class RampObj(AttributeFunctionality):
              - Acceleration - motion - deceleration.
         '''
         # prepare
-        backup_state = self.get_state()
-        self.change_state_status(newState=PyTango.DevState.MOVING,
+        backup_state = self.__get_state()
+        self.__change_state_status(newState=PyTango.DevState.MOVING,
                                  rebuild=True)
         orig_pos = self._owner.rvalue
         dest_pos = self._owner.wvalue
@@ -315,7 +319,7 @@ class RampObj(AttributeFunctionality):
             attrWriteCmd = self._owner.writeCmd(new_pos)
             self.info_stream("In _rampProcedure() step from %f to %f sending: "
                              "%s" % (orig_pos, dest_pos, attrWriteCmd))
-            self.doHardwareWrite(attrWriteCmd)
+            self.__doHardwareWrite(attrWriteCmd)
             sleep(self.rampStepSpeed)
             # get newer values
             orig_pos = self._owner.rvalue
@@ -323,16 +327,16 @@ class RampObj(AttributeFunctionality):
         self.info_stream("In _rampProcedure(): finished the movement at %f"
                          % (dest_pos))
         # close
-        self.change_state_status(newState=backup_state, rebuild=True)
+        self.__change_state_status(newState=backup_state, rebuild=True)
         self._rampThread = None
 
-    def get_state(self):
+    def __get_state(self):
         return self._owner.get_state()
 
-    def change_state_status(self, *args, **kwargs):
+    def __change_state_status(self, *args, **kwargs):
         self._owner.change_state_status(*args, **kwargs)
 
-    def doHardwareWrite(self, cmd):
+    def __doHardwareWrite(self, cmd):
         self._owner.doHardwareWrite(cmd)
 
 
@@ -350,18 +354,173 @@ class RawDataObj(AttributeFunctionality):
 
     @lastReadRaw.setter
     def lastReadRaw(self, value):
+        self.debug_stream("set raw data: %s" % (value))
         self._lastReadRaw = value
+
+
+class ArrayDataInterpreterObj(AttributeFunctionality):
+    def __init__(self, rawObj, format, origin=None, increment=None,
+                 *args, **kwargs):
+        super(ArrayDataInterpreterObj, self).__init__(*args, **kwargs)
+        self._rawObj = rawObj
+        self._dataFormatAttrName = format
+        self._originAttrName = origin
+        self._incrementAttrName = increment
+
+    @property
+    def rawObj(self):
+        return self._rawObj
+
+    def __getParentAttrValue(self, attrName):
+        if self._owner._parent is not None:
+            parent = self._owner._parent
+            if hasattr(parent, 'attributes'):
+                attributes = getattr(parent, 'attributes')
+                if attrName:
+                    if attrName in attributes:
+                        return attributes[attrName].lastReadValue
+                    else:
+                        self.debug_stream("%s not in attributes" % (attrName))
+            else:
+                self.debug_stream("parent doesn't have attributes")
+        else:
+            self.debug_stream("owner doesn't have parent")
+
+    def __getDataFormat(self):
+        value = self.__getParentAttrValue(self._dataFormatAttrName)
+        if not value:
+            return ''
+        return value
+
+    def __getOrigin(self):
+        value = self.__getParentAttrValue(self._originAttrName)
+        if not value:
+            return 0.0  # addition factor
+        return value
+
+    def __getIncrement(self):
+        value = self.__getParentAttrValue(self._originAttrName)
+        if not value:
+            return 1.0  # multiplier factor
+        return value
+
+    def interpretArray(self):
+        if self._rawObj is None or self._owner is None:
+            raise AssertionError("It is necessary to have owner and raw "
+                                 "objects to interpret data")
+        data = self._rawObj.lastReadRaw
+        dataFormat = self.__getDataFormat()
+        if dataFormat.startswith('ASC'):
+            data = self.__interpretAsciiFormat(data)
+        else:
+            format, divisor = self.__getFormatAndDivisor(dataFormat)
+            data = self.__interpretBinaryFormat(data, format, divisor)
+        if data is None:
+            return numpy.fromstring("", dtype=float)
+        return data
+
+    def __interpretAsciiFormat(self, data):
+        if data[0] == '#':
+            bodyBlock = self.__interpretHeader(data)
+            if not bodyBlock:
+                self.error_stream('Impossible to interpret the header')
+                return
+            return numpy.fromstring(bodyBlock, dtype=float, sep=',')
+        else:
+            try:
+                return numpy.fromstring(data, dtype=float, sep=',')
+            except Exception as e:
+                self.error_stream("Impossible to interpret raw data")
+                self.debug_stream("Exception: %s" % (e))
+
+    def __interpretBinaryFormat(self, data, format, divisor):
+        bodyBlock = self.__interpretHeader(data)
+        if not bodyBlock:
+            self.error_stream('Impossible to interpret the header')
+            return
+        completBytes = self.__getCompleteBytes(bodyBlock, divisor)
+        unpackedData = self.__unpackBytes(data, format, divisor)
+        if unpackedData:
+            floats = numpy.array(unpackInt, dtype=float)
+            return self.__getOrigin() + (self.__getIncrement() * floats)
+
+    def __interpretHeader(self, buffer):
+        if buffer[0] == '#' and len(buffer) > 2:
+            headerSize = int(buffer[1])
+            if len(buffer) > 2+headerSize:
+                bodySize = int(buffer[2:2+headerSize])
+                bodyBlock = buffer[2+headerSize:2+headerSize+bodySize]
+                self.debug_stream("In _headerInterpreter() waveform data: "
+                                  "header size %d bytes, wave size %d bytes "
+                                  "(%d)" % (2+headerSize, bodySize,
+                                            len(bodyBlock)))
+                return bodyBlock
+
+    def __getFormatAndDivisor(self, dataFormat):
+        if dataFormat.startswith('BYT'):  # signed char, 1byte
+            format, divisor = 'b', 1
+        elif dataFormat.startswith('WORD'):  # signed short, 2byte
+            format, divisor = 'h', 2
+        elif dataFormat.lower() in ['real,32', 'asc']:
+            format, divisor = 'I', 4
+        else:
+            self.error_stream("Cannot decodify data received with format %r"
+                              % (dataFormat))
+            format, divisor = None, None
+        return format, divisor
+
+    def __getCompleteBytes(self, buffer, divisor):
+        nIncompleteBytes = (len(buffer) % divisor)
+        nCompletBytes = len(buffer) - nIncompleteBytes
+        completBytes = buffer[:nCompletBytes]
+        self.debug_stream("With %d bytes, found %d complete packs "
+                          "and %d incomplete. (Expected %d single "
+                          "values)" % (len(buffer), nCompletBytes,
+                                       nIncompleteBytes,
+                                       nCompletBytes/divisor))
+        return completBytes
+
+    def __unpackBytes(self, data, format, divisor):
+        lenData = len(data)
+        try:
+            fmt = format*(lenData/divisor)
+            self.debug_stream("Preparing to unpack with %r format "
+                              "(len fmt %d, len bytes %d)"
+                              % (format, len(fmt), lenData))
+            return struct.unpack(fmt, data)
+        except Exception as e:
+            self.error_stream("Data cannot be unpacked")
+            self.debug_stream("Exception: %s" % (e))
+            traceback.print_exc()
 
 
 ###############################
 # Attribute Objects ---
 class AttributeObj(object):
-    def __init__(self, name, type, dim, parent=None, *args, **kwargs):
+    def __init__(self, name, type, dim, parent=None, withRawData=False,
+                 *args, **kwargs):
         super(AttributeObj, self).__init__()  # *args, **kwargs)
         self._name = name
         self._type = type
         self._dim = dim
         self._parent = parent
+        if withRawData:
+            self._raw = RawDataObj("rawdata", self)
+        else:
+            self._raw = None
+        if self.dim == 1:
+            if not hasattr(self, '_raw') or not self._raw:
+                self._raw = RawDataObj("rawdata", self)
+            # FIXME: format, origin, increment
+            format = 'WaveformDataFormat'
+            origin = 'WaveformOrigin'
+            increment = 'WaveformIncrement'
+            self._interpreter = ArrayDataInterpreterObj(name="array",
+                                                        owner=self,
+                                                        rawObj=self._raw,
+                                                        format=format,
+                                                        origin=origin,
+                                                        increment=increment)
 
     @property
     def name(self):
@@ -430,20 +589,37 @@ class AttributeObj(object):
                 self.debug_stream("In _buildrepr_() doesn't have %s" % (key))
         return repr
 
+# FIXME: it doesn't work as expected
+#     def _buildRawFunctionality(self):
+#         self._raw = RawDataObj("rawdata", self)
+#         self._makeRawDataProperties()
+# 
+#     def _makeRawDataProperties(self):
+#         setattr(self, 'lastReadRaw', self._makeLastReadRawProperty())
+# 
+#     def _makeLastReadRawProperty(self):
+#         def getter(self):
+#             return self._raw.lastReadRaw
+# 
+#         def setter(self, value):
+#             self._raw.lastReadRaw = value
+# 
+#         return property(getter, setter)
+
+    def interpretArray(self):
+        if self._interpreter:
+            return self._interpreter.interpretArray()
+
 
 class ROAttributeObj(AttributeObj):
     def __init__(self, readCmd, readFormula=None,
-                 withRawData=False, *args, **kwargs):
+                 *args, **kwargs):
         super(ROAttributeObj, self).__init__(*args, **kwargs)
         self._readCmd = readCmd
         self._readFormula = readFormula
         self._lastReadValue = None
         self._timestamp = None
         self._quality = PyTango.AttrQuality.ATTR_INVALID
-        if withRawData:
-            self._raw = RawDataObj("rawdata", self)
-        else:
-            self._raw = None
 
     def __str__(self):
         return "%s (%s) [%s, %s, %s]" % (self.name, self.__class__.__name__,
@@ -472,7 +648,7 @@ class ROAttributeObj(AttributeObj):
     def readCmd(self):
         return self._readCmd
 
-    def doHardwareRead(self, query):
+    def __doHardwareRead(self, query):
         if self._parent is not None and hasattr(self._parent,
                                                 'doHardwareRead'):
             return self._parent.doHardwareRead(query)
@@ -483,7 +659,8 @@ class ROAttributeObj(AttributeObj):
 
     @property
     def rvalue(self):
-        newReadValue = self.doHardwareRead(self.readCmd)
+        # TODO: check if has to be read from cache
+        newReadValue = self.__doHardwareRead(self.readCmd)
         t = time()
         if self._readFormula:
             self.debug_stream("Evaluating %r with VALUE=%r"
@@ -501,7 +678,8 @@ class ROAttributeObj(AttributeObj):
                     if self.dim == 0:
                         self._lastReadValue = float(newReadValue)
                     elif self.dim == 1:
-                        self._lastReadValue = self.interpretArray(newReadValue)
+                        self._raw.lastReadRaw = newReadValue
+                        self._lastReadValue = self.interpretArray()
                     else:
                         raise BufferError("Unsuported multidimensional data")
                 elif self.type in [PyTango.DevShort, PyTango.DevUShort,
@@ -518,7 +696,10 @@ class ROAttributeObj(AttributeObj):
                 traceback.print_exc()
                 return None
         self.timestamp = t
-        return self._lastReadValue
+        if self._lastReadValue is not None:
+            self.quality = PyTango.AttrQuality.ATTR_VALID
+            return self._lastReadValue
+        self.quality = PyTango.AttrQuality.ATTR_INVALID
 
     @property
     def lastReadValue(self):
@@ -543,109 +724,6 @@ class ROAttributeObj(AttributeObj):
     @quality.setter
     def quality(self, value):
         self._quality = value
-
-    def _makeRawDataProperties(self):
-        setattr(self, 'lastReadRaw', self._makeLastReadRawProperty())
-
-    def _makeLastReadRawProperty(self):
-        def getter(self):
-            return self._raw.lastReadRaw
-
-        def setter(self, value):
-            self._raw.lastReadRaw = value
-
-        return property(getter, setter)
-
-    def interpretArray(self, answer):
-        if self._parent is not None and hasattr(self._parent, 'attributes'):
-            dataFormat = \
-                self._parent.attributes['WaveformDataFormat'].lastReadValue
-            if dataFormat.startswith('ASC'):
-                if self.hasRawData():
-                    self.lastReadRaw = answer
-                self.quality = PyTango.AttrQuality.ATTR_VALID
-                return numpy.fromstring(answer, dtype=float, sep=',')
-            else:
-                # process the header
-                if not answer[0] == '#':
-                    self.error_stream("Wrong data receiver for the "
-                                      "attribute %s" % (attrName))
-                    return
-                # save values for debugging
-                self.lastReadRaw = answer
-                # review the header, in answer[0] there is the '#' tag
-#                 headerSize = int(answer[1])
-#                 bodySize = int(answer[2:2+headerSize])
-#                 bodyBlock = answer[2+headerSize:
-#                                    2+headerSize+bodySize]
-#                 self.debug_stream("In __postHardwareSpectrumRead() "
-#                                   "waveform data: header size %d "
-#                                   "bytes, wave size %d bytes (%d)"
-#                                   % (2+headerSize, bodySize,
-#                                      len(bodyBlock)))
-                bodyBlock = self._headerInterpreter(answer)
-                # prepare interpretation of the raw data
-                if dataFormat.startswith('BYT'):
-                    format = 'b'  # signed char, 1byte
-                    divisor = 1
-                elif dataFormat.startswith('WORD'):
-                    format = 'h'  # signed short, 2byte
-                    divisor = 2
-                elif dataFormat.lower() in ['real,32', 'asc']:
-                    format = 'I'
-                    divisor = 4
-                else:
-                    self.error_stream("Cannot decodify data receiver "
-                                      "for the attribute %s (%s)"
-                                      % (attrName, dataFormat))
-                    self.quality = PyTango.AttrQuality.ATTR_INVALID
-                    return numpy.fromstring("", dtype=float)
-                nIncompleteBytes = (len(bodyBlock) % divisor)
-                nCompletBytes = len(bodyBlock) - nIncompleteBytes
-                completBytes = bodyBlock[:nCompletBytes]
-                self.debug_stream("With %d bytes, found %d complete packs "
-                                  "and %d incomplete. (Expected %d single "
-                                  "values)" % (len(bodyBlock), nCompletBytes,
-                                               nIncompleteBytes,
-                                               nCompletBytes/divisor))
-                # convert the received input to integers
-                try:
-                    fmt = format*(nCompletBytes/divisor)
-                    self.debug_stream("Preparing to unpack with %r format "
-                                      "(len fmt %d, len bytes %d)"
-                                      % (format, len(fmt), len(completBytes)))
-                    unpackInt = struct.unpack(fmt, completBytes)
-                    # self.debug_stream("Unpacked: %s" % unpackInt)
-                except Exception as e:
-                    self.error_stream("Data cannot be unpacked: %s"
-                                      % (e))
-                    traceback.print_exc()
-                else:
-                    # expand the input when each float is codified in
-                    # less than 4 bytes
-                    floats = numpy.array(unpackInt, dtype=float)
-                    if 'WaveformOrigin' in self._parent.attributes and \
-                            'WaveformIncrement' in self._parent.attributes:
-                        waveorigin =\
-                            self._parent.attributes['WaveformOrigin'].\
-                            lastReadValue
-                        waveincrement =\
-                            self._parent.attributes['WaveformIncrement'].\
-                            lastReadValue
-                        self.quality = PyTango.AttrQuality.ATTR_VALID
-                        return (waveorigin + (waveincrement * floats))
-                    else:
-                        return numpy.fromstring("", dtype=float)
-
-    def _headerInterpreter(self, buffer):
-        headerSize = int(buffer[1])
-        bodySize = int(buffer[2:2+headerSize])
-        bodyBlock = buffer[2+headerSize:
-                           2+headerSize+bodySize]
-        self.debug_stream("In _headerInterpreter() waveform data: "
-                          "header size %d bytes, wave size %d bytes (%d)"
-                          % (2+headerSize, bodySize, len(bodyBlock)))
-        return bodyBlock
 
 
 class RWAttributeObj(ROAttributeObj):
