@@ -50,11 +50,10 @@ import PyTango
 import sys
 # Add additional import
 #----- PROTECTED REGION ID(Skippy.additionnal_import) ENABLED START -----#
-import communicator
 import copy
 import instructionSet
 import numpy
-from skippylib import AttrExc
+from skippylib import AttrExc, buildCommunicator, TIME_BETWEEN_SENDANDRECEIVE
 import socket
 import struct
 import threading
@@ -109,11 +108,9 @@ class Skippy (PyTango.Device_4Impl):
                                'timeout': timeout,
                                'xonxoff': self.SerialXonXoff}
             terminator = self.TxTerminator
-            self._instrument = communicator.buildCommunicator(self.Instrument,
-                                                              self.Port,
-                                                              self,
-                                                              extra_arguments,
-                                                              terminator)
+            self._instrument = buildCommunicator(self.Instrument, self.Port,
+                                                 self, extra_arguments,
+                                                 terminator)
         except SyntaxError as e:
             self.error_stream("Error in the instrument name: %s" % (e))
             self.change_state_status(newState=PyTango.DevState.FAULT,
@@ -151,7 +148,7 @@ class Skippy (PyTango.Device_4Impl):
                 #     return False
                 self.warn_stream("In __connectInstrumentObj() no answer to the"
                                  " identification request (try %d)" % (i))
-                time.sleep(communicator.TIME_BETWEEN_SENDANDRECEIVE*10)
+                time.sleep(TIME_BETWEEN_SENDANDRECEIVE*10)
             if len(self._idn) == 0:
                 self.error_stream("In __connectInstrumentObj() Cannot identify"
                                   " the instrument after %d tries" % (i))

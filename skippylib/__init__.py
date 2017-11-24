@@ -17,9 +17,10 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from .builder import Builder, AttrExc
 from .attributes import AttributeObj
 from .attributes import ROAttributeObj, RWAttributeObj
+from .builder import Builder, AttrExc
+from .communications import buildCommunicator, TIME_BETWEEN_SENDANDRECEIVE
 from .features import AttributeFeature
 from .features import RampObj, RawDataObj, ArrayDataInterpreterObj
 from .skippyobj import SkippyObj
