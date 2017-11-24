@@ -15,18 +15,17 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from PyTango import DevState
+from threading import Thread, Event
+from time import sleep
+import traceback
+
 __author__ = "Sergi Blanch-Torne"
 __maintainer__ = "Sergi Blanch-Torne"
 __email__ = "sblanch@cells.es"
 __copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 __status__ = "Production"
-
-
-from PyTango import DevState
-from threading import Thread, Event
-from time import sleep
-import traceback
 
 MINIMUM_RECOVERY_DELAY = 3.0
 

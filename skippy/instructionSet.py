@@ -16,13 +16,6 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-__author__ = "Sergi Blanch-Torne"
-__maintainer__ = "Sergi Blanch-Torne"
-__email__ = "sblanch@cells.es"
-__copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
-__license__ = "GPLv3+"
-__status__ = "Production"
-
 from copy import copy
 import functools
 import numpy
@@ -32,6 +25,13 @@ import struct
 import traceback
 from threading import Thread
 from time import sleep, time
+
+__author__ = "Sergi Blanch-Torne"
+__maintainer__ = "Sergi Blanch-Torne"
+__email__ = "sblanch@cells.es"
+__copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
+__license__ = "GPLv3+"
+__status__ = "Production"
 
 
 def identifier(idn, deviceObj):
@@ -185,16 +185,16 @@ class AttributeFunctionality(object):
         return "%s (%s)" % (self.name, self.__class__.__name__)
 
     def debug_stream(self, msg):
-        self._owner.debug_stream("[%s] %s" % (self.name,msg))
+        self._owner.debug_stream("[%s] %s" % (self.name, msg))
 
     def info_stream(self, msg):
-        self._owner.info_stream("[%s] %s" % (self.name,msg))
+        self._owner.info_stream("[%s] %s" % (self.name, msg))
 
     def warn_stream(self, msg):
-        self._owner.warn_stream("[%s] %s" % (self.name,msg))
+        self._owner.warn_stream("[%s] %s" % (self.name, msg))
 
     def error_stream(self, msg):
-        self._owner.error_stream("[%s] %s" % (self.name,msg))
+        self._owner.error_stream("[%s] %s" % (self.name, msg))
 
     def _buildrepr_(self, attributes):
         repr = "%s:\n" % self
@@ -302,7 +302,7 @@ class RampObj(AttributeFunctionality):
         # prepare
         backup_state = self.__get_state()
         self.__change_state_status(newState=PyTango.DevState.MOVING,
-                                 rebuild=True)
+                                   rebuild=True)
         orig_pos = self._owner.rvalue
         dest_pos = self._owner.wvalue
         self.info_stream("In _rampProcedure(): ramp will start from %g to %g"
@@ -593,17 +593,17 @@ class AttributeObj(object):
 #     def _buildRawFunctionality(self):
 #         self._raw = RawDataObj("rawdata", self)
 #         self._makeRawDataProperties()
-# 
+#
 #     def _makeRawDataProperties(self):
 #         setattr(self, 'lastReadRaw', self._makeLastReadRawProperty())
-# 
+#
 #     def _makeLastReadRawProperty(self):
 #         def getter(self):
 #             return self._raw.lastReadRaw
-# 
+#
 #         def setter(self, value):
 #             self._raw.lastReadRaw = value
-# 
+#
 #         return property(getter, setter)
 
     def interpretArray(self):

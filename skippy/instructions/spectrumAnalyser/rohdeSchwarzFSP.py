@@ -16,6 +16,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+import PyTango
+
 __author__ = "Sergi Blanch-Torne"
 __maintainer__ = "Sergi Blanch-Torne"
 __email__ = "sblanch@cells.es"
@@ -23,7 +25,6 @@ __copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 __status__ = "Production"
 
-import PyTango
 
 ####
 # Example of attribute:

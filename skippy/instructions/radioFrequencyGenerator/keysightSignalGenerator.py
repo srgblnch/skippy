@@ -16,6 +16,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+import PyTango
+
 __author__ = "Fulvio Becheri"
 __maintainer__ = "Fulvio Becheri"
 __email__ = "fbecheri@cells.es"
@@ -23,7 +25,6 @@ __copyright__ = "Copyright 2017, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 __status__ = "Production"
 
-import PyTango
 
 Attribute('Phase',
           {'type': PyTango.CmdArgType.DevDouble,

@@ -15,28 +15,28 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-__author__ = "Sergi Blanch-Torne, Antonio Milan Otero"
-__maintainer__ = "Sergi Blanch-Torne"
-__email__ = "sblanch@cells.es"
-__copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
-__license__ = "GPLv3+"
-__status__ = "Production"
-
 import array
-import PyTango
+
 try:
     import serial
 except:
     serial = None
+import PyTango
+import socket
+import threading
+from time import sleep
 try:
     import visa
     import pyvisa
 except:
     pyvisa = None
 
-import socket
-from time import sleep
-import threading
+__author__ = "Sergi Blanch-Torne, Antonio Milan Otero"
+__maintainer__ = "Sergi Blanch-Torne"
+__email__ = "sblanch@cells.es"
+__copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
+__license__ = "GPLv3+"
+__status__ = "Production"
 
 TIME_BETWEEN_SENDANDRECEIVE = 0.05
 

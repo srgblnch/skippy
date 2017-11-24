@@ -16,6 +16,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+import PyTango
+
 __author__ = "Sergi Blanch-Torne"
 __maintainer__ = "Sergi Blanch-Torne"
 __email__ = "sblanch@cells.es"
@@ -23,7 +25,6 @@ __copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 __status__ = "Production"
 
-import PyTango
 
 Attribute('Amplitude',
           {'type': PyTango.CmdArgType.DevDouble,
@@ -31,9 +32,9 @@ Attribute('Amplitude',
            'readCmd': lambda ch, num: ":SOURce%d:VOLTage:AMPLitude?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":SOURce%d:VOLTage:AMPLitude %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 Attribute('Frequency',
           {'type': PyTango.CmdArgType.DevDouble,
@@ -41,9 +42,9 @@ Attribute('Frequency',
            'readCmd': lambda ch, num: ":SOURce%d:FREQuency?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":SOURce%d:FREQuency %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 functionShapes = ['SINusoid', 'SQUare', 'PULSe', 'RAMP', 'PRNoise']
 
@@ -62,7 +63,7 @@ Attribute('FunctionShapes',
           {'type': PyTango.CmdArgType.DevString,
            'dim': [1, 20],
            'readCmd': lambda ch, num: functionShapes,
-          })
+           })
 
 Attribute('High',
           {'type': PyTango.CmdArgType.DevDouble,
@@ -70,9 +71,9 @@ Attribute('High',
            'readCmd': lambda ch, num: ":SOURce%d:VOLTage:HIGH?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":SOURce%d:VOLTage:HIGH %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 Attribute('Low',
           {'type': PyTango.CmdArgType.DevDouble,
@@ -80,9 +81,9 @@ Attribute('Low',
            'readCmd': lambda ch, num: ":SOURce%d:VOLTage:LOW?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":SOURce%d:VOLTage:LOW %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 Attribute('ModulatedDepth',
           {'type': PyTango.CmdArgType.DevDouble,
@@ -90,9 +91,9 @@ Attribute('ModulatedDepth',
            'readCmd': lambda ch, num: ":SOURce%d:am:DEPTh?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":SOURce%d:am:DEPTh %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 # FIXME: only valid in ["am"] mode
 
 # Attribute('ModulatedDeviation',
@@ -109,12 +110,13 @@ Attribute('ModulatedDepth',
 # Attribute('ModulatedFrequency',
 #           {'type': PyTango.CmdArgType.DevDouble,
 #            'dim': [0],
-#            'readCmd': lambda ch, num: ":SOURce%d:%s:INTernal:FREQuency?" % (num),
+#            'readCmd': lambda ch, num: ":SOURce%d:%s:INTernal:FREQuency?"
+#                                       % (num),
 #            'writeCmd': lambda ch, num: (lambda value:
 #                                         ":SOURce%d:%s:INTernal:FREQuency %s"
-#                                         % (ch,value)),
+#                                         % (ch, value)),
 #            'channels': True,
-#           })
+#            })
 # FIXME: for ["am","fm","pm"] modes,
 #        but for ["fsk"] "INTernal" should have removed
 
@@ -124,21 +126,22 @@ Attribute('ModulatedRate',
            'readCmd': lambda ch, num: ":SOURce%d:fsk:INTernal:RATE?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":SOURce%d:fsk:INTernal:RATE %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 # FIXME: only valid in ["fsk"] mode
 
 # Attribute('ModulatedShape',
 #           {'type': PyTango.CmdArgType.DevString,
 #            'dim': [0],
-#            'readCmd': lambda ch, num: ":SOURce%d:%s:INTernal:FUNCtion?" % (num),
+#            'readCmd': lambda ch, num: ":SOURce%d:%s:INTernal:FUNCtion?"
+#                                       % (num),
 #            'writeCmd': lambda ch, num: (lambda value:
 #                                         ":SOURce%d:%s:INTernal:FUNCtion %s"
 #                                         % (num, value)),
 #            'channels': True,
 #            'writeValues': functionShapes,
-#           })
+#            })
 # FIXME: readCmd depends on the mode ["am", "fm", "pm", "fsk"]
 
 Attribute('Offset',
@@ -147,9 +150,9 @@ Attribute('Offset',
            'readCmd': lambda ch, num: ":SOURce%d:VOLTage:OFFSet?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":SOURce%d:VOLTage:OFFSet %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 Attribute('Phase',
           {'type': PyTango.CmdArgType.DevDouble,
@@ -157,19 +160,20 @@ Attribute('Phase',
            'readCmd': lambda ch, num: ":SOURce%d:PHASe?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":SOURce%d:PHASe %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 Attribute('PulseLead',
           {'type': PyTango.CmdArgType.DevDouble,
            'dim': [0],
-           'readCmd': lambda ch, num: ":SOURce%d:PULSe:TRANsition:LEADing?" % (num),
+           'readCmd': lambda ch, num: ":SOURce%d:PULSe:TRANsition:LEADing?"
+                                      % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":SOURce%d:PULSe:TRANsition:LEADing %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 Attribute('PulseWidth',
           {'type': PyTango.CmdArgType.DevDouble,
@@ -177,19 +181,20 @@ Attribute('PulseWidth',
            'readCmd': lambda ch, num: ":SOURce%d:PULSe:WIDTh?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":SOURce%d:PULSe:WIDTh %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 Attribute('RampSymmetry',
           {'type': PyTango.CmdArgType.DevDouble,
            'dim': [0],
-           'readCmd': lambda ch, num: ":SOURce%d:FUNCtion:RAMP:SYMMetry?" % (num),
+           'readCmd': lambda ch, num: ":SOURce%d:FUNCtion:RAMP:SYMMetry?"
+                                      % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":SOURce%d:FUNCtion:RAMP:SYMMetry %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 # Attribute('RunMode',
 #           {'type': PyTango.CmdArgType.DeString,
@@ -197,9 +202,9 @@ Attribute('RampSymmetry',
 #            #'readCmd': lambda ch, num: "" % (num),
 #            #'writeCmd': lambda ch, num: (lambda value:
 #            #                             ""
-#            #                             % (ch,value)),
+#            #                             % (ch, value)),
 #            'channels': True,
-#           })
+#            })
 # TODO: PyVisaInstrWrapper asks 5 questions and combines them to get one answer
 #     def runMode_read(self,ch):
 #         """ This block is really different than the rest. The continuous
@@ -213,7 +218,7 @@ Attribute('RampSymmetry',
 #         query.write(";"+self.runMode_modulation_pm_get(ch))
 #         query.write(";"+self.runMode_sweep_get(ch))
 #         return query.getvalue()
-#         
+#
 #     def runMode_write(self,ch,value):
 #         bar = ""
 #         print "runMode_write(%d,%d)"%(ch,value)
@@ -256,9 +261,9 @@ Attribute('SweepFreqCenter',
            'readCmd': lambda ch, num: ":source%d:frequency:center?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":source%d:frequency:center %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 Attribute('SweepFreqSpan',
           {'type': PyTango.CmdArgType.DevDouble,
@@ -266,9 +271,9 @@ Attribute('SweepFreqSpan',
            'readCmd': lambda ch, num: ":source%d:frequency:span?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":source%d:frequency:span %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 Attribute('SweepFreqStart',
           {'type': PyTango.CmdArgType.DevDouble,
@@ -276,9 +281,9 @@ Attribute('SweepFreqStart',
            'readCmd': lambda ch, num: ":source%d:frequency:start?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":source%d:frequency:start %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 Attribute('SweepFreqStop',
           {'type': PyTango.CmdArgType.DevDouble,
@@ -286,9 +291,9 @@ Attribute('SweepFreqStop',
            'readCmd': lambda ch, num: ":source%d:frequency:stop?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":source%d:frequency:stop %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 Attribute('SweepHoldTime',
           {'type': PyTango.CmdArgType.DevDouble,
@@ -296,9 +301,9 @@ Attribute('SweepHoldTime',
            'readCmd': lambda ch, num: ":source%d:sweep:htime?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":source%d:sweep:htime %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 Attribute('SweepMode',
           {'type': PyTango.CmdArgType.DevString,
@@ -306,10 +311,10 @@ Attribute('SweepMode',
            'readCmd': lambda ch, num: ":source%d:sweep:mode?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":source%d:sweep:mode %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-           'writeValues': ['auto','man']
-          })
+           'writeValues': ['auto', 'man']
+           })
 
 Attribute('SweepReturnTime',
           {'type': PyTango.CmdArgType.DevDouble,
@@ -317,9 +322,9 @@ Attribute('SweepReturnTime',
            'readCmd': lambda ch, num: ":source%d:sweep:rtime?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":source%d:sweep:rtime %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 Attribute('SweepSpacing',
           {'type': PyTango.CmdArgType.DevString,
@@ -327,9 +332,9 @@ Attribute('SweepSpacing',
            'readCmd': lambda ch, num: ":source%d:sweep:spacing?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":source%d:sweep:spacing %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 Attribute('SweepTime',
           {'type': PyTango.CmdArgType.DevDouble,
@@ -337,9 +342,9 @@ Attribute('SweepTime',
            'readCmd': lambda ch, num: ":source%d:sweep:time?" % (num),
            'writeCmd': lambda ch, num: (lambda value:
                                         ":source%d:sweep:time %s"
-                                        % (ch,value)),
+                                        % (ch, value)),
            'channels': True,
-          })
+           })
 
 Attribute('lock',
           {'type': PyTango.CmdArgType.DevBoolean,

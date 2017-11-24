@@ -16,6 +16,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+import PyTango
+
 __author__ = "Manuel Broseta Sebastia"
 __maintainer__ = "Antonio Milan Otero"
 __email__ = "mbroseta@cells.es"
@@ -23,8 +25,6 @@ __copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 __status__ = "Production"
 
-
-import PyTango
 
 Attribute('Mac',
           {'type': PyTango.CmdArgType.DevString,
