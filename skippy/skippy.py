@@ -54,7 +54,6 @@ import copy
 import instructionSet
 import numpy
 from skippylib import AttrExc, buildCommunicator, TIME_BETWEEN_SENDANDRECEIVE
-import socket
 import struct
 import threading
 import time
