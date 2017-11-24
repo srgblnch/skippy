@@ -158,43 +158,76 @@ def latin1(x):
 
 
 ###############################
-# Attribute functionalities ---
+# skippy object superclass ---
 
-class AttributeFunctionality(object):
-    def __init__(self, name, owner, *args, **kwargs):
-        super(AttributeFunctionality, self).__init__(*args, **kwargs)
+class SkippyObj(object):
+    def __init__(self, name, *args, **kwargs):
+        super(SkippyObj, self).__init__()
         if name is None:
             raise AssertionError("Functionality must have a name")
-        if owner is None:
-            raise AssertionError("Functionality must have an owner")
-        if not isinstance(owner, AttributeObj):
-            raise AssertionError("Functionality owner must be an attribute "
-                                 "object")
         self._name = name
-        self._owner = owner
 
     @property
     def name(self):
         return self._name
 
+    # TODO: python logging when there is no tango device above
+
+    def debug_stream(self, msg):
+        if hasattr(self, '_parent') and self._parent:
+            self._parent.debug_stream(msg)
+        else:
+            print("DEBUG: %s" % (msg))
+
+    def info_stream(self, msg):
+        if hasattr(self, '_parent') and self._parent:
+            self._parent.info_stream(msg)
+        else:
+            print("INFO:  %s" % (msg))
+
+    def warn_stream(self, msg):
+        if hasattr(self, '_parent') and self._parent:
+            self._parent.warn_stream(msg)
+        else:
+            print("WARN:  %s" % (msg))
+
+    def error_stream(self, msg):
+        if hasattr(self, '_parent') and self._parent:
+            self._parent.error_stream(msg)
+        else:
+            print("ERROR: %s" % (msg))
+
+    def _get_state(self):
+        if hasattr(self, '_parent') and self._parent and \
+                hasattr(self._parent, 'get_state'):
+            return self._parent.get_state()
+        return PyTango.DevState.UNKNOWN
+
+    def _change_state_status(self, *args, **kwargs):
+        if hasattr(self, '_parent') and self._parent and \
+                hasattr(self._parent, 'change_state_status'):
+            self._parent.change_state_status(*args, **kwargs)
+
+
+###############################
+# Attribute functionalities ---
+
+class AttributeFunctionality(SkippyObj):
+    def __init__(self, parent, *args, **kwargs):
+        super(AttributeFunctionality, self).__init__(*args, **kwargs)
+        if parent is None:
+            raise AssertionError("Functionality must have a parent")
+        if not isinstance(parent, AttributeObj):
+            raise AssertionError("Functionality parent must be an attribute "
+                                 "object")
+        self._parent = parent
+
     @property
-    def owner(self):
-        return self._owner
+    def parent(self):
+        return self._parent
 
     def __str__(self):
         return "%s (%s)" % (self.name, self.__class__.__name__)
-
-    def debug_stream(self, msg):
-        self._owner.debug_stream("[%s] %s" % (self.name, msg))
-
-    def info_stream(self, msg):
-        self._owner.info_stream("[%s] %s" % (self.name, msg))
-
-    def warn_stream(self, msg):
-        self._owner.warn_stream("[%s] %s" % (self.name, msg))
-
-    def error_stream(self, msg):
-        self._owner.error_stream("[%s] %s" % (self.name, msg))
 
     def _buildrepr_(self, attributes):
         repr = "%s:\n" % self
@@ -261,7 +294,7 @@ class RampObj(AttributeFunctionality):
     def prepareRamping(self):
         try:
             thread = Thread(target=self._rampProcedure,
-                            name="%s_ramp" % (self._owner.name))
+                            name="%s_ramp" % (self._parent.name))
             thread.setDaemon(True)
         except Exception as e:
             self.error_stream("Prepare ramp exception: %s" % (e))
@@ -300,11 +333,11 @@ class RampObj(AttributeFunctionality):
              - Acceleration - motion - deceleration.
         '''
         # prepare
-        backup_state = self.__get_state()
-        self.__change_state_status(newState=PyTango.DevState.MOVING,
+        backup_state = self._get_state()
+        self._change_state_status(newState=PyTango.DevState.MOVING,
                                    rebuild=True)
-        orig_pos = self._owner.rvalue
-        dest_pos = self._owner.wvalue
+        orig_pos = self._parent.rvalue
+        dest_pos = self._parent.wvalue
         self.info_stream("In _rampProcedure(): ramp will start from %g to %g"
                          % (orig_pos, dest_pos))
         while not orig_pos == dest_pos:
@@ -316,28 +349,22 @@ class RampObj(AttributeFunctionality):
                 new_pos = orig_pos - self.rampStep
             elif orig_pos < dest_pos:
                 new_pos = orig_pos + self.rampStep
-            attrWriteCmd = self._owner.writeCmd(new_pos)
+            attrWriteCmd = self._parent.writeCmd(new_pos)
             self.info_stream("In _rampProcedure() step from %f to %f sending: "
                              "%s" % (orig_pos, dest_pos, attrWriteCmd))
             self.__doHardwareWrite(attrWriteCmd)
             sleep(self.rampStepSpeed)
             # get newer values
-            orig_pos = self._owner.rvalue
-            dest_pos = self._owner.wvalue
+            orig_pos = self._parent.rvalue
+            dest_pos = self._parent.wvalue
         self.info_stream("In _rampProcedure(): finished the movement at %f"
                          % (dest_pos))
         # close
-        self.__change_state_status(newState=backup_state, rebuild=True)
+        self._change_state_status(newState=backup_state, rebuild=True)
         self._rampThread = None
 
-    def __get_state(self):
-        return self._owner.get_state()
-
-    def __change_state_status(self, *args, **kwargs):
-        self._owner.change_state_status(*args, **kwargs)
-
     def __doHardwareWrite(self, cmd):
-        self._owner.doHardwareWrite(cmd)
+        self._parent.doHardwareWrite(cmd)
 
 
 class RawDataObj(AttributeFunctionality):
@@ -372,19 +399,25 @@ class ArrayDataInterpreterObj(AttributeFunctionality):
         return self._rawObj
 
     def __getParentAttrValue(self, attrName):
-        if self._owner._parent is not None:
-            parent = self._owner._parent
-            if hasattr(parent, 'attributes'):
-                attributes = getattr(parent, 'attributes')
-                if attrName:
-                    if attrName in attributes:
-                        return attributes[attrName].lastReadValue
-                    else:
-                        self.debug_stream("%s not in attributes" % (attrName))
+        if self._parent is not None:
+            attrObj = self._parent
+            if attrObj._parent is not None:
+                container = attrObj._parent
+                if hasattr(container, 'attributes'):
+                    attributes = getattr(container, 'attributes')
+                    if attrName:
+                        if attrName in attributes:
+                            return attributes[attrName].lastReadValue
+                        else:
+                            self.debug_stream("%s not in attributes"
+                                              % (attrName))
+                else:
+                    self.debug_stream("container of my AttributeObj doesn't "
+                                      "support attributes")
             else:
-                self.debug_stream("parent doesn't have attributes")
+                self.debug_stream("My AttributeObj doesn't have parent")
         else:
-            self.debug_stream("owner doesn't have parent")
+            self.debug_stream("This functionality doesn't have parent")
 
     def __getDataFormat(self):
         value = self.__getParentAttrValue(self._dataFormatAttrName)
@@ -405,9 +438,9 @@ class ArrayDataInterpreterObj(AttributeFunctionality):
         return value
 
     def interpretArray(self):
-        if self._rawObj is None or self._owner is None:
-            raise AssertionError("It is necessary to have owner and raw "
-                                 "objects to interpret data")
+        if self._rawObj is None or self._parent is None:
+            raise AssertionError("It is necessary to have AttributeObj and "
+                                 "RawDataObj objects to interpret data")
         data = self._rawObj.lastReadRaw
         dataFormat = self.__getDataFormat()
         if dataFormat.startswith('ASC'):
@@ -496,35 +529,30 @@ class ArrayDataInterpreterObj(AttributeFunctionality):
 
 ###############################
 # Attribute Objects ---
-class AttributeObj(object):
-    def __init__(self, name, type, dim, parent=None, withRawData=False,
+class AttributeObj(SkippyObj):
+    def __init__(self, type, dim, parent=None, withRawData=False,
                  *args, **kwargs):
-        super(AttributeObj, self).__init__()  # *args, **kwargs)
-        self._name = name
+        super(AttributeObj, self).__init__(*args, **kwargs)
         self._type = type
         self._dim = dim
         self._parent = parent
         if withRawData:
-            self._raw = RawDataObj("rawdata", self)
+            self._raw = RawDataObj(name="rawdata", parent=self)
         else:
             self._raw = None
         if self.dim == 1:
             if not hasattr(self, '_raw') or not self._raw:
-                self._raw = RawDataObj("rawdata", self)
+                self._raw = RawDataObj(name="rawdata", parent=self)
             # FIXME: format, origin, increment
             format = 'WaveformDataFormat'
             origin = 'WaveformOrigin'
             increment = 'WaveformIncrement'
             self._interpreter = ArrayDataInterpreterObj(name="array",
-                                                        owner=self,
+                                                        parent=self,
                                                         rawObj=self._raw,
                                                         format=format,
                                                         origin=origin,
                                                         increment=increment)
-
-    @property
-    def name(self):
-        return self._name
 
     @property
     def type(self):
@@ -533,31 +561,6 @@ class AttributeObj(object):
     @property
     def dim(self):
         return self._dim
-
-    def debug_stream(self, msg):
-        msg = "[%s] %s" % (self.name, msg)
-        if self._parent is not None:
-            self._parent.debug_stream(msg)
-        else:
-            print("DEBUG: %s" % (msg))
-
-    def info_stream(self, msg):
-        if self._parent is not None:
-            self._parent.info_stream(msg)
-        else:
-            print("INFO:  %s" % (msg))
-
-    def warn_stream(self, msg):
-        if self._parent is not None:
-            self._parent.warn_stream(msg)
-        else:
-            print("WARN:  %s" % (msg))
-
-    def error_stream(self, msg):
-        if self._parent is not None:
-            self._parent.error_stream(msg)
-        else:
-            print("ERROR: %s" % (msg))
 
     def get_state(self):
         if self._parent is not None and\
@@ -790,7 +793,7 @@ class RWAttributeObj(ROAttributeObj):
 
     def makeRampeable(self):
         if self._ramp is None:
-            self._ramp = RampObj("ramp", self)
+            self._ramp = RampObj(name="ramp", parent=self)
 
     def getRampObj(self):
         return self._ramp
