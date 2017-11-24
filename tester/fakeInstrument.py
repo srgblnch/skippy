@@ -19,7 +19,7 @@ from __future__ import print_function
 
 import argparse
 from instrAttrs import (ROinteger, RWinteger, ROfloat, RWfloat,
-                        ROIntegerFallible)
+                        ROIntegerFallible, Format, ROintegerArray)
 from instrIdn import InstrumentIdentification, __version__
 from psutil import process_iter, Process
 import PyTango
@@ -67,19 +67,28 @@ class FakeInstrument(object):
         self._buildFakeSCPI()
 
     def _buildFakeSCPI(self):
+        version = "%s+scpilib_%s" % (__version__, scpilib.version.version())
         self._identity = InstrumentIdentification('FakeInstruments. Inc',
-                                                  'Tester', 0,
-                                                  __version__)
+                                                  'Tester', 0, version)
         self._scpiObj = scpilib.scpi(local=True, debug=True, log2File=True)
         self._buildSpecialCommands()
         self._buildNormalCommands()
         self.open()
+
+    def __str__(self):
+        return "%s" % self._scpiObj
+
+    def __repr__(self):
+        return "%r" % self._scpiObj
 
     def open(self):
         self._scpiObj.open()
 
     def close(self):
         self._scpiObj.close()
+
+    def commands(self):
+        return self._scpiObj.commands
 
     def _buildSpecialCommands(self):
         self._scpiObj.addSpecialCommand('IDN', self._identity.idn)
@@ -153,19 +162,25 @@ class FakeInstrument(object):
                                  readcb=fallible.lowerLimit,
                                  writecb=fallible.lowerLimit)
         self._attrObjs['fallible'] = fallible
-#         rointegerarray = ROintegerArray()
-#         self._scpiObj.addCommand('source:readable:array:short:value',
-#                                  readcb=rointegerarray.value, default=True)
-#         self._scpiObj.addCommand('source:readable:array:short:upper',
-#                                  readcb=rointegerarray.upperLimit,
-#                                  writecb=rointegerarray.upperLimit)
-#         self._scpiObj.addCommand('source:readable:array:short:lower',
-#                                  readcb=rointegerarray.lowerLimit,
-#                                  writecb=rointegerarray.lowerLimit)
-#         self._scpiObj.addCommand('source:readable:array:short:samples',
-#                                  readcb=rointegerarray.samples,
-#                                  writecb=rointegerarray.samples)
-#         self._attrObjs['rointegerarray'] = rointegerarray
+        formatarray = Format()
+        self._scpiObj.addCommand('dataformat',
+                                 readcb=formatarray.value,
+                                 writecb=formatarray.value)
+        self._attrObjs['formatarray'] = formatarray
+        rointegerarray = ROintegerArray()
+        self._scpiObj.addCommand('source:readable:array:short:value',
+                                 readcb=rointegerarray.value, default=True)
+        self._scpiObj.addCommand('source:readable:array:short:upper',
+                                 readcb=rointegerarray.upperLimit,
+                                 writecb=rointegerarray.upperLimit)
+        self._scpiObj.addCommand('source:readable:array:short:lower',
+                                 readcb=rointegerarray.lowerLimit,
+                                 writecb=rointegerarray.lowerLimit)
+        self._scpiObj.addCommand('source:readable:array:short:samples',
+                                 readcb=rointegerarray.samples,
+                                 writecb=rointegerarray.samples)
+        
+        self._attrObjs['rointegerarray'] = rointegerarray
 
 
 global manager
@@ -181,6 +196,8 @@ class TestManager(object):
     def __init__(self, *args, **kwargs):
         super(TestManager, self).__init__(*args, **kwargs)
         self._instrument = FakeInstrument()
+        self.log("FakeInstrument build: %r" % (self._instrument))
+        self.log("\tattributes:\n%s" % (self._instrument.commands()))
         self._createTestDevice()
         self._startTestDevice()
 
@@ -307,9 +324,18 @@ class TestManager(object):
                        self.test_readings,
                        self.test_writes,
                        self.test_glitch]
+        reports = []
         for i, test in enumerate(testMethods):
-            if not test(deviceProxy):
+            result, report = test(deviceProxy)
+            if not result:
                 return i+1
+            if isinstance(report[0], list):
+                reports += report
+            else:
+                reports.append(report)
+        self.log("All tests passed", color=bcolors.HEADER)
+        for name, msg in reports:
+            self.log("\t%s:\t%s" % (name, msg))
         return 0
 
     def _checkTest(self, names, values):
@@ -323,14 +349,16 @@ class TestManager(object):
             return (True, bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC)
 
     def test_communications(self, device):
+        testTitle = "Communications"
         attrNames = ['QueryWindow', 'TimeStampsThreshold', 'State', 'Status']
         attrs = device.read_attributes(attrNames)
         values = [attr.value for attr in attrs]
         result, msg = self._checkTest(attrNames, values)
-        self.log("Communications:\t%s" % msg)
-        return result
+        self.log("%s:\t%s" % (testTitle, msg))
+        return result, [testTitle, msg]
 
     def test_readings(self, device):
+        testTitle = "Readings"
         exclude = ['QueryWindow', 'TimeStampsThreshold', 'State', 'Status',
                    'RampeableStep', 'RampeableStepSpeed', 'Fallible']
         attrNames = []
@@ -339,6 +367,11 @@ class TestManager(object):
             if attrName not in exclude:
                 attrNames.append(attrName)
             # TODO: special attributes like ramps descriptors or spectra
+        self.log("attributes for the %s test" % (testTitle),
+                 color=bcolors.OKBLUE)
+        for attrName in attrNames:
+            self.log("\t{}".format(attrName))
+        reports = []
         for i in range(1, len(attrNames)+1):
             device['QueryWindow'] = i
             attrs = device.read_attributes(attrNames)
@@ -346,12 +379,14 @@ class TestManager(object):
             nones = [value is None for value in values]
             result, msg = self._checkTest(attrNames, values)
             self.log("Readings[%d]\t%s" % (i, msg))
+            reports.append(["%s[%d]" % (testTitle, i), msg])
             if not result:
-                return False
+                return False, reports
             sleep(1.1*device['TimeStampsThreshold'].value)
-        return True
+        return True, reports
 
     def test_writes(self, device):
+        testTitle = "Writes"
         attrNames = []
         values = []
         for attrName in device.get_attribute_list():
@@ -372,10 +407,11 @@ class TestManager(object):
                 else:
                     values.append(wvalue)
         result, msg = self._checkTest(attrNames, values)
-        self.log("Writes:\t%s" % msg)
-        return result
+        self.log("%s:\t%s" % (testTitle, msg))
+        return result, [testTitle, msg]
 
     def test_glitch(self, device):
+        testTitle = "Glitch"
         if device['State'].value in [PyTango.DevState.ON]:
             self._instrument.close()
             self.log("Instrument closed", color=bcolors.OKBLUE)
@@ -384,24 +420,24 @@ class TestManager(object):
             if device['State'].value not in [PyTango.DevState.FAULT,
                                              PyTango.DevState.DISABLE,
                                              PyTango.DevState.OFF]:
-                self.log("Glitch:\t" + bcolors.FAIL +
-                         "TEST FAILED" + bcolors.ENDC +
-                         ":\n\t" + bcolors.WARNING +
-                         "No device reaction" + bcolors.ENDC)
-                return False
+                msg = bcolors.FAIL + "TEST FAILED" + bcolors.ENDC + ":\n\t"\
+                    + bcolors.WARNING + "No device reaction" + bcolors.ENDC
+                self.log("%s:\t%s" % (testTitle, msg))
+                return False, [testTitle, msg]
             self.log("Device has reacted", color=bcolors.OKBLUE)
             self._instrument.open()
             self.log("Instrument reopened", color=bcolors.OKBLUE)
             sleep(reactiontime*2)  # FIXME: enough time to the device reaction
             if device['State'].value not in [PyTango.DevState.ON]:
-                self.log("Glitch:\t" + bcolors.FAIL +
-                         "TEST FAILED" + bcolors.ENDC +
-                         ":\n\t" + bcolors.WARNING +
-                         "No device recovery" + bcolors.ENDC)
-                return False
+                msg = bcolors.FAIL + "TEST FAILED" + bcolors.ENDC + \
+                    ":\n\t" + bcolors.WARNING + "No device recovery" \
+                    + bcolors.ENDC
+                self.log("%s:\t%s" % (testTitle, msg))
+                return False, [testTitle, msg]
             self.log("Device has recovered", color=bcolors.OKBLUE)
-        self.log("Glitch:\t"+bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC)
-        return True
+        msg = bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC
+        self.log("%s:\t%s" % (testTitle, msg))
+        return True, [testTitle, msg]
 
 
 def signalHandler(signum, frame):

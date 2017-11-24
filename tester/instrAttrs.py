@@ -49,19 +49,26 @@ class FakeNumber(object):
         self._lowerLimit = int(value)
 
 
-# class FakeIntegerArray(FakeNumber):
-# 
-#     _samples = None
-# 
-#     def __init__(self, samples=10, *args, **kwargs):
-#         super(FakeIntegerArray, self).__init__(*args, **kwargs)
-#         self._samples = samples
-# 
-#     def samples(self, value=None):
-#         if value is None:
-#             return self._samples
-#         self._samples = int(value)
+class FakeString(object):
 
+    _value = None
+
+    def __init__(self, *args, **kwargs):
+        super(FakeString, self).__init__(*args, **kwargs)
+
+
+class FakeIntegerArray(FakeNumber):
+ 
+    _samples = None
+ 
+    def __init__(self, samples=10, *args, **kwargs):
+        super(FakeIntegerArray, self).__init__(*args, **kwargs)
+        self._samples = samples
+ 
+    def samples(self, value=None):
+        if value is None:
+            return self._samples
+        self._samples = int(value)
 
 class FakeInteger(FakeNumber):
     def __init__(self, *args, **kwargs):
@@ -147,12 +154,24 @@ class ROIntegerFallible(ROinteger):
             return ROinteger.value(self)
 
 
-# class ROintegerArray(FakeIntegerArray):
-#     def __init__(self, *args, **kwargs):
-#         super(ROintegerArray, self).__init__(*args, **kwargs)
-#         self.value()
-# 
-#     def value(self):
-#         self._value = randint(self._lowerLimit, self._upperLimit,
-#                               size=self._samples)
-#         return self._value
+class Format(FakeString):
+    def __init__(self, *args, **kwargs):
+        super(Format, self).__init__(*args, **kwargs)
+        self._value = 'ASCII'
+
+    def value(self, value=None):
+        if value is None:
+            return self._value
+        if value in ['ASC', 'ASCI', 'ASCII', 'BYT', 'BYTE', 'WOR', 'WORD']:
+            self._value = value
+
+
+class ROintegerArray(FakeIntegerArray):
+    def __init__(self, *args, **kwargs):
+        super(ROintegerArray, self).__init__(*args, **kwargs)
+        self.value()
+ 
+    def value(self):
+        self._value = randint(self._lowerLimit, self._upperLimit,
+                              size=self._samples)
+        return self._value
