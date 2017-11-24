@@ -17,7 +17,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-
+from .builder import Builder, AttrExc
 from .attributes import AttributeObj
 from .attributes import ROAttributeObj, RWAttributeObj
 from .features import AttributeFeature

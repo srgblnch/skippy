@@ -54,6 +54,7 @@ import communicator
 import copy
 import instructionSet
 import numpy
+from skippylib import AttrExc
 import socket
 import struct
 import threading
@@ -785,7 +786,7 @@ class Skippy (PyTango.Device_4Impl):
                               % (e))
             traceback.print_exc()
 
-    @instructionSet.AttrExc
+    @AttrExc
     def read_attr(self, attr):
         if self.get_state() in [PyTango.DevState.FAULT]:
             attr.set_value_date_quality(0, time.time(),
@@ -839,7 +840,7 @@ class Skippy (PyTango.Device_4Impl):
             raise AttributeError("Invalid read of the attribute %s"
                                  % (attrName))
 
-    @instructionSet.AttrExc
+    @AttrExc
     def write_attr(self, attr):
         '''The execution of this method starts with three different branches:
            - An instrument attribute to be send. This splits in two branches
