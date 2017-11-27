@@ -420,10 +420,15 @@ class TestManager(object):
             if device['State'].value not in [PyTango.DevState.FAULT,
                                              PyTango.DevState.DISABLE,
                                              PyTango.DevState.OFF]:
-                msg = bcolors.FAIL + "TEST FAILED" + bcolors.ENDC + ":\n\t"\
-                    + bcolors.WARNING + "No device reaction" + bcolors.ENDC
-                self.log("%s:\t%s" % (testTitle, msg))
-                return False, [testTitle, msg]
+                self.log("No device reaction yet...", bcolors.WARNING)
+                sleep(reactiontime*2)  # FIXME: enough time to the device reaction
+                if device['State'].value not in [PyTango.DevState.FAULT,
+                                                 PyTango.DevState.DISABLE,
+                                                 PyTango.DevState.OFF]:
+                    msg = bcolors.FAIL + "TEST FAILED" + bcolors.ENDC + ":\n\t"\
+                        + bcolors.WARNING + "No device reaction" + bcolors.ENDC
+                    self.log("%s:\t%s" % (testTitle, msg))
+                    return False, [testTitle, msg]
             self.log("Device has reacted", color=bcolors.OKBLUE)
             self._instrument.open()
             self.log("Instrument reopened", color=bcolors.OKBLUE)
