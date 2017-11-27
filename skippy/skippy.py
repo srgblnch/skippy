@@ -53,14 +53,14 @@ import sys
 import copy
 import instructionSet
 import numpy
-from skippylib import AttrExc, buildCommunicator, TIME_BETWEEN_SENDANDRECEIVE
+from skippylib import (AttrExc, buildCommunicator, TIME_BETWEEN_SENDANDRECEIVE,
+                       WatchDog)
 import struct
 import threading
 import time
 import traceback
 from types import StringType
 from version import version
-from watchDog import WatchDog
 
 MINIMUM_RECOVERY_DELAY = 3.0
 DEFAULT_RECOVERY_DELAY = 600.0

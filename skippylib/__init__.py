@@ -25,6 +25,7 @@ from .builder import Builder, AttrExc
 from .communications import buildCommunicator, TIME_BETWEEN_SENDANDRECEIVE
 from .features import (SkippyFeature, RampFeature, RawDataFeature,
                        ArrayDataInterpreterFeature)
+from .watchdog import WatchDog
 
 
 __author__ = "Sergi Blanch-Torné"
