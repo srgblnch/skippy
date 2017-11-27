@@ -353,8 +353,8 @@ class Builder:
                                          # writeFormula=definition['writeFormula'],
                                          rampeable=True,
                                          parent=self.__device)
-            self.configureRamping(attrName, definition,
-                                  readmethod, writemethod)
+            self.__configureRamping(attrName, definition,
+                                    readmethod, writemethod)
         else:
             self.__device.attributes[attrName] =\
                 SkippyReadWriteAttribute(name=attrName,
@@ -380,7 +380,7 @@ class Builder:
         aprop.set_description(descr)
         attr.set_default_properties(aprop)
 
-    def configureRamping(self, attrName, definition, readmethod, writemethod):
+    def __configureRamping(self, attrName, definition, readmethod, writemethod):
         db = PyTango.Database()
         step = PyTango.Attr(attrName+"Step", definition['type'],
                             PyTango.READ_WRITE)
