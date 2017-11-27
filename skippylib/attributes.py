@@ -17,9 +17,9 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from .features import RampObj, RawDataObj, ArrayDataInterpreterObj
+from .features import RampFeature, RawDataFeature, ArrayDataInterpreterFeature
 import PyTango
-from .skippyobj import SkippyObj
+from .abstracts import AbstractSkippyAttribute
 from time import time
 import traceback
 
@@ -29,30 +29,28 @@ __copyright__ = "Copyright 2017, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 
 
-class AttributeObj(SkippyObj):
+class SkippyAttribute(AbstractSkippyAttribute):
     def __init__(self, type, dim, parent=None, withRawData=False,
                  *args, **kwargs):
-        super(AttributeObj, self).__init__(*args, **kwargs)
+        super(SkippyAttribute, self).__init__(*args, **kwargs)
         self._type = type
         self._dim = dim
         self._parent = parent
         if withRawData:
-            self._raw = RawDataObj(name="rawdata", parent=self)
+            self._raw = RawDataFeature(name="rawdata", parent=self)
         else:
             self._raw = None
         if self.dim == 1:
             if not hasattr(self, '_raw') or not self._raw:
-                self._raw = RawDataObj(name="rawdata", parent=self)
+                self._raw = RawDataFeature(name="rawdata", parent=self)
             # FIXME: format, origin, increment
             format = 'WaveformDataFormat'
             origin = 'WaveformOrigin'
             increment = 'WaveformIncrement'
-            self._interpreter = ArrayDataInterpreterObj(name="array",
-                                                        parent=self,
-                                                        rawObj=self._raw,
-                                                        format=format,
-                                                        origin=origin,
-                                                        increment=increment)
+            self._interpreter = \
+                ArrayDataInterpreterFeature(name="array", parent=self,
+                                            rawObj=self._raw, format=format,
+                                            origin=origin, increment=increment)
 
     @property
     def type(self):
@@ -94,7 +92,7 @@ class AttributeObj(SkippyObj):
 
 # FIXME: it doesn't work as expected
 #     def _buildRawFunctionality(self):
-#         self._raw = RawDataObj("rawdata", self)
+#         self._raw = RawDataFeature("rawdata", self)
 #         self._makeRawDataProperties()
 #
 #     def _makeRawDataProperties(self):
@@ -114,10 +112,10 @@ class AttributeObj(SkippyObj):
             return self._interpreter.interpretArray()
 
 
-class ROAttributeObj(AttributeObj):
+class SkippyReadAttribute(SkippyAttribute):
     def __init__(self, readCmd, readFormula=None,
                  *args, **kwargs):
-        super(ROAttributeObj, self).__init__(*args, **kwargs)
+        super(SkippyReadAttribute, self).__init__(*args, **kwargs)
         self._readCmd = readCmd
         self._readFormula = readFormula
         self._lastReadValue = None
@@ -229,12 +227,12 @@ class ROAttributeObj(AttributeObj):
         self._quality = value
 
 
-class RWAttributeObj(ROAttributeObj):
+class SkippyReadWriteAttribute(SkippyReadAttribute):
     # FIXME: this class is getting dirty due to the ramp: too many specific
     #        methods when the ramp should be encapsulated apart.
     def __init__(self, writeCmd=None, writeFormula=None, rampeable=False,
                  writeValues=None, *args, **kwargs):
-        super(RWAttributeObj, self).__init__(*args, **kwargs)
+        super(SkippyReadWriteAttribute, self).__init__(*args, **kwargs)
         self._writeCmd = writeCmd
         self._writeFormula = writeFormula
         self._lastWriteValue = None
@@ -293,7 +291,7 @@ class RWAttributeObj(ROAttributeObj):
 
     def makeRampeable(self):
         if self._ramp is None:
-            self._ramp = RampObj(name="ramp", parent=self)
+            self._ramp = RampFeature(name="ramp", parent=self)
 
     def getRampObj(self):
         return self._ramp

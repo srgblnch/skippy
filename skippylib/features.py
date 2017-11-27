@@ -18,7 +18,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import numpy
-from .skippyobj import SkippyObj
+from .abstracts import AbstractSkippyAttribute, AbstractSkippyFeature
 import struct
 from threading import Thread
 from time import sleep
@@ -29,12 +29,12 @@ __copyright__ = "Copyright 2017, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 
 
-class AttributeFeature(SkippyObj):
+class SkippyFeature(AbstractSkippyFeature):
     def __init__(self, parent, *args, **kwargs):
-        super(AttributeFeature, self).__init__(*args, **kwargs)
+        super(SkippyFeature, self).__init__(*args, **kwargs)
         if parent is None:
             raise AssertionError("Functionality must have a parent")
-        if not isinstance(parent, SkippyObj):
+        if not isinstance(parent, AbstractSkippyAttribute):
             raise AssertionError("Functionality parent must be an attribute "
                                  "object")
         self._parent = parent
@@ -64,9 +64,9 @@ class AttributeFeature(SkippyObj):
         return repr
 
 
-class RampObj(AttributeFeature):
+class RampFeature(SkippyFeature):
     def __init__(self, *args, **kwargs):
-        super(RampObj, self).__init__(*args, **kwargs)
+        super(RampFeature, self).__init__(*args, **kwargs)
         self._rampStep = None
         self._rampStepSpeep = None
         self._rampThread = None
@@ -184,9 +184,9 @@ class RampObj(AttributeFeature):
         self._parent.doHardwareWrite(cmd)
 
 
-class RawDataObj(AttributeFeature):
+class RawDataFeature(SkippyFeature):
     def __init__(self, *args, **kwargs):
-        super(RawDataObj, self).__init__(*args, **kwargs)
+        super(RawDataFeature, self).__init__(*args, **kwargs)
         self._lastReadRaw = None
 
     def __repr__(self):
@@ -202,10 +202,10 @@ class RawDataObj(AttributeFeature):
         self._lastReadRaw = value
 
 
-class ArrayDataInterpreterObj(AttributeFeature):
+class ArrayDataInterpreterFeature(SkippyFeature):
     def __init__(self, rawObj, format, origin=None, increment=None,
                  *args, **kwargs):
-        super(ArrayDataInterpreterObj, self).__init__(*args, **kwargs)
+        super(ArrayDataInterpreterFeature, self).__init__(*args, **kwargs)
         self._rawObj = rawObj
         self._dataFormatAttrName = format
         self._originAttrName = origin
@@ -229,10 +229,10 @@ class ArrayDataInterpreterObj(AttributeFeature):
                             self.debug_stream("%s not in attributes"
                                               % (attrName))
                 else:
-                    self.debug_stream("container of my AttributeObj doesn't "
-                                      "support attributes")
+                    self.debug_stream("container of my SkippyAttribute "
+                                      "doesn't support attributes")
             else:
-                self.debug_stream("My AttributeObj doesn't have parent")
+                self.debug_stream("My SkippyAttribute doesn't have parent")
         else:
             self.debug_stream("This functionality doesn't have parent")
 
@@ -256,8 +256,8 @@ class ArrayDataInterpreterObj(AttributeFeature):
 
     def interpretArray(self):
         if self._rawObj is None or self._parent is None:
-            raise AssertionError("It is necessary to have AttributeObj and "
-                                 "RawDataObj objects to interpret data")
+            raise AssertionError("It is necessary to have SkippyAttribute and "
+                                 "RawDataFeature objects to interpret data")
         data = self._rawObj.lastReadRaw
         dataFormat = self.__getDataFormat()
         if dataFormat.startswith('ASC'):

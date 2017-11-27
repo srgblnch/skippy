@@ -20,7 +20,7 @@
 from copy import copy
 import functools
 import PyTango
-from .attributes import ROAttributeObj, RWAttributeObj
+from .attributes import SkippyReadAttribute, SkippyReadWriteAttribute
 import traceback
 
 __author__ = "Sergi Blanch-Torné"
@@ -335,34 +335,36 @@ class Builder:
 
     def __buildROObj(self, attrName, definition):
         self.__device.attributes[attrName] =\
-            ROAttributeObj(name=attrName, type=definition['type'],
-                           dim=definition['dim'][0],
-                           readCmd=definition['readCmd'],
-                           readFormula=definition['readFormula'],
-                           parent=self.__device)
+            SkippyReadAttribute(name=attrName, type=definition['type'],
+                                dim=definition['dim'][0],
+                                readCmd=definition['readCmd'],
+                                readFormula=definition['readFormula'],
+                                parent=self.__device)
 
     def __buildRWObj(self, attrName, definition, readmethod, writemethod):
         if 'rampeable' in definition:
             self.__device.attributes[attrName] =\
-                RWAttributeObj(name=attrName, type=definition['type'],
-                               dim=definition['dim'][0],
-                               readCmd=definition['readCmd'],
-                               writeCmd=definition['writeCmd'],
-                               readFormula=definition['readFormula'],
-                               # writeFormula=definition['writeFormula'],
-                               rampeable=True,
-                               parent=self.__device)
+                SkippyReadWriteAttribute(name=attrName,
+                                         type=definition['type'],
+                                         dim=definition['dim'][0],
+                                         readCmd=definition['readCmd'],
+                                         writeCmd=definition['writeCmd'],
+                                         readFormula=definition['readFormula'],
+                                         # writeFormula=definition['writeFormula'],
+                                         rampeable=True,
+                                         parent=self.__device)
             self.configureRamping(attrName, definition,
                                   readmethod, writemethod)
         else:
             self.__device.attributes[attrName] =\
-                RWAttributeObj(name=attrName, type=definition['type'],
-                               dim=definition['dim'][0],
-                               readCmd=definition['readCmd'],
-                               writeCmd=definition['writeCmd'],
-                               readFormula=definition['readFormula'],
-                               # writeFormula=definition['writeFormula'],
-                               parent=self.__device)
+                SkippyReadWriteAttribute(name=attrName,
+                                         type=definition['type'],
+                                         dim=definition['dim'][0],
+                                         readCmd=definition['readCmd'],
+                                         writeCmd=definition['writeCmd'],
+                                         readFormula=definition['readFormula'],
+                                         # writeFormula=definition['writeFormula'],
+                                         parent=self.__device)
 
     def __prepareWriteValues(self, attrName, definition, aprop, attr):
         self.__device.attributes[attrName].\

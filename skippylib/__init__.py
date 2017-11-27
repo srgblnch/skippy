@@ -17,13 +17,14 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from .attributes import AttributeObj
-from .attributes import ROAttributeObj, RWAttributeObj
+# from .abstracts import (AbstractSkippyObj, AbstractSkippyAttribute,
+#                         AbstractSkippyFeature)
+from .attributes import (SkippyAttribute, SkippyReadAttribute,
+                         SkippyReadWriteAttribute)
 from .builder import Builder, AttrExc
 from .communications import buildCommunicator, TIME_BETWEEN_SENDANDRECEIVE
-from .features import AttributeFeature
-from .features import RampObj, RawDataObj, ArrayDataInterpreterObj
-from .skippyobj import SkippyObj
+from .features import (SkippyFeature, RampFeature, RawDataFeature,
+                       ArrayDataInterpreterFeature)
 
 
 __author__ = "Sergi Blanch-Torné"

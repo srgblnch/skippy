@@ -23,11 +23,11 @@ __copyright__ = "Copyright 2017, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 
 
-class SkippyObj(object):
+class AbstractSkippyObj(object):
     def __init__(self, name, *args, **kwargs):
-        super(SkippyObj, self).__init__()
+        super(AbstractSkippyObj, self).__init__()
         if name is None:
-            raise AssertionError("Functionality must have a name")
+            raise AssertionError("SkippyObj must have a name")
         self._name = name
 
     @property
@@ -70,3 +70,11 @@ class SkippyObj(object):
         if hasattr(self, '_parent') and self._parent and \
                 hasattr(self._parent, 'change_state_status'):
             self._parent.change_state_status(*args, **kwargs)
+
+class AbstractSkippyAttribute(AbstractSkippyObj):
+    def __init__(self, *args, **kwargs):
+        super(AbstractSkippyAttribute, self).__init__(*args, **kwargs)
+
+class AbstractSkippyFeature(AbstractSkippyObj):
+    def __init__(self, *args, **kwargs):
+        super(AbstractSkippyFeature, self).__init__(*args, **kwargs)
