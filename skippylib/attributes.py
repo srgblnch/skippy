@@ -60,15 +60,30 @@ class SkippyAttribute(AbstractSkippyAttribute):
     def dim(self):
         return self._dim
 
-    def get_state(self):
-        if self._parent is not None and\
-                hasattr(self._parent, 'get_state'):
-            return self._parent.get_state()
+    def isWritable(self):
+        return False
 
-    def change_state_status(self, *args, **kwargs):
-        if self._parent is not None and\
-                hasattr(self._parent, 'change_state_status'):
-            self._parent.change_state_status(*args, **kwargs)
+    def isRampeable(self):
+        return False
+
+    def hasWriteValues(self):
+        return False
+
+    def hasRawData(self):
+        if self._raw is None:
+            return False
+        return True
+
+# Those method are in the superclass AbstractSkippyObj
+#     def get_state(self):
+#         if self._parent is not None and\
+#                 hasattr(self._parent, 'get_state'):
+#             return self._parent.get_state()
+# 
+#     def change_state_status(self, *args, **kwargs):
+#         if self._parent is not None and\
+#                 hasattr(self._parent, 'change_state_status'):
+#             self._parent.change_state_status(*args, **kwargs)
 
     def _buildrepr_(self, attributes):
         repr = "%s (%s):\n" % (self.name, self.__class__.__name__)
@@ -131,25 +146,11 @@ class SkippyReadAttribute(SkippyAttribute):
         return self._buildrepr_(['rvalue', 'timestamp', 'quality', 'dim',
                                  'readCmd', 'readFormula'])
 
-    def isWritable(self):
-        return False
-
-    def isRampeable(self):
-        return False
-
-    def hasWriteValues(self):
-        return False
-
-    def hasRawData(self):
-        if self._raw is None:
-            return False
-        return True
-
     @property
     def readCmd(self):
         return self._readCmd
 
-    def __doHardwareRead(self, query):
+    def _doHardwareRead(self, query):
         if self._parent is not None and hasattr(self._parent,
                                                 'doHardwareRead'):
             return self._parent.doHardwareRead(query)
@@ -161,7 +162,7 @@ class SkippyReadAttribute(SkippyAttribute):
     @property
     def rvalue(self):
         # TODO: check if has to be read from cache
-        newReadValue = self.__doHardwareRead(self.readCmd)
+        newReadValue = self._doHardwareRead(self.readCmd)
         t = time()
         if self._readFormula:
             self.debug_stream("Evaluating %r with VALUE=%r"
@@ -263,7 +264,7 @@ class SkippyReadWriteAttribute(SkippyReadAttribute):
     def writeCmd(self):
         return self._writeCmd
 
-    def doHardwareWrite(self, cmd):
+    def _doHardwareWrite(self, cmd):
         if self._parent is not None and\
                 hasattr(self._parent, 'doHardwareWrite'):
             self._parent.doHardwareWrite(cmd)

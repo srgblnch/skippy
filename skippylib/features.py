@@ -180,8 +180,8 @@ class RampFeature(SkippyFeature):
         self._change_state_status(newState=backup_state, rebuild=True)
         self._rampThread = None
 
-    def __doHardwareWrite(self, cmd):
-        self._parent.doHardwareWrite(cmd)
+    def _doHardwareWrite(self, cmd):
+        self._parent._doHardwareWrite(cmd)
 
 
 class RawDataFeature(SkippyFeature):
@@ -236,19 +236,22 @@ class ArrayDataInterpreterFeature(SkippyFeature):
         else:
             self.debug_stream("This functionality doesn't have parent")
 
-    def __getDataFormat(self):
+    @property
+    def _dataFormat(self):
         value = self.__getParentAttrValue(self._dataFormatAttrName)
         if not value:
             return ''
         return value
 
-    def __getOrigin(self):
+    @property
+    def _origin(self):
         value = self.__getParentAttrValue(self._originAttrName)
         if not value:
             return 0.0  # addition factor
         return value
 
-    def __getIncrement(self):
+    @property
+    def _increment(self):
         value = self.__getParentAttrValue(self._originAttrName)
         if not value:
             return 1.0  # multiplier factor
@@ -259,7 +262,7 @@ class ArrayDataInterpreterFeature(SkippyFeature):
             raise AssertionError("It is necessary to have SkippyAttribute and "
                                  "RawDataFeature objects to interpret data")
         data = self._rawObj.lastReadRaw
-        dataFormat = self.__getDataFormat()
+        dataFormat = self._dataFormat
         if dataFormat.startswith('ASC'):
             data = self.__interpretAsciiFormat(data)
         else:
@@ -292,7 +295,7 @@ class ArrayDataInterpreterFeature(SkippyFeature):
         unpackedData = self.__unpackBytes(data, format, divisor)
         if unpackedData:
             floats = numpy.array(unpackInt, dtype=float)
-            return self.__getOrigin() + (self.__getIncrement() * floats)
+            return self._Origin + (self._increment * floats)
 
     def __interpretHeader(self, buffer):
         if buffer[0] == '#' and len(buffer) > 2:
