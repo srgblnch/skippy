@@ -61,7 +61,6 @@ class Skippy(AbstractSkippyObj):
                  xonxoff=None,
                  # startup flags
                  autoStandby=True, autoOn=True, autoStart=True,
-                 # 
                  nChannels=None, nFunctions=None, nMultiple=None,
                  # monitoring parameters
                  attrs2Monitor=None,
@@ -82,7 +81,7 @@ class Skippy(AbstractSkippyObj):
         self._autoStandby = autoStandby
         self._autoOn = autoOn
         self._autoStart = autoStart
-        self._attrs2Monitor=attrs2Monitor
+        self._attrs2Monitor = attrs2Monitor
         self._nChannels = nChannels
         self._nFunctions = nFunctions
         self._nMultiple = nMultiple
@@ -384,7 +383,7 @@ class Skippy(AbstractSkippyObj):
             self.warn_stream("Monitor not yet build: ignored the append of "
                              "%s (%s)" % (attrName, attrPeriod))
             return
-        if attrPeriod == None:
+        if attrPeriod is None:
             attrPeriod = self.timestampsThreshold
         if attrPeriod == self.timestampsThreshold:
             monitoringType = 'Generic'
@@ -487,8 +486,7 @@ class Skippy(AbstractSkippyObj):
                     if answer is None:
                         self.error_stream("In _readAttrProcedure() "
                                           "Uou, we've got a null answer!")
-                        self._change_state_status(newState=
-                                                  DevState.FAULT,
+                        self._change_state_status(newState=DevState.FAULT,
                                                   newLine="Communication "
                                                   "error to the instrument",
                                                   important=True)
@@ -558,7 +556,6 @@ class Skippy(AbstractSkippyObj):
                         if attrName is not None:
                             try:
                                 t_a = self.attributes[attrName].timestamp
-                                # attrObj = multiattr.get_attr_by_name(attrName)
                                 attrDim = self.attributes[attrName].dim
                                 if attrIndex not in \
                                         self._monitor.monitoredIds and \
@@ -632,7 +629,7 @@ class Skippy(AbstractSkippyObj):
                                       "function is close" % (attrName))
                     return None
         return attrName
-    
+
     def __preHardwareRead(self, attrList, window=None):
         '''Given a list of attributes to be read, prepare it.
            - Divide the attributes to be read in subsets of QueryWindow size.

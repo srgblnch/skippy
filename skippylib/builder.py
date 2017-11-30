@@ -141,9 +141,8 @@ class Builder(AbstractSkippyObj):
                 attr = self.__getAttrObj(attributeName, attributeDefinition)
                 self.debug_stream("Added: %r" % (attr))
             except Exception as e:
-                self.error_stream("NOT added attribute: %s "
-                                           "due to exception: %s"
-                                           % (attributeName, e))
+                self.error_stream("NOT added attribute: %s due to exception: "
+                                  "%s" % (attributeName, e))
                 traceback.print_exc()
 
     def __prepareChannelLikeGroup(self, attributeName, attributeDefinition):
@@ -362,7 +361,7 @@ class Builder(AbstractSkippyObj):
             definition['writeCmd'] = definition['writeCmd'](scpiPrefix, number)
         if 'manager' in definition and definition['manager'] is True:
             self._parent.attributesFlags["%s%d"
-                                          % (attrSuffix, number)] = attrName
+                                         % (attrSuffix, number)] = attrName
 
     def __buildROObj(self, attrName, attrId, definition):
         self._parent.attributes[attrName] =\
@@ -415,7 +414,8 @@ class Builder(AbstractSkippyObj):
         aprop.set_description(descr)
         attr.set_default_properties(aprop)
 
-    def __configureRamping(self, attrName, definition, readmethod, writemethod):
+    def __configureRamping(self, attrName, definition, readmethod,
+                           writemethod):
         if self.__device is not None:
             db = PyTango.Database()
             step = PyTango.Attr(attrName+"Step", definition['type'],
@@ -424,7 +424,6 @@ class Builder(AbstractSkippyObj):
             step.set_memorized_init(True)
             self.__device.add_attribute(step, r_meth=readmethod,
                                         w_meth=writemethod)
-            
             try:
                 devName = self.__device.get_name()
                 stepAttrName = attrName+"Step"

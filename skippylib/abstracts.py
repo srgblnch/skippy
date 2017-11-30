@@ -82,9 +82,11 @@ class AbstractSkippyObj(object):
                 hasattr(self._parent, '_change_state_status'):
             self._parent._change_state_status(*args, **kwargs)
 
+
 class AbstractSkippyAttribute(AbstractSkippyObj):
     def __init__(self, *args, **kwargs):
         super(AbstractSkippyAttribute, self).__init__(*args, **kwargs)
+
 
 class AbstractSkippyFeature(AbstractSkippyObj):
     def __init__(self, *args, **kwargs):

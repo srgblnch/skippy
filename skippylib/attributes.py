@@ -79,17 +79,6 @@ class SkippyAttribute(AbstractSkippyAttribute):
             return False
         return True
 
-# Those method are in the superclass AbstractSkippyObj
-#     def get_state(self):
-#         if self._parent is not None and\
-#                 hasattr(self._parent, 'get_state'):
-#             return self._parent.get_state()
-# 
-#     def change_state_status(self, *args, **kwargs):
-#         if self._parent is not None and\
-#                 hasattr(self._parent, 'change_state_status'):
-#             self._parent.change_state_status(*args, **kwargs)
-
     def _buildrepr_(self, attributes):
         repr = "%s (%s):\n" % (self.name, self.__class__.__name__)
         for key in attributes:

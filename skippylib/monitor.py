@@ -188,7 +188,6 @@ class Monitor(AbstractSkippyObj):
                 if self.__getDevice() is not None:
                     self.set_change_event(argin, False, False)
                 break
-        
         position = self._monitoredAttributeIds.index(attrId)
         self._monitoredAttributeIds.pop(position)
         return True

@@ -128,5 +128,3 @@ def fakeinstrument(model):
     raise EnvironmentError("Fake Instrument %s model not supported" % (model))
 # done supported companies methods
 ##################################
-
-

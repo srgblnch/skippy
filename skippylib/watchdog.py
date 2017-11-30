@@ -144,7 +144,6 @@ class WatchDog(AbstractSkippyObj):
                 idn = self._communications.ask("*IDN?")
                 if idn == self._parent._idn:
                     self.debug_stream("Watchdog found the instrument ok")
-                    
                     return True
                 self.warn_stream("Watchdog received a bad answer from the "
                                  "instrument (%d): %r" % (tries, idn))
