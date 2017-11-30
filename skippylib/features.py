@@ -169,7 +169,7 @@ class RampFeature(SkippyFeature):
             attrWriteCmd = self._parent.writeCmd(new_pos)
             self.info_stream("In _rampProcedure() step from %f to %f sending: "
                              "%s" % (orig_pos, dest_pos, attrWriteCmd))
-            self.__doHardwareWrite(attrWriteCmd)
+            self._write(attrWriteCmd)
             sleep(self.rampStepSpeed)
             # get newer values
             orig_pos = self._parent.rvalue
@@ -180,8 +180,8 @@ class RampFeature(SkippyFeature):
         self._change_state_status(newState=backup_state, rebuild=True)
         self._rampThread = None
 
-    def _doHardwareWrite(self, cmd):
-        self._parent._doHardwareWrite(cmd)
+    def _write(self, cmd):
+        self._parent._write(cmd)
 
 
 class RawDataFeature(SkippyFeature):
@@ -317,9 +317,10 @@ class ArrayDataInterpreterFeature(SkippyFeature):
         elif dataFormat.lower() in ['real,32', 'asc']:
             format, divisor = 'I', 4
         else:
-            self.error_stream("Cannot decodify data received with format %r"
-                              % (dataFormat))
-            format, divisor = None, None
+            raise AssertionError("Cannot decodify data received with format %r"
+                                 % (dataFormat))
+        self.debug_stream("dataFormat %s: unpack with %s, %d"
+                          % (dataFormat, format, divisor))
         return format, divisor
 
     def __getCompleteBytes(self, buffer, divisor):

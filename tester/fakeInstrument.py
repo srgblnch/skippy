@@ -18,6 +18,7 @@ from __future__ import print_function
 # ##### END GPL LICENSE BLOCK #####
 
 import argparse
+from datetime import datetime
 from instrAttrs import (ROinteger, RWinteger, ROfloat, RWfloat,
                         ROIntegerFallible, Format, ROintegerArray)
 from instrIdn import InstrumentIdentification, __version__
@@ -412,37 +413,60 @@ class TestManager(object):
 
     def test_glitch(self, device):
         testTitle = "Glitch"
-        if device['State'].value in [PyTango.DevState.ON]:
+        if device['State'].value in [PyTango.DevState.ON,
+                                     PyTango.DevState.RUNNING]:
+            reactiontime = \
+                float(device.Exec("self.skippy.watchdogObj.checkPeriod"))
+            t_0 = datetime.now()
             self._instrument.close()
             self.log("Instrument closed", color=bcolors.OKBLUE)
-            reactiontime = float(device.Exec("self._watchDog._checkPeriod"))
-            sleep(reactiontime*2)  # FIXME: enough time to the device reaction
-            if device['State'].value not in [PyTango.DevState.FAULT,
-                                             PyTango.DevState.DISABLE,
-                                             PyTango.DevState.OFF]:
-                self.log("No device reaction yet...", bcolors.WARNING)
-                sleep(reactiontime*2)  # FIXME: enough time to the device reaction
-                if device['State'].value not in [PyTango.DevState.FAULT,
-                                                 PyTango.DevState.DISABLE,
-                                                 PyTango.DevState.OFF]:
-                    msg = bcolors.FAIL + "TEST FAILED" + bcolors.ENDC + ":\n\t"\
-                        + bcolors.WARNING + "No device reaction" + bcolors.ENDC
-                    self.log("%s:\t%s" % (testTitle, msg))
-                    return False, [testTitle, msg]
+            reacted = self._waitUntilReaction(device, reactiontime,
+                                              [PyTango.DevState.FAULT,
+                                               PyTango.DevState.DISABLE])
+            if not reacted:
+                msg = "No device reaction after %s" % (datetime.now()-t_0)
+                self.log(msg)
+                fullmsg = bcolors.FAIL + "TEST FAILED" + bcolors.ENDC + \
+                    ":\n\t" + bcolors.WARNING + msg + bcolors.ENDC
+                return False, [testTitle, fullmsg]
             self.log("Device has reacted", color=bcolors.OKBLUE)
+            t_1 = datetime.now()
             self._instrument.open()
             self.log("Instrument reopened", color=bcolors.OKBLUE)
-            sleep(reactiontime*2)  # FIXME: enough time to the device reaction
-            if device['State'].value not in [PyTango.DevState.ON]:
-                msg = bcolors.FAIL + "TEST FAILED" + bcolors.ENDC + \
-                    ":\n\t" + bcolors.WARNING + "No device recovery" \
-                    + bcolors.ENDC
-                self.log("%s:\t%s" % (testTitle, msg))
-                return False, [testTitle, msg]
+            reacted = self._waitUntilReaction(device, reactiontime,
+                                              [PyTango.DevState.ON,
+                                               PyTango.DevState.RUNNING])
+            if not reacted:
+                msg = "No device recovery after %s" % (datetime.now()-t_1)
+                self.log(msg)
+                fullmsg = bcolors.FAIL + "TEST FAILED" + bcolors.ENDC + \
+                    ":\n\t" + bcolors.WARNING + msg + bcolors.ENDC
+                return False, [testTitle, fullmsg]
             self.log("Device has recovered", color=bcolors.OKBLUE)
-        msg = bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC
-        self.log("%s:\t%s" % (testTitle, msg))
-        return True, [testTitle, msg]
+            msg = bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC
+            self.log("%s:\t%s" % (testTitle, msg))
+            return True, [testTitle, msg]
+        else:
+            msg = bcolors.FAIL + "TEST FAILED" + bcolors.ENDC + \
+                    ":\n\t" + bcolors.WARNING + \
+                    "Wrong device state %s" % (device['State'].value) \
+                    + bcolors.ENDC
+            self.log("%s:\t%s" % (testTitle, msg))
+            return False, [testTitle, msg]
+
+    def _waitUntilReaction(self, device, reactionPeriod, statesLst):
+        tries = 0
+        state = device['State'].value
+        while state not in statesLst:
+            self.log("No device reaction yet... (%s)" % state,
+                     bcolors.WARNING)
+            sleep(reactionPeriod)
+            tries += 1
+            if tries == 10:
+                return False
+            state = device['State'].value
+        self.log("Found a device reaction, state %s" % state)
+        return True
 
 
 def signalHandler(signum, frame):

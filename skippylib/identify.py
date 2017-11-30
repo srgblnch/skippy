@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 import os
-from skippylib import Builder
+from .builder import Builder
 import traceback
 
 __author__ = "Sergi Blanch-Torne"
@@ -28,7 +28,7 @@ __license__ = "GPLv3+"
 __status__ = "Production"
 
 
-def identifier(idn, deviceObj):
+def identifier(idn, parent):
     '''This method has been designed to understand from the answer of an
        instrument to the '*IDN?' command, what is the correct object that
        contains the set of commands for this instrument.
@@ -42,7 +42,7 @@ def identifier(idn, deviceObj):
             'keithley instruments inc.': keithley,
             'fakeinstruments. inc': fakeinstrument,
             }[company](model)
-    builder = Builder(deviceObj)
+    builder = Builder(name="Builder", parent=parent)
     builder.parseFile(file)
     return builder
 

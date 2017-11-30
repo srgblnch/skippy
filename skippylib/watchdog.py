@@ -15,6 +15,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from .abstracts import AbstractSkippyObj
 from PyTango import DevState
 from threading import Thread, Event
 from time import sleep
@@ -30,9 +31,9 @@ __status__ = "Production"
 MINIMUM_RECOVERY_DELAY = 3.0
 
 
-class WatchDog(object):
+class WatchDog(AbstractSkippyObj):
 
-    _device = None
+    _parent = None
     _thread = None
     _work = None
     _finish = None
@@ -44,15 +45,18 @@ class WatchDog(object):
     #       it is back ON in a reasonable time.
     # TODO: collect information about when and why it had to act
 
-    def __init__(self, device, checkPeriod=3.0,
+    def __init__(self, checkPeriod=3.0,
                  recoverDelay=MINIMUM_RECOVERY_DELAY, *args, **kwargs):
         super(WatchDog, self).__init__(*args, **kwargs)
-        self._device = device
         self._checkPeriod = float(checkPeriod)
         self._recoverDelay = float(recoverDelay)
         self.__prepareEvents()
         self.__prepareThread()
-        self._debug("WatchDog prepared")
+        self.debug_stream("WatchDog prepared")
+
+    @property
+    def checkPeriod(self):
+        return self._checkPeriod
 
     def __prepareEvents(self):
         self._work = Event()
@@ -65,7 +69,7 @@ class WatchDog(object):
         self._thread.setDaemon(True)
 
     def __doWatch(self):
-        self._debug("WatchDog launched")
+        self.debug_stream("WatchDog launched")
         while not self._finish.isSet():
             if not self._work.isSet():
                 self._work.wait()
@@ -74,12 +78,12 @@ class WatchDog(object):
                     sleep(self._checkPeriod)
             else:
                 sleep(self._checkPeriod)
-        self._debug("Watchdog ends")
+        self.debug_stream("Watchdog ends")
 
     @property
-    def _instrument(self):
-        if self._device is not None:
-            return self._device._instrument
+    def _communications(self):
+        if self._parent is not None:
+            return self._parent._communications
 
     def isAlive(self):
         if self._thread is not None:
@@ -94,7 +98,12 @@ class WatchDog(object):
         return False
 
     def isInhibited(self):
-        return self._deviceState() in [DevState.INIT, DevState.OFF]
+        # TODO: check first if the instrument has been contacted from another
+        #       element of the skippylib. To avoid useless requests.
+        answer = self._get_state() in [DevState.INIT, DevState.OFF]
+        self.debug_stream("Watchdog is %sinhibited"
+                          % ("" if answer else "not "))
+        return answer
 
     def standby(self):
         '''This method is to avoid the connectivity check when there are
@@ -119,84 +128,54 @@ class WatchDog(object):
         return False
 
     def _isInstrumentOk(self):
-        i = 0
-        if self._instrument is not None:
-            try:
-                while i <= 1:  # two tries
-                    self._debug("Watchdog check if instrument is still there")
-                    idn = self._instrument.ask("*IDN?")
-                    if idn == self._device._idn:
-                        # self._debug("Watchdog found the instrument ok")
-                        return True
-                    self._warning("Watchdog received a bad answer from the "
-                                  "instrument: %r" % (idn))
-                    sleep(self._checkPeriod)
-                    i += 1
-            except Exception as e:
-                self._error("watchdog had an exception checking the "
-                            "instrument: %r" % (e))
-                traceback.print_exc()
-        self._warning("Watchdog couldn't talk with the instrument (%d)" % (i))
-        return False
+        # TODO: check first if the instrument has been contacted from another
+        #       element of the skippylib. To avoid useless requests.
+        # Do it in the isInhibited()
+        if self._communications is None:
+            self.warn_stream("Watchdog couldn't talk with the instrument")
+            return False
+        if not self._communications.isConnected():
+            self.warn_stream("Watchdog found the instrument disconnected")
+            return False
+        try:
+            tries = 0
+            while tries <= 1:  # two tries
+                self.debug_stream("Watchdog check if instrument is there")
+                idn = self._communications.ask("*IDN?")
+                if idn == self._parent._idn:
+                    self.debug_stream("Watchdog found the instrument ok")
+                    
+                    return True
+                self.warn_stream("Watchdog received a bad answer from the "
+                                 "instrument (%d): %r" % (tries, idn))
+                sleep(self._checkPeriod/2)  # another check in half period
+                tries += 1
+            self.warn_stream("Watchdog couldn't talk with the instrument (%d)"
+                             % (tries))
+            return False
+        except Exception as e:
+            self.error_stream("Watchdog had an exception checking the "
+                              "instrument: %r" % (e))
+            traceback.print_exc()
 
     def _reconnectProcedure(self):
-        if self._instrument is not None:
-            state = DevState.DISABLE
-            status = "Communication with the instrument lost. "\
-                     "Trying to reconnect"
-            self._device.change_state_status(newState=state, newStatus=status)
-            self._info("Watchdog sets a new status message: %s" % (status))
-            try:
-                self._instrument.disconnect()
-            except Exception as e:
-                state = DevState.FAULT
-                status = "Failed to recover communications."
-                self._device.change_state_status(newState=state,
-                                                 newStatus=status)
-                self._info("Watchdog sets a new status message: %s" % (status))
-                return False
-            if self._device._buildInstrumentObj():
-                sleep(self._recoverDelay)
-                if self._2Standby() and self._2On() and self._2Start():
-                    pass
-                self._info("Watchdog recovered the communications")
-                return True
-        self._error("Watchdog reconnect failed")
-        return False
-
-    def _deviceState(self):
-        return self._device.get_state()
-
-    def _2Standby(self):
-        if self._device is not None and self._device.AutoStandby:
-            self._device.Standby()
+        self.debug_stream("Launching the reconnection procedure")
+        # if self._communications is not None:
+        state = DevState.DISABLE
+        status = "Communication with the instrument lost. "\
+                 "Trying to reconnect"
+        self._parent._change_state_status(newState=state, newLine=status)
+        self.debug_stream("Watchdog sets a new status message: %s"
+                          % (status))
+        self._parent._communications = None
+        if self._parent._buildCommunications(updateState=False) and \
+                self._parent.connect():
+            if len(self._parent.monitorObj.monitoredIds) == 0:
+                self._parent._change_state_status(newState=DevState.ON)
+            else:
+                self._parent._change_state_status(newState=DevState.RUNNING)
+            self.info_stream("Watchdog recovered the communications")
             return True
-        return False
-
-    def _2On(self):
-        if self._device is not None and self._device.AutoOn:
-            self._device.On()
-            return True
-        return False
-
-    def _2Start(self):
-        if self._device is not None and self._device.AutoStart:
-            self._device.Start()
-            return True
-        return False
-
-    def _debug(self, msg):
-        if self._device is not None:
-            self._device.debug_stream(msg)
-
-    def _info(self, msg):
-        if self._device is not None:
-            self._device.info_stream(msg)
-
-    def _warning(self, msg):
-        if self._device is not None:
-            self._device.warn_stream(msg)
-
-    def _error(self, msg):
-        if self._device is not None:
-            self._device.error_stream(msg)
+        else:
+            self.warn_stream("Watchdog couldn't reconnect")
+            return False

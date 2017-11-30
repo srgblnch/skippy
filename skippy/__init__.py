@@ -18,7 +18,6 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from skippy import Skippy
-from skippy import version
 
 __author__ = "Sergi Blanch-Torné"
 __email__ = "sblanch@cells.es"

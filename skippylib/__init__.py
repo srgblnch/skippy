@@ -25,6 +25,8 @@ from .builder import Builder, AttrExc
 from .communications import buildCommunicator, TIME_BETWEEN_SENDANDRECEIVE
 from .features import (SkippyFeature, RampFeature, RawDataFeature,
                        ArrayDataInterpreterFeature)
+from .skippy import Skippy
+from .version import version
 from .watchdog import WatchDog
 
 

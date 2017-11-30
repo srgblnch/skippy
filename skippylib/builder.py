@@ -17,10 +17,11 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from .abstracts import AbstractSkippyObj
+from .attributes import SkippyReadAttribute, SkippyReadWriteAttribute
 from copy import copy
 import functools
 import PyTango
-from .attributes import SkippyReadAttribute, SkippyReadWriteAttribute
 import traceback
 
 __author__ = "Sergi Blanch-Torné"
@@ -50,12 +51,16 @@ def latin1(x):
         replace(u'\u03bc', u'\u00b5').encode('latin1')
 
 
-class Builder:
-    def __init__(self, parent):
-        '''parent: device object to who apply the dynamic attributes
-        '''
-        self.__device = parent
+class Builder(AbstractSkippyObj):
+
+    __device = None
+
+    def __init__(self, *args, **kwargs):
+        super(Builder, self).__init__(*args, **kwargs)
+        if hasattr(self._parent, '_parent'):  # TODO: and it is a tango device
+            self.__device = self._parent._parent
         self._attributeList = list()
+        self._attributeIds = {}
         self.locals_ = {}
 
         self.globals_ = globals()
@@ -67,14 +72,14 @@ class Builder:
         # self.__device.debug_stream('%30s\t%10s\t%5s\t%6s\t%6s'
         #                            % ("attrName", "Type", 'RO/RW', "read",
         #                               "write"))
-        self.__device.info_stream("Start parsing the attribute file: %s"
-                                  % (fName))
+        self.info_stream("Start parsing the attribute file: %s" % (fName))
         try:
             execfile(str(fName), self.globals_, self.locals_)
         except Exception as e:
-            self.__device.debug_stream("Builder.parseFile Exception: "
-                                       "%s\n%s" % (e, traceback.format_exc()))
-        self.__device.debug_stream('Parse of the attribute file done.')
+            self.error_stream("Builder.parseFile(%s) failed" % (fName))
+            self.debug_stream("Exception: %s\n%s"
+                              % (e, traceback.format_exc()))
+        self.debug_stream('Parse of the attribute file done.')
 
     def parse(self, text):
         exec text in self.globals_, self.locals_
@@ -121,7 +126,7 @@ class Builder:
             if k not in attributeDefinition:
                 msg = "In %s Invalid definition, key %s is mandatory"\
                     % (attributeName, k)
-                self.__device.error_stream(msg)
+                self.error_stream(msg)
                 raise KeyError(msg)
 
         # If the attribute definition includes channels and functions,
@@ -134,9 +139,9 @@ class Builder:
         else:
             try:
                 attr = self.__getAttrObj(attributeName, attributeDefinition)
-                self.__device.debug_stream("Added: %r" % (attr))
+                self.debug_stream("Added: %r" % (attr))
             except Exception as e:
-                self.__device.error_stream("NOT added attribute: %s "
+                self.error_stream("NOT added attribute: %s "
                                            "due to exception: %s"
                                            % (attributeName, e))
                 traceback.print_exc()
@@ -144,28 +149,28 @@ class Builder:
     def __prepareChannelLikeGroup(self, attributeName, attributeDefinition):
         if 'channels' in attributeDefinition and \
                 attributeDefinition['channels']:
-            if self.__device.NumChannels < 0:
+            if self._parent.nChannels < 0:
                 raise ValueError("Could not prepare channels for %s because "
                                  "not well defined the device property about "
                                  "how many have to be created (%d)"
-                                 % (attributeName, self.__device.NumChannels))
-            elif self.__device.NumChannels == 0:
-                self.__device.debug_stream("No channels to define")
+                                 % (attributeName, self._parent.nChannels))
+            elif self._parent.nChannels == 0:
+                self.debug_stream("No channels to define")
             else:
                 self.__buildGroup(attributeName, attributeDefinition,
-                                  self.__device.NumChannels, "Ch")
+                                  self._parent.nChannels, "Ch")
         if 'functions' in attributeDefinition and \
                 attributeDefinition['functions']:
-            if self.__device.NumFunctions < 0:
+            if self._parent.nFunctions < 0:
                 raise ValueError("Could not prepare functions for %s because "
                                  "not well defined the device property about "
                                  "how many have to be created (%d)"
-                                 % (attributeName, self.__device.NumFunctions))
-            elif self.__device.NumFunctions == 0:
-                self.__device.debug_stream("No function to define")
+                                 % (attributeName, self._parent.nFunctions))
+            elif self._parent.NumFunctions == 0:
+                self.debug_stream("No function to define")
             else:
                 self.__buildGroup(attributeName, attributeDefinition,
-                                  self.__device.NumFunctions, "Fn")
+                                  self._parent.nFunctions, "Fn")
         if 'multiple' in attributeDefinition and \
                 attributeDefinition['multiple']:
             try:
@@ -176,17 +181,15 @@ class Builder:
                 self.__buildGroup(attributeName, attributeDefinition, number,
                                   attrSuffix)
             except Exception as e:
-                self.__device.error_stream("NOT added attribute: %s "
-                                           "due to exception: %s"
-                                           % (attributeName, e))
-                # traceback.print_exc()
+                self.error_stream("NOT added attribute: %s due to exception: "
+                                  "%s" % (attributeName, e))
 
     def __checkNumberOfMultiple(self, attributeName, scpiPrefix):
         scpiPrefix = scpiPrefix.lower()
         number = None
         e = "Could not prepare 'Multiple' attributes for %s " % (attributeName)
-        if len(self.__device.NumMultiple) > 0:
-            for element in self.__device.NumMultiple:
+        if len(self._parent.nMultiple) > 0:
+            for element in self._parent.nMultiple:
                 element = element.lower()
                 if element.startswith("%s:" % scpiPrefix):
                     try:
@@ -224,62 +227,89 @@ class Builder:
                 attr = self.__getAttrObj("%s%d" % (attrName, i),
                                          defcopy, channel=ch, function=fn,
                                          multiple=multiple)
-                self.__device.debug_stream("Added attribute: %s"
-                                           % (attr.get_name()))
+                self.debug_stream("Added attribute: %s" % (attr.get_name()))
             except Exception as e:
-                self.__device.error_stream("NOT added attribute: "
-                                           "%s%d due to exception: "
-                                           "%s" % (attrName,
-                                                   i, e))
+                self.error_stream("NOT added attribute: %s%d due to "
+                                  "exception: %s" % (attrName, i, e))
                 traceback.print_exc()
+
+    def _generateAttrId(self, attrName):
+        id = 0
+        idLst = self._attributeIds.keys()
+        while id in idLst:
+            i += 1
+        self._attributeIds[id] = attrName
+        return id
+
+    def _getAttrNameById(self, id):
+        if id in self._attributeIds:
+            return self._attributeIds[id]
+        if self.__device is not None:
+            multiattr = self.__device.get_device_attr()
+            attrObj = multiattr.get_attr_by_ind(id)
+            attrName = attrName = attrObj.get_name()
+            if id not in self._attributeIds:
+                self._attributeIds[id] = attrName
+            return attrName
+        raise KeyError("id %d not found in %s"
+                       % (id, self._attributeIds.keys()))
 
     def __getAttrObj(self, attrName, definition, channel=None, function=None,
                      multiple=None):
         # TODO: image dimensions
-        if definition['dim'] == [0]:
-            if 'writeCmd' in definition:
-                attr = PyTango.Attr(attrName, definition['type'],
-                                    PyTango.READ_WRITE)
-                readmethod = AttrExc(getattr(self.__device, 'read_attr'))
-                writemethod = AttrExc(getattr(self.__device, 'write_attr'))
+        if self.__device is not None:
+            if definition['dim'] == [0]:
+                if 'writeCmd' in definition:
+                    attr = PyTango.Attr(attrName, definition['type'],
+                                        PyTango.READ_WRITE)
+                    readmethod = AttrExc(getattr(self.__device, 'read_attr'))
+                    writemethod = AttrExc(getattr(self.__device, 'write_attr'))
+                else:
+                    attr = PyTango.Attr(attrName, definition['type'],
+                                        PyTango.READ)
+                    readmethod = AttrExc(getattr(self.__device, 'read_attr'))
+                    writemethod = None
+            elif definition['dim'][0] == 1:
+                if 'writeCmd' in definition:
+                    attr = PyTango.SpectrumAttr(attrName, definition['type'],
+                                                PyTango.READ_WRITE,
+                                                definition['dim'][1])
+                    readmethod = AttrExc(getattr(self.__device, 'read_attr'))
+                    writemethod = AttrExc(getattr(self.__device, 'write_attr'))
+                else:
+                    attr = PyTango.SpectrumAttr(attrName, definition['type'],
+                                                PyTango.READ,
+                                                definition['dim'][1])
+                    readmethod = AttrExc(getattr(self.__device, 'read_attr'))
+                    writemethod = None
             else:
-                attr = PyTango.Attr(attrName, definition['type'], PyTango.READ)
-                readmethod = AttrExc(getattr(self.__device, 'read_attr'))
-                writemethod = None
-        elif definition['dim'][0] == 1:
-            if 'writeCmd' in definition:
-                attr = PyTango.SpectrumAttr(attrName, definition['type'],
-                                            PyTango.READ_WRITE,
-                                            definition['dim'][1])
-                readmethod = AttrExc(getattr(self.__device, 'read_attr'))
-                writemethod = AttrExc(getattr(self.__device, 'write_attr'))
-            else:
-                attr = PyTango.SpectrumAttr(attrName, definition['type'],
-                                            PyTango.READ, definition['dim'][1])
-                readmethod = AttrExc(getattr(self.__device, 'read_attr'))
-                writemethod = None
+                raise AttributeError("Not supported multiple dimensions")
+            # attribute properties
+            aprop = PyTango.UserDefaultAttrProp()
+            if 'unit' in definition:
+                aprop.set_unit(latin1(definition['unit']))
+            if 'min' in definition:
+                aprop.set_min_value(str(definition['min']))
+            if 'max' in definition:
+                aprop.set_max_value(str(definition['max']))
+            if 'format' in definition:
+                aprop.set_format(latin1(definition['format']))
+            if 'description' in definition:
+                aprop.set_description(latin1(definition['description']))
+            if 'label' in definition:
+                aprop.set_label(latin1(definition['label']))
+            if 'memorized' in definition:
+                attr.set_memorized()
+                attr.set_memorized_init(True)
+            attr.set_default_properties(aprop)
+            self.__device.add_attribute(attr, r_meth=readmethod,
+                                        w_meth=writemethod)
+            multiattr = self.__device.get_device_attr()
+            attrId = multiattr.get_attr_ind_by_name(attrName)
+            self._attributeIds[attrId] = attrName
         else:
-            raise AttributeError("Not supported multiple dimensions")
-        # attribute properties
-        aprop = PyTango.UserDefaultAttrProp()
-        if 'unit' in definition:
-            aprop.set_unit(latin1(definition['unit']))
-        if 'min' in definition:
-            aprop.set_min_value(str(definition['min']))
-        if 'max' in definition:
-            aprop.set_max_value(str(definition['max']))
-        if 'format' in definition:
-            aprop.set_format(latin1(definition['format']))
-        if 'description' in definition:
-            aprop.set_description(latin1(definition['description']))
-        if 'label' in definition:
-            aprop.set_label(latin1(definition['label']))
-        if 'memorized' in definition:
-            attr.set_memorized()
-            attr.set_memorized_init(True)
-        attr.set_default_properties(aprop)
-        self.__device.add_attribute(attr, r_meth=readmethod,
-                                    w_meth=writemethod)
+            attrId = self._generateAttrId(attrName)
+        # self.debug_stream("Attribute %s has the id %s" % (attrName, attrId))
         self._attributeList.append(attrName)
         # prepare internal structure ---
         if channel or function or multiple:
@@ -307,9 +337,10 @@ class Builder:
         #     writeFormula = None
         # build internal structure ---
         if definition['writeCmd'] is None:
-            self.__buildROObj(attrName, definition)
+            self.__buildROObj(attrName, attrId, definition)
         else:
-            self.__buildRWObj(attrName, definition, readmethod, writemethod)
+            self.__buildRWObj(attrName, attrId, definition, readmethod,
+                              writemethod)
             if 'writeValues' in definition:
                 self.__prepareWriteValues(attrName, definition, aprop, attr)
         return attr
@@ -330,21 +361,24 @@ class Builder:
         else:
             definition['writeCmd'] = definition['writeCmd'](scpiPrefix, number)
         if 'manager' in definition and definition['manager'] is True:
-            self.__device.attributesFlags["%s%d"
+            self._parent.attributesFlags["%s%d"
                                           % (attrSuffix, number)] = attrName
 
-    def __buildROObj(self, attrName, definition):
-        self.__device.attributes[attrName] =\
-            SkippyReadAttribute(name=attrName, type=definition['type'],
+    def __buildROObj(self, attrName, attrId, definition):
+        self._parent.attributes[attrName] =\
+            SkippyReadAttribute(name=attrName, id=attrId,
+                                type=definition['type'],
                                 dim=definition['dim'][0],
                                 readCmd=definition['readCmd'],
                                 readFormula=definition['readFormula'],
-                                parent=self.__device)
+                                parent=self._parent)
 
-    def __buildRWObj(self, attrName, definition, readmethod, writemethod):
+    def __buildRWObj(self, attrName, attrId, definition, readmethod,
+                     writemethod):
         if 'rampeable' in definition:
-            self.__device.attributes[attrName] =\
+            self._parent.attributes[attrName] =\
                 SkippyReadWriteAttribute(name=attrName,
+                                         id=attrId,
                                          type=definition['type'],
                                          dim=definition['dim'][0],
                                          readCmd=definition['readCmd'],
@@ -352,22 +386,23 @@ class Builder:
                                          readFormula=definition['readFormula'],
                                          # writeFormula=definition['writeFormula'],
                                          rampeable=True,
-                                         parent=self.__device)
+                                         parent=self._parent)
             self.__configureRamping(attrName, definition,
                                     readmethod, writemethod)
         else:
-            self.__device.attributes[attrName] =\
+            self._parent.attributes[attrName] =\
                 SkippyReadWriteAttribute(name=attrName,
+                                         id=attrId,
                                          type=definition['type'],
                                          dim=definition['dim'][0],
                                          readCmd=definition['readCmd'],
                                          writeCmd=definition['writeCmd'],
                                          readFormula=definition['readFormula'],
                                          # writeFormula=definition['writeFormula'],
-                                         parent=self.__device)
+                                         parent=self._parent)
 
     def __prepareWriteValues(self, attrName, definition, aprop, attr):
-        self.__device.attributes[attrName].\
+        self._parent.attributes[attrName].\
             setWriteValues(definition['writeValues'])
         # this is a very important information to have
         # in the attr descrition
@@ -381,68 +416,64 @@ class Builder:
         attr.set_default_properties(aprop)
 
     def __configureRamping(self, attrName, definition, readmethod, writemethod):
-        db = PyTango.Database()
-        step = PyTango.Attr(attrName+"Step", definition['type'],
-                            PyTango.READ_WRITE)
-        step.set_memorized()
-        step.set_memorized_init(True)
-        self.__device.add_attribute(step, r_meth=readmethod,
-                                    w_meth=writemethod)
+        if self.__device is not None:
+            db = PyTango.Database()
+            step = PyTango.Attr(attrName+"Step", definition['type'],
+                                PyTango.READ_WRITE)
+            step.set_memorized()
+            step.set_memorized_init(True)
+            self.__device.add_attribute(step, r_meth=readmethod,
+                                        w_meth=writemethod)
+            
+            try:
+                devName = self.__device.get_name()
+                stepAttrName = attrName+"Step"
+                attrProp = db.get_device_attribute_property(devName,
+                                                            stepAttrName)
+                propertyValueStr = attrProp[stepAttrName]['__value'][0]
+                value = float(propertyValueStr)
+                rampObj = self._parent.attributes[attrName].getRampObj()
+                rampObj.rampStep = value
+            except:
+                rampObj = self._parent.attributes[attrName].getRampObj()
+                rampObj.rampStep = None
+            stepspeed = PyTango.Attr(attrName+"StepSpeed",
+                                     PyTango.CmdArgType.DevDouble,
+                                     PyTango.READ_WRITE)
+            stepspeed.set_memorized()
+            stepspeed.set_memorized_init(True)
+            self.__device.add_attribute(stepspeed, r_meth=readmethod,
+                                        w_meth=writemethod)
+            try:
+                devName = self.__device.get_name()
+                stepSpeedAttrName = attrName+"StepSpeed"
+                attrProp = db.get_device_attribute_property(devName,
+                                                            stepSpeedAttrName)
+                propertyValueStr = attrProp[attrName+"StepSpeed"]['__value'][0]
+                value = float(propertyValueStr)
+                rampObj = self._parent.attributes[attrName].getRampObj()
+                rampObj.rampStepSpeed = value
+            except:
+                rampObj = self._parent.attributes[attrName].getRampObj()
+                rampObj.rampStepSpeed = None
         self._attributeList.append(attrName+"Step")
-        try:
-            devName = self.__device.get_name()
-            stepAttrName = attrName+"Step"
-            attrProp = db.get_device_attribute_property(devName,
-                                                        stepAttrName)
-            propertyValueStr = attrProp[stepAttrName]['__value'][0]
-            value = float(propertyValueStr)
-            rampObj = self.__device.attributes[attrName].getRampObj()
-            rampObj.rampStep = value
-        except:
-            rampObj = self.__device.attributes[attrName].getRampObj()
-            rampObj.rampStep = None
-        stepspeed = PyTango.Attr(attrName+"StepSpeed",
-                                 PyTango.CmdArgType.DevDouble,
-                                 PyTango.READ_WRITE)
-        stepspeed.set_memorized()
-        stepspeed.set_memorized_init(True)
-        self.__device.add_attribute(stepspeed, r_meth=readmethod,
-                                    w_meth=writemethod)
         self._attributeList.append(attrName+"StepSpeed")
-        try:
-            devName = self.__device.get_name()
-            stepSpeedAttrName = attrName+"StepSpeed"
-            attrProp = db.get_device_attribute_property(devName,
-                                                        stepSpeedAttrName)
-            propertyValueStr = attrProp[attrName+"StepSpeed"]['__value'][0]
-            value = float(propertyValueStr)
-            rampObj = self.__device.attributes[attrName].getRampObj()
-            rampObj.rampStepSpeed = value
-        except:
-            rampObj = self.__device.attributes[attrName].getRampObj()
-            rampObj.rampStepSpeed = None
 
     # remove dynamic attributes
     def remove_attribute(self, attrName):
-        if self.__device:
+        if self.__device is not None:
             if attrName in self._attributeList:
                 try:
                     self.__device.remove_attribute(attrName)
                 except Exception as e:
-                    self.__device.error_stream("In remove_attribute(%s) "
-                                               "Exception: %s"
-                                               % (attrName, e.desc))
+                    self.error_stream("In remove_attribute(%s) Exception: %s"
+                                      % (attrName, e.desc))
                 else:
                     attrIdx = self._attributeList.index(attrName)
                     self._attributeList.pop(attrIdx)
-                    # self.__device.debug_stream("In remove_attribute(%s): "
-                    #                            "done" %(attrName))
             else:
-                self.__device.warn_stream("In remove_attribute(%s): it "
-                                          "wasn't in the list" % (attrName))
-        else:
-            print "!"*20
-            print attrName
+                self.warn_stream("In remove_attribute(%s): it wasn't in the "
+                                 "list" % (attrName))
 
     def remove_alldynAttrs(self):
         while len(self._attributeList) > 0:

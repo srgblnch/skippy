@@ -17,6 +17,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from PyTango import DevState
+
 __author__ = "Sergi Blanch-Torné"
 __email__ = "sblanch@cells.es"
 __copyright__ = "Copyright 2017, CELLS / ALBA Synchrotron"
@@ -24,11 +26,12 @@ __license__ = "GPLv3+"
 
 
 class AbstractSkippyObj(object):
-    def __init__(self, name, *args, **kwargs):
+    def __init__(self, name, parent=None, *args, **kwargs):
         super(AbstractSkippyObj, self).__init__()
         if name is None:
             raise AssertionError("SkippyObj must have a name")
         self._name = name
+        self._parent = parent
 
     @property
     def name(self):
@@ -61,15 +64,23 @@ class AbstractSkippyObj(object):
             print("ERROR: %s" % (msg))
 
     def _get_state(self):
+        if hasattr(self, '_stateMachine') and self._stateMachine:
+            return self._stateMachine.state
         if hasattr(self, '_parent') and self._parent and \
                 hasattr(self._parent, 'get_state'):
             return self._parent.get_state()
-        return PyTango.DevState.UNKNOWN
+        return DevState.UNKNOWN
 
-    def _change_state_status(self, *args, **kwargs):
+    def _change_state_status(self, newState=None, newLine=None,
+                             important=False):
+        if hasattr(self, '_stateMachine') and self._stateMachine:
+            if newState is not None:
+                self._stateMachine.state = newState
+            if newLine is not None:
+                self._stateMachine.addStatusMessage(newLine, important)
         if hasattr(self, '_parent') and self._parent and \
-                hasattr(self._parent, 'change_state_status'):
-            self._parent.change_state_status(*args, **kwargs)
+                hasattr(self._parent, '_change_state_status'):
+            self._parent._change_state_status(*args, **kwargs)
 
 class AbstractSkippyAttribute(AbstractSkippyObj):
     def __init__(self, *args, **kwargs):

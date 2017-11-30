@@ -30,9 +30,10 @@ __license__ = "GPLv3+"
 
 
 class SkippyAttribute(AbstractSkippyAttribute):
-    def __init__(self, type, dim, parent=None, withRawData=False,
+    def __init__(self, id, type, dim, parent=None, withRawData=False,
                  *args, **kwargs):
         super(SkippyAttribute, self).__init__(*args, **kwargs)
+        self._id = id
         self._type = type
         self._dim = dim
         self._parent = parent
@@ -51,6 +52,10 @@ class SkippyAttribute(AbstractSkippyAttribute):
                 ArrayDataInterpreterFeature(name="array", parent=self,
                                             rawObj=self._raw, format=format,
                                             origin=origin, increment=increment)
+
+    @property
+    def id(self):
+        return self._id
 
     @property
     def type(self):
@@ -150,10 +155,9 @@ class SkippyReadAttribute(SkippyAttribute):
     def readCmd(self):
         return self._readCmd
 
-    def _doHardwareRead(self, query):
-        if self._parent is not None and hasattr(self._parent,
-                                                'doHardwareRead'):
-            return self._parent.doHardwareRead(query)
+    def _read(self, query):
+        if self._parent is not None and hasattr(self._parent, 'Read'):
+            return self._parent.Read(query)
 
     @property
     def readFormula(self):
@@ -162,7 +166,7 @@ class SkippyReadAttribute(SkippyAttribute):
     @property
     def rvalue(self):
         # TODO: check if has to be read from cache
-        newReadValue = self._doHardwareRead(self.readCmd)
+        newReadValue = self._read(self.readCmd)
         t = time()
         if self._readFormula:
             self.debug_stream("Evaluating %r with VALUE=%r"
@@ -192,9 +196,9 @@ class SkippyReadAttribute(SkippyAttribute):
                 elif self.type in [PyTango.DevBoolean]:
                     self._lastReadValue = bool(newReadValue)
             except Exception as e:
-                self.error_stream("Exception converting string to "
-                                  "type %s (dim %s): %s"
-                                  % (self.type, self.dim, e))
+                self.error_stream("Cannot convert string to %s (dim %d)"
+                                  % (self.type, self.dim))
+                self.debug_stream("Exception: %s" % (e))
                 traceback.print_exc()
                 return None
         self.timestamp = t
@@ -264,10 +268,10 @@ class SkippyReadWriteAttribute(SkippyReadAttribute):
     def writeCmd(self):
         return self._writeCmd
 
-    def _doHardwareWrite(self, cmd):
+    def _write(self, cmd):
         if self._parent is not None and\
-                hasattr(self._parent, 'doHardwareWrite'):
-            self._parent.doHardwareWrite(cmd)
+                hasattr(self._parent, 'Write'):
+            self._parent.Write(cmd)
 
     @property
     def writeFormula(self):

@@ -41,7 +41,7 @@ __status__ = "Production"
 TIME_BETWEEN_SENDANDRECEIVE = 0.05
 
 
-def buildCommunicator(instrumentName, port=None, parent=None, extra_args=None,
+def buildCommunicator(instrumentName, parent=None, port=None, serial_args=None,
                       terminator=None, log=None):
     if parent is not None and hasattr(parent, "debug_stream"):
         log = parent.debug_stream
@@ -60,7 +60,7 @@ def buildCommunicator(instrumentName, port=None, parent=None, extra_args=None,
     elif __isSerialName(instrumentName):
         log("identified %r as serial name" % instrumentName)
         return BySerialName(instrumentName, parent=parent,
-                            serial_args=extra_args, terminator=terminator)
+                            serial_args=serial_args, terminator=terminator)
     raise SyntaxError("Instrument name invalid or instrument unreachable")
 
 
@@ -179,7 +179,7 @@ class Communicator(object):
         return self._terminator
 
 
-SOCKET_TIMEOUT = 2
+SOCKET_TIMEOUT = 1
 DEFAULT_PORT = 5025
 DEFAULT_BUFFERSIZE = 10240
 
@@ -198,10 +198,14 @@ class BySocket(Communicator):
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
     def connect(self):
-        if self._socket is None:
-            self.build()
-        self._socket.settimeout(SOCKET_TIMEOUT)
-        self._socket.connect((self.__hostName, self.__port))
+        try:
+            if self._socket is None:
+                self.build()
+            self._socket.settimeout(SOCKET_TIMEOUT)
+            self._socket.connect((self.__hostName, self.__port))
+        except Exception as e:
+            self._socket = None
+            raise e
 
     def disconnect(self):
         self._socket = None
@@ -225,6 +229,9 @@ class BySocket(Communicator):
         completeMsg = ''
         try:
             buffer = self._socket.recv(bufsize)
+            if buffer == '':
+                self.error_stream("No answer")
+                return buffer
         except socket.timeout:
             self.error_stream("Exception in %s: time out!" % (self.__hostName))
             return ''
@@ -250,6 +257,10 @@ class BySocket(Communicator):
                 while not completeMsg[len(completeMsg)-1] == '\n':
                     buffer = self._socket.recv(bufsize)
                     completeMsg = ''.join([completeMsg, buffer])
+            except socket.timeout:
+                self.error_stream("Exception in %s: time out!"
+                                  % (self.__hostName))
+                return ''
             except Exception as e:
                 self.error_stream("Exception in %s:%d string data "
                                   "interpretation: %s"
@@ -304,6 +315,9 @@ class ByVisa(Communicator):
     def close(self):
         if self.__device.State() == PyTango.DevState.ON:
             self.__device.Close()
+
+    def isConnected(self):
+        return self.__device.State() == PyTango.DevState.ON
 
     def ask(self, commandList, waittimefactor=None):
         with self.mutex:
@@ -410,6 +424,9 @@ class BySerialName(Communicator):
 
     def close(self):
         self.disconnect()
+
+    def isConnected(self):
+        return self.__serial is not None and self.__serial.isOpen()
 
     def _send(self, msg):
         self.__serial.write(msg)
