@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from .abstracts import AbstractSkippyObj
-from .communications import buildCommunicator, TIME_BETWEEN_SENDANDRECEIVE
+from .communications import CommunicatorBuilder, TIME_BETWEEN_SENDANDRECEIVE
 from .identify import identifier
 import numpy
 from .monitor import Monitor
@@ -40,7 +40,7 @@ MINIMUM_QUERY_WINDOW = 1
 class Skippy(AbstractSkippyObj):
 
     # internal important objects
-    _stateMachine = None
+    _statemachine = None
     _communications = None
     _identificator = None
     _idn = None
@@ -66,8 +66,8 @@ class Skippy(AbstractSkippyObj):
                  attrs2Monitor=None,
                  *args, **kwargs):
         super(Skippy, self).__init__(*args, **kwargs)
-        self._stateMachine = StateManager(name="StateManager", parent=self)
-        self._stateMachine.setStateAndStatus(DevState.INIT, "Initializing...")
+        self._statemachine = StateManager(name="StateManager", parent=self)
+        self._statemachine.setStateAndStatus(DevState.INIT, "Initializing...")
         # prepare communications:
         self._terminator = terminator
         self._port = port
@@ -111,6 +111,10 @@ class Skippy(AbstractSkippyObj):
     @property
     def version(self):
         return version()
+
+    @property
+    def statemachineObj(self):
+        return self._statemachine
 
     @property
     def communicationsObj(self):
@@ -193,9 +197,9 @@ class Skippy(AbstractSkippyObj):
     def _buildCommunications(self, updateState=True):
         try:
             self._communications = \
-                buildCommunicator(instrumentName=self.name, parent=self,
-                                  port=self._port, serial_args=self._serial,
-                                  terminator=self._terminator)
+                CommunicatorBuilder(instrumentName=self.name, parent=self,
+                                    port=self._port, serial_args=self._serial,
+                                    terminator=self._terminator).build()
         except SyntaxError as e:
             self.error_stream("Error in the instrument name: %s" % (e))
             self._change_state_status(newState=DevState.FAULT,

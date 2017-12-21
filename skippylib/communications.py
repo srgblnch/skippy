@@ -41,77 +41,85 @@ __status__ = "Production"
 TIME_BETWEEN_SENDANDRECEIVE = 0.05
 
 
-def buildCommunicator(instrumentName, parent=None, port=None, serial_args=None,
-                      terminator=None, log=None):
-    if parent is not None and hasattr(parent, "debug_stream"):
-        log = parent.debug_stream
-    if __isHostName(instrumentName):
-        log("identified %r as host name" % instrumentName)
-        return BySocket(instrumentName, port=port, parent=parent)
-    elif __isVisaDevice(instrumentName):
-        log("identified %r as visa device" % instrumentName)
-        return ByVisa(instrumentName, parent=parent)
-    elif __isVisaName(instrumentName):
-        log("identified %r as visa name" % instrumentName)
-        return ByVisaName(instrumentName, parent=parent)
-    elif __isSerialDevice(instrumentName):
-        log("identified %r as serial device" % instrumentName)
-        return BySerialDevice(instumentName, parent=parent)
-    elif __isSerialName(instrumentName):
-        log("identified %r as serial name" % instrumentName)
-        return BySerialName(instrumentName, parent=parent,
-                            serial_args=serial_args, terminator=terminator)
-    raise SyntaxError("Instrument name invalid or instrument unreachable")
+class CommunicatorBuilder:
+    def __init__(instrumentName, parent=None, port=None, serial_args=None,
+                 terminator=None, log=None):
+        self._instrumentName = instrumentName
+        self._parent = parent
+        self._port = port
+        self._serial_args = serial_args
+        self._terminator = terminator
+        self._log = log
 
+    def build(self):
+        if self._log is None and \
+                self._parent is not None and \
+                hasattr(self._parent, "debug_stream"):
+            self._log = self._parent.debug_stream
+        if self.__isHostName(self._instrumentName):
+            self._log("identified %r as host name" % self._instrumentName)
+            return BySocket(self._instrumentName, port=self._port,
+                            parent=self._parent)
+        elif self.__isVisaDevice(self._instrumentName):
+            self._log("identified %r as visa device" % self._instrumentName)
+            return ByVisaDevice(self._instrumentName, parent=self._parent)
+        elif self.__isVisaName(self._instrumentName):
+            self._log("identified %r as visa name" % self._instrumentName)
+            return ByVisaName(self._instrumentName, parent=self._parent)
+        elif self.__isSerialDevice(self._instrumentName):
+            self._log("identified %r as serial device" % self._instrumentName)
+            return BySerialDevice(self._instumentName, parent=self._parent)
+        elif self.__isSerialName(self._instrumentName):
+            self._log("identified %r as serial name" % self._instrumentName)
+            return BySerialName(self._instrumentName, parent=self._parent,
+                                serial_args=self._serial_args,
+                                terminator=self._terminator)
+        raise SyntaxError("Instrument name invalid or instrument unreachable")
 
-def __isHostName(name):
-    try:
-        socket.gethostbyname(name)
-        return True
-    except:
-        return False
-
-
-def __isSerialDevice(name):
-    try:
-        devClass = PyTango.DeviceProxy(devName).info().dev_class
-        if devClass in ('Serial', 'PySerial'):
+    def __isHostName(self, name):
+        try:
+            socket.gethostbyname(name)
             return True
-        else:
+        except:
             return False
-    except:
-        return False
 
-
-def __isSerialName(name):
-    try:
-        if serial is not None:
-            serial.Serial(name)
-            return True
-        return False
-    except:
-        return False
-
-
-def __isVisaDevice(devName):
-    try:
-        devClass = PyTango.DeviceProxy(devName).info().dev_class
-        if devClass == 'PyVisa':
-            return True
-        else:
+    def __isSerialDevice(self, name):
+        try:
+            devClass = PyTango.DeviceProxy(devName).info().dev_class
+            if devClass in ('Serial', 'PySerial'):
+                return True
+            else:
+                return False
+        except:
             return False
-    except:
-        return False
 
+    def __isSerialName(self, name):
+        try:
+            if serial is not None:
+                serial.Serial(name)
+                return True
+            return False
+        except:
+            return False
 
-def __isVisaName(name):
-    try:
-        if pyvisa is not None:
-            pyvisa.visa.instrument(name)
-            return True
-        return False
-    except:
-        return False
+    def __isVisaDevice(self, devName):
+        try:
+            devClass = PyTango.DeviceProxy(devName).info().dev_class
+            if devClass == 'PyVisa':
+                return True
+            else:
+                return False
+        except:
+            return False
+
+    def __isVisaName(self, name):
+        try:
+            if pyvisa is not None:
+                pyvisa.visa.instrument(name)
+                return True
+            return False
+        except:
+            return False
 
 
 class Communicator(object):
@@ -291,9 +299,9 @@ class BySocket(Communicator):
             return answer
 
 
-class ByVisa(Communicator):
+class ByVisaDevice(Communicator):
     def __init__(self, devName, *args, **kwargs):
-        super(ByVisa, self).__init__(*args, **kwargs)
+        super(ByVisaDevice, self).__init__(*args, **kwargs)
         self.__device = PyTango.DeviceProxy(devName)
         self.debug_stream("building a communication to %s by PyVisa"
                           % (devName))
