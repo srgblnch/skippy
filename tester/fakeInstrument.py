@@ -82,14 +82,14 @@ class FakeInstrument(object):
     def __repr__(self):
         return "%r" % self._scpiObj
 
+    def tree(self):
+        return "%r" % self._scpiObj._commandTree
+
     def open(self):
         self._scpiObj.open()
 
     def close(self):
         self._scpiObj.close()
-
-    def commands(self):
-        return self._scpiObj.commands
 
     def _buildSpecialCommands(self):
         self._scpiObj.addSpecialCommand('IDN', self._identity.idn)
@@ -198,7 +198,7 @@ class TestManager(object):
         super(TestManager, self).__init__(*args, **kwargs)
         self._instrument = FakeInstrument()
         self.log("FakeInstrument build: %r" % (self._instrument))
-        self.log("\tattributes:\n%s" % (self._instrument.commands()))
+        self.log("\tCommand tree: %s" % (self._instrument.tree()))
         self._createTestDevice()
         self._startTestDevice()
 
