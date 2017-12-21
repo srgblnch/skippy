@@ -47,12 +47,12 @@ class Skippy(AbstractSkippyObj):
     _monitor = None
     _watchdog = None
 
+    _timestampsThreshold = MINIMUM_TIMESTAMPS_THRESHOLD
+    _queryWindow = MINIMUM_QUERY_WINDOW
+
     _attributes = {}
     _attributesFlags = {}
     _attrs2Monitor = None
-
-    _timestampsThreshold = MINIMUM_TIMESTAMPS_THRESHOLD
-    _queryWindow = MINIMUM_QUERY_WINDOW
 
     def __init__(self,
                  # communications parameters
