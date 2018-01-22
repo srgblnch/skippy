@@ -42,6 +42,8 @@ class StateManager(AbstractSkippyObj):
         self._temporal = None
         self._stateCallbacks = {}
         self._statusCallbacks = {}
+        self._alarmDueToMonitoring = []
+        self._backupState = None
 
     @property
     def state(self):
@@ -140,3 +142,31 @@ class StateManager(AbstractSkippyObj):
                 v()
             except Exception as e:
                 self.warning("%dth status callback exception: %s" % (k, e))
+
+    def InsertAlarmDueToMonitoring(self, attrList):
+        for attrName in attrList:
+            if attrName not in self._alarmDueToMonitoring:
+                self._alarmDueToMonitoring.append(attrName)
+        self._checkMonitoringAlarm()
+
+    def RemoveAlarmDueToMonitoring(self, attrList):
+        for attrName in attrList:
+            if self._alarmDueToMonitoring.count(attrName):
+                self._alarmDueToMonitoring.pop(
+                    self._alarmDueToMonitoring.index(attrName))
+        self._checkMonitoringAlarm()
+
+    def _checkMonitoringAlarm(self):
+        if len(self._alarmDueToMonitoring) > 0:
+            if self._state is not DevState.ALARM:
+                self._backupState = self._state
+                self._buildState(DevState.ALARM)
+            self.cleanImportantMessages()
+            self.addStatusMessage("Attributes %r required too much time "
+                                  "to be read"
+                                  % (self._alarmDueToMonitoring),
+                                  important=True)
+        if len(self._alarmDueToMonitoring) == 0 and \
+                self._state is DevState.ALARM:
+            self.cleanImportantMessages()
+            self._buildState(self._backupState)

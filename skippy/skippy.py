@@ -429,10 +429,12 @@ class Skippy (PyTango.Device_4Impl):
 
     def __str2listProperty(self, input):
         lst = []
-        if isinstance(input, list):
+        if isinstance(input, list) or \
+                isinstance(input, PyTango.StdStringVector):
             for each in input:
                 lst += self.__str2listProperty(each)
         else:
+            self.debug_stream("In __str2listProperty(%s) argin is %s" % (input, type(input)))
             return input.split('\n')
         return lst
     #----- done attribute monitor section

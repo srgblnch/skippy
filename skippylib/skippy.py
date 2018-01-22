@@ -196,10 +196,12 @@ class Skippy(AbstractSkippyObj):
 
     def _buildCommunications(self, updateState=True):
         try:
-            self._communications = \
-                CommunicatorBuilder(instrumentName=self.name, parent=self,
-                                    port=self._port, serial_args=self._serial,
-                                    terminator=self._terminator).build()
+            kwargs = {'instrumentName': self.name,
+                      'parent': self,
+                      'port': self._port, 'serial_args': self._serial,
+                      'terminator': self._terminator}
+            builder = CommunicatorBuilder(**kwargs)
+            self._communications = builder.build()
         except SyntaxError as e:
             self.error_stream("Error in the instrument name: %s" % (e))
             self._change_state_status(newState=DevState.FAULT,

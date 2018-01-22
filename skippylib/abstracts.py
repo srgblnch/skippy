@@ -64,8 +64,8 @@ class AbstractSkippyObj(object):
             print("ERROR: %s" % (msg))
 
     def _get_state(self):
-        if hasattr(self, '_stateMachine') and self._stateMachine:
-            return self._stateMachine.state
+        if hasattr(self, '_statemachine') and self._statemachine:
+            return self._statemachine.state
         if hasattr(self, '_parent') and self._parent and \
                 hasattr(self._parent, 'get_state'):
             return self._parent.get_state()
@@ -73,14 +73,14 @@ class AbstractSkippyObj(object):
 
     def _change_state_status(self, newState=None, newLine=None,
                              important=False):
-        if hasattr(self, '_stateMachine') and self._stateMachine:
+        if hasattr(self, '_statemachine') and self._statemachine:
             if newState is not None:
-                self._stateMachine.state = newState
+                self._statemachine.state = newState
             if newLine is not None:
-                self._stateMachine.addStatusMessage(newLine, important)
+                self._statemachine.addStatusMessage(newLine, important)
         if hasattr(self, '_parent') and self._parent and \
                 hasattr(self._parent, '_change_state_status'):
-            self._parent._change_state_status(*args, **kwargs)
+            self._parent._change_state_status(newState, newLine, important)
 
 
 class AbstractSkippyAttribute(AbstractSkippyObj):

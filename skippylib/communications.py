@@ -41,15 +41,20 @@ __status__ = "Production"
 TIME_BETWEEN_SENDANDRECEIVE = 0.05
 
 
-class CommunicatorBuilder:
-    def __init__(instrumentName, parent=None, port=None, serial_args=None,
-                 terminator=None, log=None):
-        self._instrumentName = instrumentName
-        self._parent = parent
-        self._port = port
-        self._serial_args = serial_args
-        self._terminator = terminator
-        self._log = log
+class CommunicatorBuilder(object):
+    def __init__(self, instrumentName, parent=None, port=None, serial_args=None,
+                 terminator=None, log=None, *args, **kwargs):
+        try:
+            super(CommunicatorBuilder, self).__init__(*args, **kwargs)
+            self._instrumentName = instrumentName
+            self._parent = parent
+            self._port = port
+            self._serial_args = serial_args
+            self._terminator = terminator
+            self._log = log
+        except Exception as e:
+            print("...")
+            raise e
 
     def build(self):
         if self._log is None and \

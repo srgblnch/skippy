@@ -165,7 +165,7 @@ class Builder(AbstractSkippyObj):
                                  "not well defined the device property about "
                                  "how many have to be created (%d)"
                                  % (attributeName, self._parent.nFunctions))
-            elif self._parent.NumFunctions == 0:
+            elif self._parent.nFunctions == 0:
                 self.debug_stream("No function to define")
             else:
                 self.__buildGroup(attributeName, attributeDefinition,
