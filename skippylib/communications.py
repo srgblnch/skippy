@@ -134,6 +134,7 @@ class Communicator(object):
         super(Communicator, self).__init__(*args, **kwargs)
         self.mutex = threading.Lock()
         self._parent = parent
+        self._timeBetweenSendAndReceive = TIME_BETWEEN_SENDANDRECEIVE
 
     def debug_stream(self, msg):
         if hasattr(self._parent, 'debug_stream'):
@@ -147,16 +148,33 @@ class Communicator(object):
         else:
             print("ERROR: "+msg)
 
+    @property
+    def timeBetweenSendAndReceive(self):
+        return self._timeBetweenSendAndReceive
+
+    @timeBetweenSendAndReceive.setter
+    def timeBetweenSendAndReceive(self, value):
+        value = float(value)
+        if value >= TIME_BETWEEN_SENDANDRECEIVE:
+            self.debug_stream("Modify the time between Send and Receive, "
+                              "from %g to %g"
+                              % (self._timeBetweenSendAndReceive, value))
+            self._timeBetweenSendAndReceive = value
+
     def ask(self, commandList, waittimefactor=1):
         '''Prepare the command list and do a combination of
            send(msg) and recv()
         '''
-        waittime = TIME_BETWEEN_SENDANDRECEIVE * waittimefactor
         with self.mutex:
+            waittime = self.timeBetweenSendAndReceive * waittimefactor
             command = self.prepareCommand(commandList)
             self._send(command)
+            # self.debug_stream("In Communicator.ask() Send %r and wait %g "
+            #                   "(locked %s)"
+            #                   % (command, waittime, self.mutex.locked()))
             sleep(waittime)
             answer = self._recv()
+            # self.debug_stream("In Communicator.ask() Answer %r" % (answer))
             return answer
 
     def write(self, commandList):
@@ -242,6 +260,8 @@ class BySocket(Communicator):
         completeMsg = ''
         try:
             buffer = self._socket.recv(bufsize)
+            # self.debug_stream("In _recv(%d) %d bytes"
+            #                   % (bufsize, len(buffer)))
             if buffer == '':
                 self.error_stream("No answer")
                 return buffer
@@ -250,6 +270,7 @@ class BySocket(Communicator):
             return ''
         completeMsg = ''.join([completeMsg, buffer])
         if completeMsg.startswith('#'):
+            self.debug_stream("received content is an array")
             try:
                 nBytesHeaderLength = int(completeMsg[1])
                 nBytesWaveElement = int(completeMsg[2:nBytesHeaderLength+2])
@@ -268,8 +289,12 @@ class BySocket(Communicator):
         else:
             try:
                 while not completeMsg[len(completeMsg)-1] == '\n':
+                    self.warn_stream("In _recv(), incomplete read")
                     buffer = self._socket.recv(bufsize)
                     completeMsg = ''.join([completeMsg, buffer])
+                if completeMsg[len(completeMsg)-1] == '\n':
+                    self.debug_stream("In _recv() read complete %d bytes"
+                                      % (len(completeMsg)))
             except socket.timeout:
                 self.error_stream("Exception in %s: time out!"
                                   % (self.__hostName))
@@ -278,18 +303,8 @@ class BySocket(Communicator):
                 self.error_stream("Exception in %s:%d string data "
                                   "interpretation: %s"
                                   % (self.__hostName, self.__port, e))
-        if len(completeMsg) > 50:
-            pass
-            # self.debug_stream("Received from %s:%d %s(...)%s (len %d)"
-            #                   %(self.__hostName,self.__port,
-            #                     repr(completeMsg[:25]),
-            #                     repr(completeMsg[len(completeMsg)-25:]),
-            #                     len(completeMsg)))
-        else:
-            pass
-            # self.debug_stream("Received from %s:%d %s"
-            #                   %(self.__hostName,self.__port,
-            #                     repr(completeMsg)))
+        while len(completeMsg) > 0 and completeMsg[-1] in ['\n','\r']:
+            completeMsg = completeMsg[:-1]
         return completeMsg
 
     def ask_for_values(self, commandList, waittimefactor=1):

@@ -149,13 +149,13 @@ class Skippy (PyTango.Device_4Impl):
             return
         attrName = attr.get_name()
         if attrName in self.skippy.attributes:
-            value = self.skippy.attributes[attrName].rvalue
-            timestamp = self.skippy.attributes[attrName].timestamp
-            quality = self.skippy.attributes[attrName].quality
-            if self.skippy.attributes[attrName].dim == 0:
+            attrStruct = self.skippy.attributes[attrName]
+            value = attrStruct.lastReadValue
+            timestamp = attrStruct.timestamp
+            quality = attrStruct.quality
+            if attrStruct.dim == 0:
                 if value is None:
-                    if self.skippy.attributes[attrName].type in \
-                        [PyTango.DevString]:
+                    if attrStruct.type in [PyTango.DevString]:
                         value = ""
                     else:
                         value = 0
@@ -164,7 +164,7 @@ class Skippy (PyTango.Device_4Impl):
                                                 ATTR_INVALID)
                 else:
                     attr.set_value_date_quality(value, timestamp, quality)
-            elif self.skippy.attributes[attrName].dim == 1:
+            elif attrStruct.dim == 1:
                 if value is None:
                     attr.set_value_date_quality([0], time.time(),
                                                 PyTango.AttrQuality.
@@ -172,8 +172,8 @@ class Skippy (PyTango.Device_4Impl):
                 else:
                     attr.set_value_date_quality(value, timestamp, quality,
                                                 len(value))
-            if self.skippy.attributes[attrName].isWritable():
-                wvalue = self.skippy.attributes[attrName].lastWriteValue
+            if attrStruct.isWritable():
+                wvalue = attrStruct.lastWriteValue
                 if wvalue is not None:
                     attr.set_write_value(wvalue)
                 else:
@@ -181,7 +181,8 @@ class Skippy (PyTango.Device_4Impl):
                 # when there has been no read (yet) avoid the Non-initialised.
         elif attrName.endswith("Step"):
             parentAttrName = attrName.split('Step')[0]
-            value = self.skippy.attributes[parentAttrName].getRampObj().rampStep
+            parentAttrStruct = self.skippy.attributes[parentAttrName]
+            value = parentAttrStruct.getRampObj().rampStep
             if value is None:
                 attr.set_value_date_quality(0, time.time(),
                                             PyTango.AttrQuality.ATTR_INVALID)
@@ -189,7 +190,8 @@ class Skippy (PyTango.Device_4Impl):
                 attr.set_value(value)
         elif attrName.endswith("StepSpeed"):
             parentAttrName = attrName.split('StepSpeed')[0]
-            value = self.skippy.attributes[parentAttrName].getRampObj().rampStepSpeed
+            parentAttrStruct = self.skippy.attributes[parentAttrName]
+            value = parentAttrStruct.getRampObj().rampStepSpeed
             if value is None:
                 attr.set_value_date_quality(0, time.time(),
                                             PyTango.AttrQuality.ATTR_INVALID)
@@ -481,9 +483,9 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION END -----#  //  Skippy.init_device
 
     def always_executed_hook(self):
-        self.debug_stream("In always_excuted_hook()")
+        # self.debug_stream("In always_excuted_hook()")
         #----- PROTECTED REGION ID(Skippy.always_executed_hook) ENABLED START -----#
-
+        pass
         #----- PROTECTED REGION END -----#  //  Skippy.always_executed_hook
 
     #-----------------------------------------------------------------------------
@@ -556,9 +558,9 @@ class Skippy (PyTango.Device_4Impl):
         data=attr.get_write_value()
         #----- PROTECTED REGION ID(Skippy.TimeStampsThreshold_write) ENABLED START -----#
         if hasattr(self, 'skippy') and self.skippy is not None:
-            self.skippy.self.timestampsThreshold = float(data)
+            self.skippy.timestampsThreshold = float(data)
             self.attr_TimeStampsThreshold_read = \
-                self.skippy.self.timestampsThreshold
+                self.skippy.timestampsThreshold
         ## TODO: function of an instrument attribute ---
         #        for a lower limit or to force as unique possibility.
         #----- PROTECTED REGION END -----#  //  Skippy.TimeStampsThreshold_write

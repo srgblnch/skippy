@@ -17,12 +17,13 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from .abstracts import AbstractSkippyObj
-from .communications import CommunicatorBuilder, TIME_BETWEEN_SENDANDRECEIVE
+from .communications import CommunicatorBuilder
 from .identify import identifier
 import numpy
 from .monitor import Monitor
 from PyTango import AttrQuality, CmdArgType, DevFailed, DevState
 from .statemanager import StateManager
+import struct
 from time import sleep, time
 import traceback
 from .version import version
@@ -105,8 +106,8 @@ class Skippy(AbstractSkippyObj):
         elif not self.Start():
             self.warn_stream("Failed to go to the Running state")
             return
-        self._watchdog = WatchDog(name="WatchDog", parent=self)
-        self._watchdog.start()
+        # self._watchdog = WatchDog(name="WatchDog", parent=self)
+        # self._watchdog.start()
 
     @property
     def version(self):
@@ -234,13 +235,13 @@ class Skippy(AbstractSkippyObj):
                 #     return False
                 self.warn_stream("In connect() -no answer to the"
                                  " identification request (try %d)" % (i))
-                sleep(TIME_BETWEEN_SENDANDRECEIVE*10)
+                sleep(self._communications.timeBetweenSendAndReceive*10)
             if len(self._idn) == 0:
                 self.error_stream("In connect() Cannot identify"
                                   " the instrument after %d tries" % (i))
                 return False
             self.info_stream("In connect() instrument "
-                             "identification: %s" % (self._idn))
+                             "identification: %r" % (self._idn))
             return True
         except Exception as e:
             msg = "Cannot connect to the instrument."
@@ -428,7 +429,11 @@ class Skippy(AbstractSkippyObj):
                 answer = self._communications.ask_for_values(query)
             else:
                 answer = self._communications.ask(query)
-            self.debug_stream("Answer: %r" % (answer))
+            if len(answer) > 100:
+                shorted = "%r(...)%r" % (answer[:25], answer[len(answer)-25:])
+                self.debug_stream("Answer: %r" % (shorted))
+            else:
+                self.debug_stream("Answer: %r" % (answer))
             if answer == '':
                 raise Exception("No answer from the instrument")
             return answer
@@ -476,11 +481,12 @@ class Skippy(AbstractSkippyObj):
         if self._get_state() in [DevState.FAULT, DevState.DISABLE,
                                  DevState.INIT]:
             self.debug_stream("Avoid read procedure in %s state"
-                              % (self.get_state()))
+                              % (self._get_state()))
             return
         try:
             scalarList, spectrumList, imageList = \
                 self.__filterAttributes(attrIdLst, fromMonitor)
+            self.debug_stream([scalarList, spectrumList, imageList])
             if not len(scalarList) == 0:
                 indexes, queries = self.__preHardwareRead(scalarList)
                 answers = []
@@ -560,9 +566,10 @@ class Skippy(AbstractSkippyObj):
                         # discard if the channel or function is not open
                         attrName = self.__checkChannelManager(attrName)
                         if attrName is not None:
+                            attrStruct = self.attributes[attrName]
                             try:
-                                t_a = self.attributes[attrName].timestamp
-                                attrDim = self.attributes[attrName].dim
+                                t_a = attrStruct.timestamp
+                                attrDim = attrStruct.dim
                                 if attrIndex not in \
                                         self._monitor.monitoredIds and \
                                         t_a is not None and t - t_a < delta_t:
@@ -626,6 +633,8 @@ class Skippy(AbstractSkippyObj):
         if attrName[-3:-1] in ['Ch', 'Fn']:
             if attrName[-3:] in self.attributesFlags:
                 managerName = self.attributesFlags[attrName[-3:]]
+                if managerName == attrName:
+                    return attrName
                 managerValue = self.attributes[managerName].lastReadValue
                 if managerValue is None:
                     return managerName
@@ -686,11 +695,12 @@ class Skippy(AbstractSkippyObj):
                     for j, value in \
                             enumerate(answer.split('\n')[0].split(';')):
                         attrName = indexes[i][j]
+                        attrStruct = self.attributes[attrName]
                         try:
                             # With formulas, they will be responsible to build
                             # the conversion.
-                            if self.attributes[attrName].readFormula:
-                                self.attributes[attrName].lastReadValue = value
+                            if attrStruct.readFormula:
+                                attrStruct.lastReadValue = value
                             # old way tries the transformation based on
                             # attribute type information.
                             elif self.__isScalarBoolean(attrName, value):
@@ -705,32 +715,26 @@ class Skippy(AbstractSkippyObj):
                                 self.warn_stream("In __postHardwareScalarRead"
                                                  "() Unrecognized data type "
                                                  "for %s" % (attrName))
-                                self.attributes[attrName].lastReadValue = \
-                                    value
+                                attrStruct.lastReadValue = value
                         except Exception as e:
                             self.error_stream("In __postHardwareScalarRead() "
                                               "Exception of attribute %s: %s"
                                               % (attrName, e))
                             traceback.print_exc()
-                            self.attributes[attrName].lastReadValue = None
-                            self.attributes[attrName].quality = \
-                                AttrQuality.ATTR_INVALID
+                            attrStruct.lastReadValue = None
+                            attrStruct.quality = AttrQuality.ATTR_INVALID
                         finally:
-                            self.attributes[attrName].timestamp = t
-                            attrId = self.attributes[attrName].id
+                            attrStruct.timestamp = t
+                            attrId = attrStruct.id
                             if self.__isRamping(attrName):
-                                self.attributes[attrName].quality = \
-                                    AttrQuality.ATTR_CHANGING
-                            elif self.attributes[attrName].quality != \
-                                    AttrQuality.ATTR_VALID:
-                                self.attributes[attrName].quality = \
-                                    AttrQuality.ATTR_VALID
+                                attrStruct.quality = AttrQuality.ATTR_CHANGING
+                            elif attrStruct.quality != AttrQuality.ATTR_VALID:
+                                attrStruct.quality = AttrQuality.ATTR_VALID
                             if attrId in self._monitor.monitoredIds:
                                 attrWithEvents.\
                                     append([attrName,
-                                            self.attributes[attrName].
-                                            lastReadValue,
-                                            self.attributes[attrName].quality
+                                            attrStruct.lastReadValue,
+                                            attrStruct.quality
                                             ])
                 else:
                     self.error_stream("In __postHardwareScalarRead() "

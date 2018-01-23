@@ -22,7 +22,7 @@
 from .attributes import (SkippyAttribute, SkippyReadAttribute,
                          SkippyReadWriteAttribute)
 from .builder import Builder, AttrExc
-from .communications import CommunicatorBuilder, TIME_BETWEEN_SENDANDRECEIVE
+from .communications import CommunicatorBuilder
 from .features import (SkippyFeature, RampFeature, RawDataFeature,
                        ArrayDataInterpreterFeature)
 from .skippy import Skippy

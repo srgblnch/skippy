@@ -154,7 +154,7 @@ class Builder(AbstractSkippyObj):
                                  "how many have to be created (%d)"
                                  % (attributeName, self._parent.nChannels))
             elif self._parent.nChannels == 0:
-                self.debug_stream("No channels to define")
+                pass  # self.debug_stream("No channels to define")
             else:
                 self.__buildGroup(attributeName, attributeDefinition,
                                   self._parent.nChannels, "Ch")
@@ -166,7 +166,7 @@ class Builder(AbstractSkippyObj):
                                  "how many have to be created (%d)"
                                  % (attributeName, self._parent.nFunctions))
             elif self._parent.nFunctions == 0:
-                self.debug_stream("No function to define")
+                pass  # self.debug_stream("No function to define")
             else:
                 self.__buildGroup(attributeName, attributeDefinition,
                                   self._parent.nFunctions, "Fn")

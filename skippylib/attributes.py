@@ -62,6 +62,13 @@ class SkippyAttribute(AbstractSkippyAttribute):
         return self._type
 
     @property
+    def timestampsThreshold(self):
+        if self._parent is not None and \
+                hasattr(self._parent, 'timestampsThreshold'):
+            return self._parent.timestampsThreshold
+        return 0
+
+    @property
     def dim(self):
         return self._dim
 
@@ -154,6 +161,9 @@ class SkippyReadAttribute(SkippyAttribute):
 
     @property
     def rvalue(self):
+        if self._timestamp is not None and \
+                time() - self._timestamp < self.timestampsThreshold:
+            return self._lastReadValue
         # TODO: check if has to be read from cache
         newReadValue = self._read(self.readCmd)
         t = time()
@@ -198,10 +208,14 @@ class SkippyReadAttribute(SkippyAttribute):
 
     @property
     def lastReadValue(self):
+        self.debug_stream("Requested %s.lastReadValue %s"
+                          % (self.name, self._lastReadValue))
         return self._lastReadValue
 
     @lastReadValue.setter
     def lastReadValue(self, value):
+        self.debug_stream("New %s.lastReadValue received %s"
+                          % (self.name, value))
         self._lastReadValue = value
 
     @property
@@ -276,6 +290,8 @@ class SkippyReadWriteAttribute(SkippyReadAttribute):
 
     @lastWriteValue.setter
     def lastWriteValue(self, value):
+        self.debug_stream("New %s.lastWriteValue received %s"
+                  % (self.name, value))
         self._lastWriteValue = value
 
     def isRampeable(self):

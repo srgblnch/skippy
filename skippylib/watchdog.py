@@ -147,6 +147,7 @@ class WatchDog(AbstractSkippyObj):
                     return True
                 self.warn_stream("Watchdog received a bad answer from the "
                                  "instrument (%d): %r" % (tries, idn))
+                self._communications.timeBetweenSendAndReceive *= 2
                 sleep(self._checkPeriod/2)  # another check in half period
                 tries += 1
             self.warn_stream("Watchdog couldn't talk with the instrument (%d)"
