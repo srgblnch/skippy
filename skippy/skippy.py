@@ -371,14 +371,14 @@ class Skippy (PyTango.Device_4Impl):
         for attrName in attrList:
             if attrName not in self._alarmDueToMonitoring:
                 self._alarmDueToMonitoring.append(attrName)
-        self.change_state_status(rebuild=True)  # self.rebuildStatus()
+        self.skippy._change_state_status(rebuild=True)  # self.rebuildStatus()
 
     def __removeFromAlarmCausingList(self, attrList):
         for attrName in attrList:
             if self._alarmDueToMonitoring.count(attrName):
                 self._alarmDueToMonitoring.pop(
                     self._alarmDueToMonitoring.index(attrName))
-        self.change_state_status(rebuild=True)  # self.rebuildStatus()
+        self.skippy._change_state_status(rebuild=True)  # self.rebuildStatus()
 
     def __appendPropertyElement(self, propertyName, element):
         db = PyTango.Database()
@@ -607,7 +607,7 @@ class Skippy (PyTango.Device_4Impl):
         self.debug_stream("In IDN()")
         argout = ''
         #----- PROTECTED REGION ID(Skippy.IDN) ENABLED START -----#
-        idn = self.__hardwareRead("*IDN?")
+        idn = self.skippy.Read("*IDN?")
         if self.skippy.idn != idn:
             self.warn_stream("In IDN(): current identity %r has changed to %r"
                              % (self.skippy.idn, idn))
@@ -990,18 +990,18 @@ class Skippy (PyTango.Device_4Impl):
         try:
             if argin.find('?') >= 0:
                 # argout = self.skippy.instrument.ask(argin)
-                argout = self.__hardwareRead(argin) or ''
+                argout = self.skippy.Read(argin) or ''
             else:
                 # self.skippy.instrument.write(argin)
-                self.__hardwareWrite(argin)
+                self.skippy.Write(argin)
                 argout = ""
             self.info_stream("In CMD(%r): %r" % (argin, argout))
         except Exception as e:
             self.error_stream("In CMD(%r) Exception: %s" % (argin, e))
             argout = ""
-            self.change_state_status(newState=PyTango.DevState.FAULT,
-                                     newLine="Exception while executing "
-                                     "CMDfloat()")
+            self.skippy._change_state_status(
+                newState=PyTango.DevState.FAULT,
+                newLine="Exception while executing CMDfloat()")
             # self.__reconnectInstrumentObj()
         #----- PROTECTED REGION END -----#  //  Skippy.CMD
         return argout
@@ -1031,18 +1031,18 @@ class Skippy (PyTango.Device_4Impl):
         try:
             if argin.find('?') >= 0:
                 # argout = self.skippy.instrument.ask_for_values(argin)
-                argout = self.__hardwareRead(argin, ask_for_values=True)
+                argout = self.skippy.Read(argin, ask_for_values=True)
             else:
                 # self.skippy.instrument.write(argin)
-                self.__hardwareWrite(argin)
+                self.skippy.Write(argin)
                 argout = float("NaN")
             self.info_stream("In CMDfloat(%r): %r" % (argin, argout))
         except Exception as e:
             self.error_stream("In CMDfloat(%r) Exception: %s" % (argin, e))
             argout = ""
-            self.change_state_status(newState=PyTango.DevState.FAULT,
-                                     newLine="Exception while executing "
-                                     "CMDfloat()")
+            self.skippy._change_state_status(
+                newState=PyTango.DevState.FAULT,
+                newLine="Exception while executing CMDfloat()")
             # self.__reconnectInstrumentObj()
         #----- PROTECTED REGION END -----#  //  Skippy.CMDfloat
         return argout
