@@ -66,6 +66,15 @@ Attribute('Impedance',
            'channels': True,
            })
 
+Attribute('Area',
+          {'type': PyTango.CmdArgType.DevDouble,
+           'format': '%9.6f',
+           'dim': [0],
+           'readCmd': lambda ch, num: ":MEAS:AREA? Display,%s%d" % (ch, num),
+           'channels': True,
+           'functions': True,
+           })
+
 Attribute('Amplitude',
           {'type': PyTango.CmdArgType.DevDouble,
            'format': '%9.6f',
