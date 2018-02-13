@@ -97,7 +97,7 @@ def rohdeschwarz(model):
     if model == 'sma100a':
         return _getFilePath("instructions/radioFrequencyGenerator/"
                             "rohdeSchwarzRFG.py")
-    elif model.lower() == 'fsp-3':
+    elif model.lower() in ['fsp-3', 'fsp-13']:
         return _getFilePath("instructions/spectrumAnalyser/rohdeSchwarzFSP.py")
     raise EnvironmentError("Rohde&Schwarz %s model not supported" % (model))
 
