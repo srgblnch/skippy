@@ -166,9 +166,9 @@ class Format(FakeString):
             self._value = value
 
 
-class ROintegerArray(FakeIntegerArray):
+class ROIntegerArray(FakeIntegerArray):
     def __init__(self, *args, **kwargs):
-        super(ROintegerArray, self).__init__(*args, **kwargs)
+        super(ROIntegerArray, self).__init__(*args, **kwargs)
         self.value()
  
     def value(self):

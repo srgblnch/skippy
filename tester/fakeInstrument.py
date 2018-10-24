@@ -20,7 +20,7 @@ from __future__ import print_function
 import argparse
 from datetime import datetime
 from instrAttrs import (ROinteger, RWinteger, ROfloat, RWfloat,
-                        ROIntegerFallible, Format, ROintegerArray)
+                        ROIntegerFallible, Format, ROIntegerArray)
 from instrIdn import InstrumentIdentification, __version__
 from psutil import process_iter, Process
 import PyTango
@@ -168,7 +168,7 @@ class FakeInstrument(object):
                                  readcb=formatarray.value,
                                  writecb=formatarray.value)
         self._attrObjs['formatarray'] = formatarray
-        rointegerarray = ROintegerArray()
+        rointegerarray = ROIntegerArray()
         self._scpiObj.addCommand('source:readable:array:short:value',
                                  readcb=rointegerarray.value, default=True)
         self._scpiObj.addCommand('source:readable:array:short:upper',
