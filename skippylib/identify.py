@@ -40,6 +40,7 @@ def identifier(idn, parent):
             'arroyo': arroyo,
             'albasynchrotron': albasynchrotron,
             'keithley instruments inc.': keithley,
+            'norhof': norhof,
             'fakeinstruments. inc': fakeinstrument,
             }[company](model)
     builder = Builder(name="Builder", parent=parent)
@@ -120,6 +121,11 @@ def keithley(model):
     elif model in ['model 2635a', 'model 2611']:
         return _getFilePath("instructions/sourcemeter/keithley26XX.py")
     raise EnvironmentError("Keithley %s model not supported" % (model))
+
+def norhof(model):
+    if model == '900':
+        return _getFilePath('instructions/pumpController/norhof900.py')
+    raise EnvironmentError("Norhof %s model not supported" % (model))
 
 
 def fakeinstrument(model):
