@@ -446,14 +446,14 @@ class Skippy(AbstractSkippyObj):
                 raise Exception("No answer from the instrument")
             return answer
         except MemoryError as e:
-            self.error_stream("In __hardwareRead() MemoryError exception: %s"
+            self.error_stream("In Read() MemoryError exception: %s"
                               % (e))
             traceback.print_exc()
             self._change_state_status(newState=DevState.FAULT,
                                       newLine="Device memory error!")
             return None
         except Exception as e:
-            self.error_stream("In __hardwareRead() Exception: %r" % (e))
+            self.error_stream("In Read() Exception: %r" % (e))
             traceback.print_exc()
             self._change_state_status(newState=DevState.FAULT,
                                       newLine="Fatal error and communications "
@@ -468,13 +468,13 @@ class Skippy(AbstractSkippyObj):
             self.debug_stream("Writing: %r" % (cmd))
             self._communications.write(cmd)
         except MemoryError as e:
-            self.error_stream("In __hardwareWrite() MemoryError exception: %s"
+            self.error_stream("In Write() MemoryError exception: %s"
                               % (e))
             traceback.print_exc()
             self._change_state_status(newState=DevState.FAULT,
                                       newLine="Device memory error!")
         except Exception as e:
-            self.error_stream("In __hardwareWrite() Exception: %s" % (e))
+            self.error_stream("In Write() Exception: %s" % (e))
             traceback.print_exc()
             self._change_state_status(newState=DevState.FAULT,
                                       newLine="Fatal error and communications "
