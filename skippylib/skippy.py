@@ -39,6 +39,9 @@ MINIMUM_QUERY_WINDOW = 1
 
 
 class Skippy(AbstractSkippyObj):
+    """
+    This is the main object of this python module.
+    """
 
     # internal important objects
     _statemachine = None
@@ -66,6 +69,11 @@ class Skippy(AbstractSkippyObj):
                  # monitoring parameters
                  attrs2Monitor=None,
                  *args, **kwargs):
+        """
+        Object construction requires access parametrization to the instrument
+        Like for a networked instruments will be:
+        >>> skippy = Skippy(name='localhost', port=5025)
+        """
         super(Skippy, self).__init__(*args, **kwargs)
         self._statemachine = StateManager(name="StateManager", parent=self)
         self._statemachine.setStateAndStatus(DevState.INIT, "Initializing...")

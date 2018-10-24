@@ -11,8 +11,7 @@
 #  GNU General Public License for more details.
 #
 #  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software Foundation,
-#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#  along with this program; If not, see <http://www.gnu.org/licenses/>.
 #
 # ##### END GPL LICENSE BLOCK #####
 
@@ -41,6 +40,7 @@ def identifier(idn, parent):
             'albasynchrotron': albasynchrotron,
             'keithley instruments inc.': keithley,
             'norhof': norhof,
+            'ub': ub,
             'fakeinstruments. inc': fakeinstrument,
             }[company](model)
     builder = Builder(name="Builder", parent=parent)
@@ -126,6 +126,12 @@ def norhof(model):
     if model == '900':
         return _getFilePath('instructions/pumpController/norhof900.py')
     raise EnvironmentError("Norhof %s model not supported" % (model))
+
+
+def ub(model):
+    if model == 'music':
+        return _getFilePath('instructions/scintillator/music.py')
+    raise EnvironmentError("UB %s model not supported" % (model))
 
 
 def fakeinstrument(model):

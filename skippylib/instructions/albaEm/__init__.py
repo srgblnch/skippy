@@ -12,12 +12,11 @@
 #  GNU General Public License for more details.
 #
 #  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software Foundation,
-#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#  along with this program; If not, see <http://www.gnu.org/licenses/>.
 #
 # ##### END GPL LICENSE BLOCK #####
 
 __author__ = "Sergi Blanch-Torné"
 __email__ = "sblanch@cells.es"
-__copyright__ = "Copyright 2016, CELLS / ALBA Synchrotron"
+__copyright__ = "Copyright 2017, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
