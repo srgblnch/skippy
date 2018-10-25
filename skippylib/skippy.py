@@ -289,8 +289,8 @@ class Skippy(AbstractSkippyObj):
                 msg = "identification error: %s (*IDN?:%r)" % (e, self._idn)
             else:
                 msg = "identification error: %s" % (e)
-            self.error_stream("%s %s" % (self.get_name(), msg))
-            self._change_state_status(newState=DevState.FAULT,
+            self.error_stream("%s %s" % (self.name, msg))
+            self._change_state_status(newState=DevState.UNKNOWN,
                                       newLine=msg)
             return False
         else:
