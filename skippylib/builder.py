@@ -308,6 +308,7 @@ class Builder(AbstractSkippyObj):
         else:
             attrId = self._generateAttrId(attrName)
             attr = None
+            aprop = None
         # self.debug_stream("Attribute %s has the id %s" % (attrName, attrId))
         self._attributeList.append(attrName)
         # prepare internal structure ---
@@ -335,11 +336,13 @@ class Builder(AbstractSkippyObj):
         #     # writeFormula = definition['writeFormula']
         #     writeFormula = None
         # build internal structure ---
+        if 'rampeable' in definition and definition['rampeable'] is True:
+            self.__buildRWObj(attrName, attrId, definition, readmethod,
+                              writemethod)
         if definition['writeCmd'] is None:
             self.__buildROObj(attrName, attrId, definition)
         else:
-            self.__buildRWObj(attrName, attrId, definition, readmethod,
-                              writemethod)
+            self.__buildRWObj(attrName, attrId, definition)
             if 'writeValues' in definition:
                 self.__prepareWriteValues(attrName, definition, aprop, attr)
         return attr
@@ -372,8 +375,8 @@ class Builder(AbstractSkippyObj):
                                 readFormula=definition['readFormula'],
                                 parent=self._parent)
 
-    def __buildRWObj(self, attrName, attrId, definition, readmethod,
-                     writemethod):
+    def __buildRWObj(self, attrName, attrId, definition, readmethod=None,
+                     writemethod=None):
         if 'rampeable' in definition:
             self._parent.attributes[attrName] =\
                 SkippyReadWriteAttribute(name=attrName,
@@ -386,8 +389,9 @@ class Builder(AbstractSkippyObj):
                                          # writeFormula=definition['writeFormula'],
                                          rampeable=True,
                                          parent=self._parent)
-            self.__configureRamping(attrName, definition,
-                                    readmethod, writemethod)
+            if readmethod is not None and writemethod is not None:
+                self.__configureRamping(attrName, definition,
+                                        readmethod, writemethod)
         else:
             self._parent.attributes[attrName] =\
                 SkippyReadWriteAttribute(name=attrName,
@@ -411,8 +415,9 @@ class Builder(AbstractSkippyObj):
             prefix = ""
         descr = "%sAllowed values: %s"\
                 % (prefix, repr(definition['writeValues']))
-        aprop.set_description(descr)
-        attr.set_default_properties(aprop)
+        if aprop is not None:
+            aprop.set_description(descr)
+            attr.set_default_properties(aprop)
 
     def __configureRamping(self, attrName, definition, readmethod,
                            writemethod):
