@@ -137,8 +137,8 @@ class Builder(AbstractSkippyObj):
         # when is a single attribute, no loop required
         else:
             try:
-                attr = self.__getAttrObj(attributeName, attributeDefinition)
-                self.debug_stream("Added: %r" % (attr))
+                self.__getAttrObj(attributeName, attributeDefinition)
+                self.debug_stream("Added attribute: %s" % (attributeName))
             except Exception as e:
                 self.error_stream("NOT added attribute: %s due to exception: "
                                   "%s" % (attributeName, e))
@@ -222,10 +222,10 @@ class Builder(AbstractSkippyObj):
             else:
                 ch, fn, multiple = None, None, i
             try:
-                attr = self.__getAttrObj("%s%d" % (attrName, i),
-                                         defcopy, channel=ch, function=fn,
-                                         multiple=multiple)
-                self.debug_stream("Added attribute: %s" % (attr.get_name()))
+                self.__getAttrObj("%s%d" % (attrName, i),
+                                  defcopy, channel=ch, function=fn,
+                                  multiple=multiple)
+                self.debug_stream("Added attribute: %s" % (attrName))
             except Exception as e:
                 self.error_stream("NOT added attribute: %s%d due to "
                                   "exception: %s" % (attrName, i, e))
@@ -307,6 +307,7 @@ class Builder(AbstractSkippyObj):
             self._attributeIds[attrId] = attrName
         else:
             attrId = self._generateAttrId(attrName)
+            attr = None
         # self.debug_stream("Attribute %s has the id %s" % (attrName, attrId))
         self._attributeList.append(attrName)
         # prepare internal structure ---
