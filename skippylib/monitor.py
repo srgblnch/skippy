@@ -103,6 +103,8 @@ class Monitor(AbstractSkippyObj):
         '''
 #         self.debug_stream("list of attributes to monitor: %s"
 #                           % (self._attrLst))
+        if self._attrLst is None:
+            return
         for attrName in self._attrLst:
             if not attrName.count(':'):  # Normal monitoring
                 monitoringType = 'Generic'
