@@ -91,7 +91,7 @@ def __isVisaDevice(devName):
         return False
 
 
-class Communicator:
+class Communicator(object):
     _terminator = '\n'
 
     def __init__(self):
@@ -169,6 +169,13 @@ class bySocket(Communicator):
                           "using port %d" % (self.__hostName, self.__port))
         self._socket = None
         self.build()
+
+    def write(self, commandList):
+        '''Do a write operation to the remote and FORCE a read to empty
+        the buffer in cas of an acknowledge is received.
+        '''
+        super(bySocket, self).write(commandList)
+        self._recv()
 
     def build(self):
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
