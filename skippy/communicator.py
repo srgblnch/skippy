@@ -175,7 +175,9 @@ class bySocket(Communicator):
         the buffer in cas of an acknowledge is received.
         '''
         super(bySocket, self).write(commandList)
+        self._socket.settimeout(0.1)
         self._recv()
+        self._socket.settimeout(SOCKET_TIMEOUT)
 
     def build(self):
         self._socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
