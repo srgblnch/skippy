@@ -494,7 +494,6 @@ class Skippy(AbstractSkippyObj):
         try:
             scalarList, spectrumList, imageList = \
                 self.__filterAttributes(attrIdLst, fromMonitor)
-            self.debug_stream([scalarList, spectrumList, imageList])
             if not len(scalarList) == 0:
                 indexes, queries = self.__preHardwareRead(scalarList)
                 answers = []
