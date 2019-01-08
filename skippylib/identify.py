@@ -80,7 +80,7 @@ def agilent(model):
     if model.startswith('dso'):
         return _getFilePath("instructions/scope/agilentDSO.py")
     elif model.startswith('n5171'):
-        return _getFilePath("instructions/radioFrequencyGenerator/"
+        return _getFilePath("instructions/generators/rf"
                             "keysightSignalGenerator.py")
     raise EnvironmentError("Agilent %s model not supported" % (model))
 
@@ -89,14 +89,14 @@ def tektronix(model):
     if model.startswith('dpo'):
         return _getFilePath("instructions/scope/tektronixDPO.py")
     elif model.upper().startswith('AFG'):
-        return _getFilePath("instructions/arbitraryFunctionGenerator/"
+        return _getFilePath("instructions/generators/function"
                             "tektronicsAFG.py")
     raise EnvironmentError("Tektronix %s model not supported" % (model))
 
 
 def rohdeschwarz(model):
     if model == 'sma100a':
-        return _getFilePath("instructions/radioFrequencyGenerator/"
+        return _getFilePath("instructions/generators/rf"
                             "rohdeSchwarzRFG.py")
     elif model.lower() in ['fsp-3', 'fsp-13']:
         return _getFilePath("instructions/spectrumAnalyser/rohdeSchwarzFSP.py")
@@ -111,7 +111,7 @@ def arroyo(model):
 
 def albasynchrotron(model):
     if model == 'electrometer2':
-        return _getFilePath('instructions/albaEm/albaEm.py')
+        return _getFilePath('instructions/electrometer/albaEm.py')
     raise EnvironmentError("Alba Synchrotron %s model not supported" % (model))
 
 
@@ -130,7 +130,7 @@ def norhof(model):
 
 def ub(model):
     if model == 'music':
-        return _getFilePath('instructions/scintillator/music.py')
+        return _getFilePath('instructions/photomultiplier/music.py')
     raise EnvironmentError("UB %s model not supported" % (model))
 
 
