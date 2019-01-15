@@ -96,8 +96,8 @@ class SkippyAttribute(AbstractSkippyAttribute):
                     repr += "\t%s: []\n" % (key)
                 elif isinstance(attr, str):
                     repr += "\t%s: %r\n" % (key, attr)
-                elif hasattr(attr, '__call__'):
-                    args = [0]*attr.__code__.co_argcount
+                elif hasattr(attr, '__call__'):  # lambda, for example
+                    args = ['%s']*attr.__code__.co_argcount
                     repr += "\t%s: %r\n" % (key, attr(*args))
                 else:
                     repr += "\t%s: %s\n" % (key, attr)
@@ -193,6 +193,12 @@ class SkippyReadAttribute(SkippyAttribute):
                     self._lastReadValue = int(newReadValue)
                 elif self.type in [PyTango.DevBoolean]:
                     self._lastReadValue = bool(newReadValue)
+                elif self.type in [PyTango.DevString]:
+                    self._lastReadValue = newReadValue
+                else:
+                    self.warn_stream(
+                        "type {x} not in the list of managed types"
+                        "".format(x=self.type))
             except Exception as e:
                 self.error_stream("Cannot convert string to %s (dim %d)"
                                   % (self.type, self.dim))
