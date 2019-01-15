@@ -747,7 +747,7 @@ class Skippy (PyTango.Device_4Impl):
                 argout = eval(argin, self.__globals, self.__locals)
             except SyntaxError:
                 # interpretation as statement
-                exec argin in self.__globals, self.__locals
+                exec(argin in self.__globals, self.__locals)
                 argout = self.__locals.get("y")
         except Exception as exc:
             # handles errors on both eval and exec level
@@ -1291,10 +1291,10 @@ def main():
         U.server_init()
         U.server_run()
 
-    except PyTango.DevFailed,e:
-        print '-------> Received a DevFailed exception:',e
-    except Exception,e:
-        print '-------> An unforeseen exception occured....',e
+    except PyTango.DevFailed as e:
+        print('-------> Received a DevFailed exception:',e)
+    except Exception as e:
+        print('-------> An unforeseen exception occured....',e)
 
 if __name__ == '__main__':
     main()
