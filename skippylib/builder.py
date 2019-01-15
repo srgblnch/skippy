@@ -140,8 +140,9 @@ class Builder(AbstractSkippyObj):
                 self.__getAttrObj(attributeName, attributeDefinition)
                 self.debug_stream("Added attribute: %s" % (attributeName))
             except Exception as e:
-                self.error_stream("NOT added attribute: %s due to exception: "
-                                  "%s" % (attributeName, e))
+                self.error_stream("NOT added normal attribute: "
+                                  "{a!r} due to exception: {e}"
+                                  "".format(a=attributeName, e=e))
                 traceback.print_exc()
 
     def __prepareChannelLikeGroup(self, attributeName, attributeDefinition):
@@ -176,11 +177,17 @@ class Builder(AbstractSkippyObj):
                 attrSuffix = attributeDefinition['multiple']['attrSuffix']
                 number = self.__checkNumberOfMultiple(attributeName,
                                                       scpiPrefix)
+                if 'startAt' in attributeDefinition['multiple']:
+                    startAt = attributeDefinition['multiple']['startAt']
+                else:
+                    startAt = 1
                 self.__buildGroup(attributeName, attributeDefinition, number,
-                                  attrSuffix)
+                                  attrSuffix, startAt)
             except Exception as e:
-                self.error_stream("NOT added attribute: %s due to exception: "
-                                  "%s" % (attributeName, e))
+                self.error_stream("NOT added multiple attribute: "
+                                  "{a!r} due to exception: {e}"
+                                  "".format(a=attributeName, e=e))
+                traceback.print_exc()
 
     def __checkNumberOfMultiple(self, attributeName, scpiPrefix):
         scpiPrefix = scpiPrefix.lower()
@@ -210,9 +217,9 @@ class Builder(AbstractSkippyObj):
                 "how many have to be created."
         raise ValueError(e)
 
-    def __buildGroup(self, name, definition, number, attrSuffix):
+    def __buildGroup(self, name, definition, number, attrSuffix, startAt=1):
         attrName = "%s%s" % (name, attrSuffix)
-        for i in range(1, number+1):
+        for i in range(startAt, number+1):
             defcopy = copy(definition)
             if attrSuffix in ['Ch', 'Fn']:
                 if attrSuffix == 'Ch':
@@ -225,7 +232,8 @@ class Builder(AbstractSkippyObj):
                 self.__getAttrObj("%s%d" % (attrName, i),
                                   defcopy, channel=ch, function=fn,
                                   multiple=multiple)
-                self.debug_stream("Added attribute: %s" % (attrName))
+                self.debug_stream("Added attribute: "
+                                  "{name}{seq}".format(name=attrName, seq=i))
             except Exception as e:
                 self.error_stream("NOT added attribute: %s%d due to "
                                   "exception: %s" % (attrName, i, e))
