@@ -75,7 +75,7 @@ class InstrumentIdentification(object):
 
 def main():
     instrument = InstrumentIdentification('ALBA', 'test', 0, __version__)
-    print instrument.idn()
+    print(instrument.idn())
 
 if __name__ == '__main__':
     main()
