@@ -173,24 +173,24 @@ class Builder(AbstractSkippyObj):
         if 'multiple' in attributeDefinition and \
                 attributeDefinition['multiple']:
             try:
-                scpiPrefix = attributeDefinition['multiple']['scpiPrefix']
                 attrSuffix = attributeDefinition['multiple']['attrSuffix']
-                number = self.__checkNumberOfMultiple(attributeName,
-                                                      scpiPrefix)
-                if 'startAt' in attributeDefinition['multiple']:
-                    startAt = attributeDefinition['multiple']['startAt']
-                else:
-                    startAt = 1
-                self.__buildGroup(attributeName, attributeDefinition, number,
-                                  attrSuffix, startAt)
+                first, last = self.__checkNumberOfMultiple(
+                    attributeName, attributeDefinition['multiple'])
+
+                self.__buildGroup(attributeName, attributeDefinition, last,
+                                  attrSuffix, first)
             except Exception as e:
                 self.error_stream("NOT added multiple attribute: "
                                   "{a!r} due to exception: {e}"
                                   "".format(a=attributeName, e=e))
                 traceback.print_exc()
 
-    def __checkNumberOfMultiple(self, attributeName, scpiPrefix):
-        scpiPrefix = scpiPrefix.lower()
+    def __checkNumberOfMultiple(self, attributeName, multipleDefinition):
+        if 'startAt' in multipleDefinition:
+            first = multipleDefinition['startAt']
+        else:
+            first = 1
+        scpiPrefix = multipleDefinition['scpiPrefix'].lower()
         number = None
         e = "Could not prepare 'Multiple' attributes for %s " % (attributeName)
         if len(self._parent.nMultiple) > 0:
@@ -211,7 +211,8 @@ class Builder(AbstractSkippyObj):
                 e += "because no description in NumMultiple property "\
                     "has %s." % (scpiPrefix)
             else:
-                return number
+                last = number+first
+                return first, last
         else:
             e += "because not well defined the device property about "\
                 "how many have to be created."
