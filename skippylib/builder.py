@@ -37,7 +37,7 @@ def AttrExc(function):
         inst = self  # < for pychecker
         try:
             return function(inst, attr, *args, **kwargs)
-        except Exception, exc:
+        except Exception as exc:
             traceback.print_exc(exc)
             # self._trace = traceback.format_exc(exc)
             raise
@@ -81,7 +81,7 @@ class Builder(AbstractSkippyObj):
         self.debug_stream('Parse of the attribute file done.')
 
     def parse(self, text):
-        exec text in self.globals_, self.locals_
+        exec(text in self.globals_, self.locals_)
 
     def add_Attribute(self, attributeName, attributeDefinition):
         '''Method to dynamically add an attribute
