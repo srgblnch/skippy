@@ -190,7 +190,10 @@ class SkippyReadAttribute(SkippyAttribute):
                                    PyTango.DevInt, PyTango.DevLong,
                                    PyTango.DevULong, PyTango.DevLong64,
                                    PyTango.DevULong64]:
-                    self._lastReadValue = int(newReadValue)
+                    if newReadValue.count('.') == 1:
+                        self._lastReadValue = int(float(newReadValue))
+                    else:
+                        self._lastReadValue = int(newReadValue)
                 elif self.type in [PyTango.DevBoolean]:
                     self._lastReadValue = bool(newReadValue)
                 elif self.type in [PyTango.DevString]:
