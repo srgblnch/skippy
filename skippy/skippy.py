@@ -143,9 +143,8 @@ class Skippy (PyTango.Device_4Impl):
     @AttrExc
     def read_attr(self, attr):
         if self.get_state() in [PyTango.DevState.FAULT]:
-            attr.set_value_date_quality(0, time.time(),
-                                                PyTango.AttrQuality.
-                                                ATTR_INVALID)
+            attr.set_value_date_quality(
+                0, time.time(), PyTango.AttrQuality.ATTR_INVALID)
             return
         attrName = attr.get_name()
         if attrName in self.skippy.attributes:
@@ -159,9 +158,8 @@ class Skippy (PyTango.Device_4Impl):
                         value = ""
                     else:
                         value = 0
-                    attr.set_value_date_quality(value, time.time(),
-                                                PyTango.AttrQuality.
-                                                ATTR_INVALID)
+                    attr.set_value_date_quality(
+                        value, time.time(), PyTango.AttrQuality.ATTR_INVALID)
                 else:
                     attr.set_value_date_quality(value, timestamp, quality)
             elif attrStruct.dim == 1:
