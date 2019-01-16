@@ -234,7 +234,7 @@ class Builder(AbstractSkippyObj):
                                   defcopy, channel=ch, function=fn,
                                   multiple=multiple)
                 self.debug_stream("Added attribute: "
-                                  "{name}{seq}".format(name=attrName, seq=i))
+                                  "{name}{seq:d}".format(name=attrName, seq=i))
             except Exception as e:
                 self.error_stream("NOT added attribute: %s%d due to "
                                   "exception: %s" % (attrName, i, e))

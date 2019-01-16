@@ -86,19 +86,37 @@ class SkippyAttribute(AbstractSkippyAttribute):
         return True
 
     def _buildrepr_(self, attributes):
+        def lambda2str(func):
+            self.info_stream("constants: {x}".format(x=func.__code__.co_consts))
+            if isinstance(func.__code__.co_consts[1], str):
+                return func.__code__.co_consts[1]
+            elif str(type(func.__code__.co_consts[1])) == "<type 'code'>":
+                return func.__code__.co_consts[1].co_consts[1]
+            else:
+                self.error_stream(
+                    "unknown how to represent {x}"
+                    "".format(x=func.__code__.co_consts))
         repr = "%s (%s):\n" % (self.name, self.__class__.__name__)
         for key in attributes:
             if hasattr(self, key):
                 attr = getattr(self, key)
                 if attr is None:
+                    # FIXME: when is None, it can be omitted
+                    # but is nice to see it while in development
+                    # (except for writable and wvalue that means
+                    # that it wasn't wrote before
                     repr += "\t%s: None\n" % (key)
                 elif isinstance(attr, list) and len(attr) == 0:
                     repr += "\t%s: []\n" % (key)
                 elif isinstance(attr, str):
                     repr += "\t%s: %r\n" % (key, attr)
                 elif hasattr(attr, '__call__'):  # lambda, for example
-                    args = ['%s']*attr.__code__.co_argcount
-                    repr += "\t%s: %r\n" % (key, attr(*args))
+                    if attr.func_name == '<lambda>':
+                        cmd = lambda2str(attr)
+                        repr += "\t%s: %r\n" % (key, cmd)
+                    else:
+                        self.warn_stream(
+                            "unknown callable element {k}".format(k=key))
                 else:
                     repr += "\t%s: %s\n" % (key, attr)
             else:
@@ -143,8 +161,8 @@ class SkippyReadAttribute(SkippyAttribute):
                                          self.quality)
 
     def __repr__(self):
-        return self._buildrepr_(['rvalue', 'timestamp', 'quality', 'dim',
-                                 'readCmd', 'readFormula'])
+        return self._buildrepr_(['rvalue', 'timestamp', 'quality', 'type',
+                                 'dim', 'readCmd', 'readFormula'])
 
     @property
     def readCmd(self):
@@ -165,6 +183,9 @@ class SkippyReadAttribute(SkippyAttribute):
             return self._lastReadValue
         # TODO: check if has to be read from cache
         newReadValue = self._read(self.readCmd)
+        if newReadValue is None:
+            self.quality = PyTango.AttrQuality.ATTR_INVALID
+            return
         t = time()
         if self._readFormula:
             self.debug_stream("Evaluating %r with VALUE=%r"
@@ -190,7 +211,8 @@ class SkippyReadAttribute(SkippyAttribute):
                                    PyTango.DevInt, PyTango.DevLong,
                                    PyTango.DevULong, PyTango.DevLong64,
                                    PyTango.DevULong64]:
-                    if newReadValue.count('.') == 1:
+                    if hasattr(newReadValue, 'count') and \
+                            newReadValue.count('.') == 1:
                         self._lastReadValue = int(float(newReadValue))
                     else:
                         self._lastReadValue = int(newReadValue)
@@ -265,7 +287,8 @@ class SkippyReadWriteAttribute(SkippyReadAttribute):
 
     def __repr__(self):
         return self._buildrepr_(['rvalue', 'wvalue', 'timestamp', 'quality',
-                                 'dim', 'readCmd', 'readFormula', 'writeCmd',
+                                 'type', 'dim', 'readCmd', 'readFormula',
+                                 'writeCmd',
                                  # 'writeFormula'
                                  ])
 
