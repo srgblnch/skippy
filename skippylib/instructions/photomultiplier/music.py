@@ -47,7 +47,8 @@ Attribute('AcqMode',
            'type': PyTango.CmdArgType.DevString,
            'dim': [0],
            'readCmd': "CONFigure:ACQUisition:MODE?",
-           'writeCmd': lambda value: "CONFigure:ACQUisition:MODE %s" % (value),
+           'writeCmd':
+               lambda value: "CONFigure:ACQUisition:MODE {v}".format(value),
            # TODO: improve this set of valid values
            'writeValues': ['CountMode', 'TOFMode',
                            'AnalogSingleEnded', 'AnalogSummation']
@@ -58,7 +59,8 @@ Attribute('IntTime',
            'type': PyTango.CmdArgType.DevULong,
            'dim': [0],
            'readCmd': "CONFigure:COUNt:INTTime?",
-           'writeCmd': lambda value: "CONFigure:COUNt:INTTime %s" % (value),
+           'writeCmd':
+               lambda value: "CONFigure:COUNt:INTTime {v}".format(value),
            })
 
 Attribute('CountRate',
@@ -66,15 +68,17 @@ Attribute('CountRate',
            'type': PyTango.CmdArgType.DevULong,
            'dim': [0],
            'readCmd': "CONFigure:COUNt:RATE?",
-           'writeCmd': lambda value: "CONFigure:COUNt:RATE %s" % (value),
+           'writeCmd':
+               lambda value: "CONFigure:COUNt:RATE {v}".format(value),
            })
 
 Attribute('Count',
-          {'description': 'Actual count value for SiPM 1-4',
+          {'description': 'Actual count value for SiPM 0-7',
            'type': PyTango.CmdArgType.DevULong,
            'dim': [0],
-           'readCmd': lambda mult, num: "ACQUire:COUNt:%s%.2d:VALUe?"
-                                        % (mult, num),
+           'readCmd':
+               lambda mult, num: "ACQUire:COUNt:{m}{n:02d}:VALUe?"
+                                 "".format(m=mult, n=num),
            'multiple': {'scpiPrefix': 'CHANnel', 'attrSuffix': '',
                         'startAt': 0}
            })
@@ -83,8 +87,9 @@ Attribute('CountInt',
           {'description': 'Integrated counts value for SiPM 1-8',
            'type': PyTango.CmdArgType.DevULong,
            'dim': [0],
-           'readCmd': lambda mult, num: "ACQUire:COUNt:%s%.2d:INTEgrated?"
-                                        % (mult, num),
+           'readCmd':
+               lambda mult, num: "ACQUire:COUNt:{m}{n:02d}:INTEgrated?"
+                                 "".format(m=mult, n=num),
            'multiple': {'scpiPrefix': 'CHANnel', 'attrSuffix': '',
                         'startAt': 0}
            })
@@ -93,11 +98,12 @@ Attribute('Enable',
           {'description': 'Enable/Disable channel 0-7',
            'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
-           'readCmd': lambda mult, num: "CONFigure:%s%.2d:ENABLE?"
-                                        % (mult, num),
+           'readCmd':
+               lambda mult, num: "CONFigure:{m}{n:02d}:ENABLE?"
+                                 "".format(m=mult, n=num),
            'writeCmd': lambda mult, num: (
-               lambda value: "CONFigure:%s%.2d:ENABLE %s"
-                             % (mult, num, value)),
+               lambda value: "CONFigure:{m}{n:02d}:ENABLE {v}"
+                             "".format(m=mult, n=num, v=value)),
            'multiple': {'scpiPrefix': 'CHANnel', 'attrSuffix': 'CH',
                         'startAt': 0}
            })
@@ -106,10 +112,12 @@ Attribute('Enable',
           {'description': 'Enable/Disable single ended input for channel 0-7',
            'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
-           'readCmd': lambda mult, num: "CONFigure:%s%.2d:SE?" % (mult, num),
+           'readCmd':
+               lambda mult, num: "CONFigure:{m}{n:02d}:SE?"
+                                 "".format(m=mult, n=num),
            'writeCmd': lambda mult, num: (
-               lambda value: "CONFigure:%s%.2d:SE %s"
-                             % (mult, num, value)),
+               lambda value: "CONFigure:{m}{n:02d}:SE {v}"
+                             "".format(m=mult, n=num, v=value)),
            'multiple': {'scpiPrefix': 'CHANnel', 'attrSuffix': 'SE',
                         'startAt': 0}
            })
@@ -118,10 +126,12 @@ Attribute('Enable',
           {'description': 'Enable/Disable summation channel 0-7',
            'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
-           'readCmd': lambda mult, num: "CONFigure:%s%.2d:SUMMation?" % (mult, num),
+           'readCmd':
+               lambda mult, num: "CONFigure:{m}{n:02d}:SUMMation?"
+                                 "".format(m=mult, n=num),
            'writeCmd': lambda mult, num: (
-               lambda value: "CONFigure:%s%.2d:SUMMation %s"
-                             % (mult, num, value)),
+               lambda value: "CONFigure:{m}{n:02d}:SUMMation {v}"
+                             "".format(m=mult, n=num, v=value)),
            'multiple': {'scpiPrefix': 'CHANnel', 'attrSuffix': 'SUM',
                         'startAt': 0}
            })
