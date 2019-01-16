@@ -211,7 +211,7 @@ class Builder(AbstractSkippyObj):
                 e += "because no description in NumMultiple property "\
                     "has %s." % (scpiPrefix)
             else:
-                last = number+first
+                last = number+first-1
                 return first, last
         else:
             e += "because not well defined the device property about "\
@@ -220,6 +220,9 @@ class Builder(AbstractSkippyObj):
 
     def __buildGroup(self, name, definition, number, attrSuffix, startAt=1):
         attrName = "%s%s" % (name, attrSuffix)
+        self.debug_stream(
+            "preparing to build {a} as a group of {n} (starting at {s})"
+            "".format(a=attrName, n=number, s=startAt))
         for i in range(startAt, number+1):
             defcopy = copy(definition)
             if attrSuffix in ['Ch', 'Fn']:
@@ -321,17 +324,19 @@ class Builder(AbstractSkippyObj):
         # self.debug_stream("Attribute %s has the id %s" % (attrName, attrId))
         self._attributeList.append(attrName)
         # prepare internal structure ---
-        if channel or function or multiple:
-            if channel:
+        if channel is not None or function is not None or multiple is not None:
+            if channel is not None:
                 like = "channel"
-            elif function:
+                number = channel
+            elif function is not None:
                 like = "function"
-            elif multiple and 'scpiPrefix' in definition['multiple'] and\
+                number = function
+            elif multiple is not None and 'scpiPrefix' in definition['multiple'] and\
                     'attrSuffix' in definition['multiple']:
                 like = definition['multiple']['scpiPrefix']
+                number = multiple
             else:
                 raise AttributeError("Wrong definition of multiple attribute")
-            number = channel or function or multiple
             self.__prepareChannelLikeAttr(like, number, definition, attrName)
         else:
             readCmd = definition['readCmd']
