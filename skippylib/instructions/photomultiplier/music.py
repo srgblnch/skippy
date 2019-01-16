@@ -25,6 +25,12 @@ __status__ = "Pre-Alpha"
 
 import PyTango
 
+
+# from skippylib import skippy
+# skippyobj = skippy.Skippy(name='localhost',
+#                           port=5025,
+#                           nMultiple=['CHANnel:7'])
+
 Attribute('MAC',
           {'description': 'MAC address',
            'type': PyTango.CmdArgType.DevString,
@@ -47,143 +53,260 @@ Attribute('AcqMode',
                            'AnalogSingleEnded', 'AnalogSummation']
            })
 
-# Attribute('IntTime',
-#           {'description': 'Number of seconds to integrate counts',
-#            'type': PyTango.CmdArgType.DevULong,
-#            'dim': [0],
-#            'readCmd': "CONFigure:COUNt:INTTime?",
-#            'writeCmd': lambda value: "CONFigure:COUNt:INTTime %s" % (value),
-#            })
+Attribute('IntTime',
+          {'description': 'Number of seconds to integrate counts',
+           'type': PyTango.CmdArgType.DevULong,
+           'dim': [0],
+           'readCmd': "CONFigure:COUNt:INTTime?",
+           'writeCmd': lambda value: "CONFigure:COUNt:INTTime %s" % (value),
+           })
 
-# Attribute('CountRate',
-#           {'description': 'Counts refreshment rate in seconds',
-#            'type': PyTango.CmdArgType.DevULong,
-#            'dim': [0],
-#            'readCmd': "CONFigure:COUNt:RATE?",
-#            'writeCmd': lambda value: "CONFigure:COUNt:RATE %s" % (value),
-#            })
+Attribute('CountRate',
+          {'description': 'Counts refreshment rate in seconds',
+           'type': PyTango.CmdArgType.DevULong,
+           'dim': [0],
+           'readCmd': "CONFigure:COUNt:RATE?",
+           'writeCmd': lambda value: "CONFigure:COUNt:RATE %s" % (value),
+           })
 
-# Attribute('Count',
-#           {'description': 'Actual count value for SiPM 1-4',
-#            'type': PyTango.CmdArgType.DevULong,
-#            'dim': [0],
-#            'readCmd': lambda mult, num: "ACQUire:COUNt:CHANnel%s%.2d:VALUe?"
-#                                         % (mult, num),
-#            'multiple': {'scpiPrefix': '', 'attrSuffix': ''}
-#            })
+Attribute('Count',
+          {'description': 'Actual count value for SiPM 1-4',
+           'type': PyTango.CmdArgType.DevULong,
+           'dim': [0],
+           'readCmd': lambda mult, num: "ACQUire:COUNt:%s%.2d:VALUe?"
+                                        % (mult, num),
+           'multiple': {'scpiPrefix': 'CHANnel', 'attrSuffix': '',
+                        'startAt': 0}
+           })
 
-# Attribute('CountInt',
-#           {'description': 'Integrated counts value for SiPM 1-8',
-#            'type': PyTango.CmdArgType.DevULong,
-#            'dim': [0],
-#            'readCmd': lambda mult, num:
-#            "ACQUire:COUNt:CHANnel%s%.2d:INTEgrated?" % (mult, num),
-#            'multiple': {'scpiPrefix': '', 'attrSuffix': ''}
-#            })
+Attribute('CountInt',
+          {'description': 'Integrated counts value for SiPM 1-8',
+           'type': PyTango.CmdArgType.DevULong,
+           'dim': [0],
+           'readCmd': lambda mult, num: "ACQUire:COUNt:%s%.2d:INTEgrated?"
+                                        % (mult, num),
+           'multiple': {'scpiPrefix': 'CHANnel', 'attrSuffix': '',
+                        'startAt': 0}
+           })
 
-# Attribute('C_EnablePM',
-#           {'description': 'Enable/Disable SiPM 1-4',
-#            'type': PyTango.CmdArgType.DevBoolean,
-#            'dim': [0],
-#            'readCmd': lambda mult, num:
-#            # "CONFigure:ENABle:SIPM%s%.2d:VALUe?" % (mult, num),
-#            "CONFigure:CHANnel%sa%.2d:ENABle?",
-#            'writeCmd': lambda mult, num:
-#            (lambda value:
-#             # "CONFigure:ENABle:SIPM%s%.2d:VALUe %s" % (mult, num, value)),
-#             "CONFigure:CHANnel%sa%.2d:ENABle %s" % (mult, num, value)),
-#            'multiple': {'scpiPrefix': '', 'attrSuffix': ''}
-#            })
+Attribute('Enable',
+          {'description': 'Enable/Disable channel 0-7',
+           'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': lambda mult, num: "CONFigure:%s%.2d:ENABLE?"
+                                        % (mult, num),
+           'writeCmd': lambda mult, num: (
+               lambda value: "CONFigure:%s%.2d:ENABLE %s"
+                             % (mult, num, value)),
+           'multiple': {'scpiPrefix': 'CHANnel', 'attrSuffix': 'CH',
+                        'startAt': 0}
+           })
 
-# # FIXME: merge those to multiple
-# Attribute('TOF1Mode',
-#           {'description': 'Configuration of SiPM for TOF measurements:\n'
-#                           '0: Ch1-Ch2\n1: Ch1-Ch3\n2: Ch1-Ch4\n'
-#                           '3: Ch2-Ch1\n4: Ch3-Ch1\n5: Ch4-Ch1\n'
-#                           '6: Ch1-Ch3\n7: Ch2-Ch4\n8: Ch3-Ch2\n'
-#                           '9: Ch4-Ch2\n10: Ch3-Ch4\n11: Ch4-Ch3',
-#            'type': PyTango.CmdArgType.DevString,
-#            'dim': [0],
-#            'readCmd': "CONFigure:TOF1:MODE?",
-#            'writeCmd': lambda value: "CONFigure:TOF1:MODE %s" % (value)
-#            })
-#
-# Attribute('TOF2Mode',
-#           {'description': 'Configuration of SiPM for TOF measurements:\n'
-#                           '0: Ch1-Ch2\n1: Ch1-Ch3\n2: Ch1-Ch4\n'
-#                           '3: Ch2-Ch1\n4: Ch3-Ch1\n5: Ch4-Ch1\n'
-#                           '6: Ch1-Ch3\n7: Ch2-Ch4\n8: Ch3-Ch2\n'
-#                           '9: Ch4-Ch2\n10: Ch3-Ch4\n11: Ch4-Ch3',
-#            'type': PyTango.CmdArgType.DevString,
-#            'dim': [0],
-#            'readCmd': "CONFigure:TOF2:MODE?",
-#            'writeCmd': lambda value: "CONFigure:TOF2:MODE %s" % (value)
-#            })
+Attribute('Enable',
+          {'description': 'Enable/Disable single ended input for channel 0-7',
+           'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': lambda mult, num: "CONFigure:%s%.2d:SE?" % (mult, num),
+           'writeCmd': lambda mult, num: (
+               lambda value: "CONFigure:%s%.2d:SE %s"
+                             % (mult, num, value)),
+           'multiple': {'scpiPrefix': 'CHANnel', 'attrSuffix': 'SE',
+                        'startAt': 0}
+           })
 
-# Attribute('ToF',
-#           {'description': 'Time-of-Flight value',
-#            'type': PyTango.CmdArgType.DevULong,
-#            'dim': [0],
-#            'readCmd': lambda mult, num:
-#            "ACQUire:TOF%s%.2d:VALUe?" % (mult, num),
-#            'multiple': {'scpiPrefix': '', 'attrSuffix': ''}
-#            })
+Attribute('Enable',
+          {'description': 'Enable/Disable summation channel 0-7',
+           'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': lambda mult, num: "CONFigure:%s%.2d:SUMMation?" % (mult, num),
+           'writeCmd': lambda mult, num: (
+               lambda value: "CONFigure:%s%.2d:SUMMation %s"
+                             % (mult, num, value)),
+           'multiple': {'scpiPrefix': 'CHANnel', 'attrSuffix': 'SUM',
+                        'startAt': 0}
+           })
 
-# Attribute('C_SumSiPM',
-#           {'description': 'Use SiPM for sumation',
-#            'type': PyTango.CmdArgType.DevBoolean,
-#            'dim': [0],
-#            'readCmd': lambda mult, num:
-#            "CONFigure:SUMMation%s%.2d:VALUe?" % (mult, num),
-#            'writeCmd': lambda mult, num:
-#            (lambda value:
-#             "CONFigure:SUMMation%s%.2d:VALUe %s" % (mult, num, value)),
-#            'multiple': {'scpiPrefix': '', 'attrSuffix': ''}
-#            })
+Attribute('C_VThres',
+          {'description': 'Voltage threshold. Possible values are [0-511]',
+           'type': PyTango.CmdArgType.DevUShort,
+           'dim': [0],
+           'readCmd': lambda mult, num: "CONFigure:{m}{n:02d}:VTHReshold?"
+                                        "".format(m=mult, n=num),
+           'writeCmd': lambda mult, num: (
+               lambda value: "CONFigure:{m}{n:02d}:VTHReshold {v}"
+                             "".format(m=mult, n=num, v=value)),
+           'multiple': {
+               'scpiPrefix': 'CHANnel', 'attrSuffix': '',
+               'startAt': 0}
+           })
 
-# Attribute('C_Threshold',
-#           {'description': 'Voltage threshold at comparator for SiPM',
-#            'type': PyTango.CmdArgType.DevString,
-#            'dim': [0],
-#            'readCmd': lambda mult, num:
-#            "CONFigure:VOLTage:THREs%s%.2d:VALUe?" % (mult, num),
-#            'writeCmd': lambda mult, num:
-#            (lambda value:
-#             "CONFigure:VOLTage:THREs%s%.2d:VALUe %s" % (mult, num, value)),
-#            })
+Attribute('C_Voff',
+          {'description': 'Voltage offset. Possible values are [0-255]',
+           'type': PyTango.CmdArgType.DevUShort,
+           'dim': [0],
+           'readCmd': lambda mult, num: "CONFigure:{m}{n:02d}:VOFFset?"
+                                        "".format(m=mult, n=num),
+           'writeCmd': lambda mult, num: (
+               lambda value: "CONFigure:{m}{n:02d}:VOFFset {v}"
+                             "".format(m=mult, n=num, v=value)),
+           'multiple': {
+               'scpiPrefix': 'CHANnel', 'attrSuffix': '',
+               'startAt': 0}
+           })
 
-# Attribute('DCRwindow',
-#           {'description': 'DRC analisys window (sec)',
-#            'type': PyTango.CmdArgType.DevULong,
-#            'dim': [0],
-#            'readCmd': "CONFigure:DCR:WINDow?",
-#            'writeCmd': lambda value: "CONFigure:DCR:WINDow %s" % (value)
-#            })
+Attribute('C_VBG',
+          {'description': 'Coarse voltage reference. Possible values are [0-7]',
+           'type': PyTango.CmdArgType.DevUShort,
+           'dim': [0],
+           'readCmd': "CONFigure:VBG?",
+           'writeCmd': lambda value: "CONFigure:VBG {v}".format(v=value)
+           })
 
-# Attribute('DCRThLow',
-#           {'description': 'DCR sweep lower Vth level',
-#            'type': PyTango.CmdArgType.DevString,
-#            'dim': [0],
-#            'readCmd': "CONFigure:DCR:THREshold:LOW?",
-#            'writeCmd': lambda value:
-#            "CONFigure:DCR:THREshold:LOW %s" % (value),
-#            })
+Attribute('PoleZeroEnable',
+          {'description': 'Enable Pole Zero cancellation',
+           'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': "CONFigure:POLEzero:ENABle?",
+           'writeCmd': lambda value: "CONFigure:POLEzero:ENABle {v}"
+                                     "".format(v=value)
+           })
 
-# Attribute('DCRThHigh',
-#           {'description': 'DCR sweep higher Vth level',
-#            'type': PyTango.CmdArgType.DevString,
-#            'dim': [0],
-#            'readCmd': "CONFigure:DCR:THREshold:HIGH?",
-#            'writeCmd': lambda value:
-#            "CONFigure:DCR:THREshold:HIGH %s" % (value),
-#            })
+Attribute('PoleZeroR',
+          {'description': 'Enable Pole Zero Resistance Ladder. '
+                          'Possible values are [0-7]',
+           'type': PyTango.CmdArgType.DevUShort,
+           'dim': [0],
+           'readCmd': "CONFigure:POLEzero:RESIstance?",
+           'writeCmd': lambda value: "CONFigure:POLEzero:RESIstance {v}"
+                                     "".format(v=value)
+           })
 
+Attribute('PoleZeroC',
+          {'description': 'Enable Pole Zero Capacitance Ladder. '
+                          'Possible values are [0-31]',
+           'type': PyTango.CmdArgType.DevUShort,
+           'dim': [0],
+           'readCmd': "CONFigure:POLEzero:CAPAcitance?",
+           'writeCmd': lambda value: "CONFigure:POLEzero:CAPAcitance {v}"
+                                     "".format(v=value)
+           })
 
+Attribute('PoleZeroAtt',
+          {'description': 'Enable Pole Zero Low Atten Ladder',
+           'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': "CONFigure:POLEzero:ATTEn?",
+           'writeCmd': lambda value: "CONFigure:POLEzero:ATTEn {v}"
+                                     "".format(v=value)
+           })
 
+Attribute('C_HighGain',
+          {'description': 'Enable high gain transimpedance mode',
+           'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': "CONFigure:HIGHgain:ENABle?",
+           'writeCmd': lambda value: "CONFigure:HIGHgain:ENABle {v}"
+                                     "".format(v=value)
+           })
 
-# Attribute('',
-#           {'description': '',
-#            'type': PyTango.CmdArgType,
-#            'dim': [0],
-#            'readCmd': "",
-#            })
+Attribute('TS_ThresholdsBest',
+          {'description': 'File tune of threshold per channel',
+           'type': PyTango.CmdArgType.DevLong,
+           'dim': [1, 8],
+           'readCmd': "ACQUire:THREshold:BEST?"
+           })
+
+Attribute('TS_VBGBest',
+          {'description': 'Global coarse tune of threshold',
+           'type': PyTango.CmdArgType.DevLong,
+           'dim': [0],
+           'readCmd': "ACQUire:THREshold:VBG?"
+           })
+
+Attribute('TS_DutyWindow',
+          {'description': 'Threshold Scan DutyWindow for actual count',
+           'type': PyTango.CmdArgType.DevLong,
+           'dim': [0],
+           'readCmd': "CONFigure:THREshold:WINDow?",
+           'writeCmd': lambda value: "CONFigure:THREshold:WINDow {v}"
+                                     "".format(v=value)
+           })
+
+Attribute('TOFtime',
+          {'description': 'Acquisition time in miliseconds',
+           'type': PyTango.CmdArgType.DevULong,
+           'dim': [0],
+           'readCmd': "CONFigure:TOF:TIME?",
+           'writeCmd': lambda value: "CONFigure:TOF:TIME {v}".format(v=value)
+           })
+
+Attribute('TOFinjection',
+          {'description': 'Useinjection pulse in U16 SMA',
+           'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': "CONFigure:TOF:INJEction?",
+           'writeCmd': lambda value: "CONFigure:TOF:INJEction {v}"
+                                     "".format(v=value)
+           })
+
+Attribute('TOFudpHost',
+          {'description': 'IP to which send udp packets',
+           'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "CONFigure:TOF:UDP:HOST?",
+           'writeCmd': lambda value: "CONFigure:TOF:UDP:HOST {v}"
+                                     "".format(v=value)
+           })
+
+Attribute('TOFudpPort',
+          {'description': 'Port to which send udp packets',
+           'type': PyTango.CmdArgType.DevUShort,
+           'dim': [0],
+           'readCmd': "CONFigure:TOF:UDP:PORT?",
+           'writeCmd': lambda value: "CONFigure:TOF:UDP:PORT {v}"
+                                     "".format(v=value)
+           })
+
+Attribute('HVenable',
+          {'description': 'High voltage font enabled',
+           'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': "CONFigure:HV:ENABle?",
+           'writeCmd': lambda value: "CONFigure:HV:ENABle {v}".format(v=value)
+           })
+
+Attribute('HVvoltage',
+          {'description': 'Voltage level [40-90]V',
+           'type': PyTango.CmdArgType.DevDouble,
+           'dim': [0],
+           'readCmd': "CONFigure:HV:VOLTage?",
+           'writeCmd': lambda value: "CONFigure:HV:VOLTage {v}".format(v=value)
+           })
+
+Attribute('HVvoltageOutput',
+          {'description': 'Output voltage',
+           'type': PyTango.CmdArgType.DevDouble,
+           'dim': [0],
+           'readCmd': "DIAGnostics:HV:VOLTage?"
+           })
+
+Attribute('HVcurrentOutput',
+          {'description': 'Output current in mA',
+           'type': PyTango.CmdArgType.DevDouble,
+           'dim': [0],
+           'readCmd': "DIAGnostics:HV:CURRent?"
+           })
+
+Attribute('HVoverCurrent',
+          {'description': 'Current output beyond safe levels',
+           'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': "DIAGnostics:HV:OVERcurrent?"
+           })
+
+Attribute('temperature',
+          {'description': 'Rpi temperature',
+           'type': PyTango.CmdArgType.DevDouble,
+           'dim': [0],
+           'readCmd': "DIAGnostics:TEMPerature?"
+           })
