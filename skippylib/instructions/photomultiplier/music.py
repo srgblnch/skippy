@@ -29,7 +29,7 @@ import PyTango
 # from skippylib import skippy
 # skippyobj = skippy.Skippy(name='localhost',
 #                           port=5025,
-#                           nMultiple=['CHANnel:7'])
+#                           nMultiple=['CHANnel:8'])
 
 Attribute('MAC',
           {'description': 'MAC address',
@@ -249,23 +249,23 @@ Attribute('TOFinjection',
                                      "".format(v=value)
            })
 
-Attribute('TOFudpHost',
-          {'description': 'IP to which send udp packets',
-           'type': PyTango.CmdArgType.DevString,
-           'dim': [0],
-           'readCmd': "CONFigure:TOF:UDP:HOST?",
-           'writeCmd': lambda value: "CONFigure:TOF:UDP:HOST {v}"
-                                     "".format(v=value)
-           })
-
-Attribute('TOFudpPort',
-          {'description': 'Port to which send udp packets',
-           'type': PyTango.CmdArgType.DevUShort,
-           'dim': [0],
-           'readCmd': "CONFigure:TOF:UDP:PORT?",
-           'writeCmd': lambda value: "CONFigure:TOF:UDP:PORT {v}"
-                                     "".format(v=value)
-           })
+# Attribute('TOFudpHost',
+#           {'description': 'IP to which send udp packets',
+#            'type': PyTango.CmdArgType.DevString,
+#            'dim': [0],
+#            'readCmd': "CONFigure:TOF:UDP:HOST?",
+#            'writeCmd': lambda value: "CONFigure:TOF:UDP:HOST {v}"
+#                                      "".format(v=value)
+#            })
+#
+# Attribute('TOFudpPort',
+#           {'description': 'Port to which send udp packets',
+#            'type': PyTango.CmdArgType.DevUShort,
+#            'dim': [0],
+#            'readCmd': "CONFigure:TOF:UDP:PORT?",
+#            'writeCmd': lambda value: "CONFigure:TOF:UDP:PORT {v}"
+#                                      "".format(v=value)
+#            })
 
 Attribute('HVenable',
           {'description': 'High voltage font enabled',
@@ -283,30 +283,30 @@ Attribute('HVvoltage',
            'writeCmd': lambda value: "CONFigure:HV:VOLTage {v}".format(v=value)
            })
 
-Attribute('HVvoltageOutput',
-          {'description': 'Output voltage',
-           'type': PyTango.CmdArgType.DevDouble,
-           'dim': [0],
-           'readCmd': "DIAGnostics:HV:VOLTage?"
-           })
-
-Attribute('HVcurrentOutput',
-          {'description': 'Output current in mA',
-           'type': PyTango.CmdArgType.DevDouble,
-           'dim': [0],
-           'readCmd': "DIAGnostics:HV:CURRent?"
-           })
-
-Attribute('HVoverCurrent',
-          {'description': 'Current output beyond safe levels',
-           'type': PyTango.CmdArgType.DevBoolean,
-           'dim': [0],
-           'readCmd': "DIAGnostics:HV:OVERcurrent?"
-           })
-
-Attribute('temperature',
-          {'description': 'Rpi temperature',
-           'type': PyTango.CmdArgType.DevDouble,
-           'dim': [0],
-           'readCmd': "DIAGnostics:TEMPerature?"
-           })
+# Attribute('HVvoltageOutput',
+#           {'description': 'Output voltage',
+#            'type': PyTango.CmdArgType.DevDouble,
+#            'dim': [0],
+#            'readCmd': "DIAGnostic:HV:VOLTage?"
+#            })
+#
+# Attribute('HVcurrentOutput',
+#           {'description': 'Output current in mA',
+#            'type': PyTango.CmdArgType.DevDouble,
+#            'dim': [0],
+#            'readCmd': "DIAGnostic:HV:CURRent?"
+#            })
+#
+# Attribute('HVoverCurrent',
+#           {'description': 'Current output beyond safe levels',
+#            'type': PyTango.CmdArgType.DevBoolean,
+#            'dim': [0],
+#            'readCmd': "DIAGnostic:HV:OVERcurrent?"
+#            })
+#
+# Attribute('temperature',
+#           {'description': 'Rpi temperature',
+#            'type': PyTango.CmdArgType.DevDouble,
+#            'dim': [0],
+#            'readCmd': "DIAGnostic:TEMPerature?"
+#            })
