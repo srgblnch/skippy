@@ -517,7 +517,7 @@ class Skippy(AbstractSkippyObj):
                     else:
                         msg = ''.join([msg, "%r" % (answer)])
                 self.debug_stream("In _readAttrProcedure() scalar answers:"
-                                  " %r" % (msg))
+                                  " {ans!r}".format(ans=msg))
                 self.__postHardwareScalarRead(indexes, answers)
             if not len(spectrumList) == 0:
                 indexes, queries = self.__preHardwareRead(spectrumList, 1)
@@ -775,7 +775,14 @@ class Skippy(AbstractSkippyObj):
                                               CmdArgType.DevULong64,
                                               CmdArgType.DevLong64]:
             try:
-                self.attributes[attrName].lastReadValue = int(attrValue)
+                self.debug_stream(
+                    "{name} {ans}".format(name=attrName, ans=attrValue))
+                if hasattr(attrValue, 'count') and \
+                        attrValue.count('.') == 1:
+                    self.attributes[attrName].lastReadValue = \
+                        int(float(attrValue))
+                else:
+                    self.attributes[attrName].lastReadValue = int(attrValue)
                 self.attributes[attrName].quality = \
                     AttrQuality.ATTR_VALID
             except:

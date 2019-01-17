@@ -95,6 +95,9 @@ class Builder(AbstractSkippyObj):
            - readCmd: method to be called to have the scpi read command
            There are also optional keys:
            - writeCmd:  method to be called to have the scpi write command
+           - delayAfterWrite: to specify that this single command needs an
+                              extra time until next communication with the
+                              instrument
            - channels:  boolean to indicate if this must be replicated
                         per all the channels
            - functions: boolean to indicate if this must be replicated
@@ -353,6 +356,8 @@ class Builder(AbstractSkippyObj):
         if 'rampeable' in definition and definition['rampeable'] is True:
             self.__buildRWObj(attrName, attrId, definition, readmethod,
                               writemethod)
+        if 'delayAfterWrite' not in definition:
+            definition['delayAfterWrite'] = 0.0
         if definition['writeCmd'] is None:
             self.__buildROObj(attrName, attrId, definition)
         else:
@@ -402,6 +407,7 @@ class Builder(AbstractSkippyObj):
                                          readFormula=definition['readFormula'],
                                          # writeFormula=definition['writeFormula'],
                                          rampeable=True,
+                                         delayAfterWrite=definition['delayAfterWrite'],
                                          parent=self._parent)
             if readmethod is not None and writemethod is not None:
                 self.__configureRamping(attrName, definition,
@@ -416,6 +422,7 @@ class Builder(AbstractSkippyObj):
                                          writeCmd=definition['writeCmd'],
                                          readFormula=definition['readFormula'],
                                          # writeFormula=definition['writeFormula'],
+                                         delayAfterWrite=definition['delayAfterWrite'],
                                          parent=self._parent)
 
     def __prepareWriteValues(self, attrName, definition, aprop, attr):

@@ -136,9 +136,9 @@ class Skippy (PyTango.Device_4Impl):
         # return self.__hardwareRead(query)
         return self.skippy.Read(query)
 
-    def doHardwareWrite(self, cmd):
-        # self.__hardwareWrite(cmd)
-        self.skippy.Write(cmd)
+    # def doHardwareWrite(self, cmd):
+    #     # self.__hardwareWrite(cmd)
+    #     self.skippy.Write(cmd)
 
     @AttrExc
     def read_attr(self, attr):
@@ -249,7 +249,8 @@ class Skippy (PyTango.Device_4Impl):
             else:
                 self.info_stream("In __write_instrument_attr() sending: %s "
                                  "= %r" % (attrName, cmd))
-                self.doHardwareWrite(cmd)
+                # self.doHardwareWrite(cmd)
+                self.skippy.attributes[attrName]._write(cmd)
         else:
             # rampeable but invalid ramp
             rampObj = self.skippy.attributes[attrName].getRampObj()
@@ -262,7 +263,8 @@ class Skippy (PyTango.Device_4Impl):
                 cmd = self.skippy.attributes[attrName].writeCmd(value)
                 self.info_stream("In __write_instrument_attr() sending: %s"
                                  % (cmd))
-                self.doHardwareWrite(cmd)
+                # self.doHardwareWrite(cmd)
+                self.skippy.attributes[attrName]._write(cmd)
             else:
                 # rampeable and create a thread, if it doesn't exist
                 if not self.skippy.attributes[attrName].getRampObj().isRamping():
@@ -999,7 +1001,7 @@ class Skippy (PyTango.Device_4Impl):
             argout = ""
             self.skippy._change_state_status(
                 newState=PyTango.DevState.FAULT,
-                newLine="Exception while executing CMDfloat()")
+                newLine="Exception while executing CMD()")
             # self.__reconnectInstrumentObj()
         #----- PROTECTED REGION END -----#  //  Skippy.CMD
         return argout
@@ -1014,46 +1016,46 @@ class Skippy (PyTango.Device_4Impl):
         #----- PROTECTED REGION END -----#  //  Skippy.is_CMD_allowed
         return state_ok
         
-    def CMDfloat(self, argin):
-        """ Expert command for a direct send of a SCPI command and read the answer converted to a float list.
+    # def CMDfloat(self, argin):
+    #     """ Expert command for a direct send of a SCPI command and read the answer converted to a float list.
+    #
+    #     :param argin:
+    #     :type: PyTango.DevString
+    #     :return:
+    #     :rtype: PyTango.DevVarFloatArray """
+    #     self.debug_stream("In CMDfloat()")
+    #     argout = [0.0]
+    #     #----- PROTECTED REGION ID(Skippy.CMDfloat) ENABLED START -----#
+    #     argin = str(argin)
+    #     self.info_stream("In %s::CMDfloat(%r)" % (self.get_name(), argin))
+    #     try:
+    #         if argin.find('?') >= 0:
+    #             # argout = self.skippy.instrument.ask_for_values(argin)
+    #             argout = self.skippy.Read(argin, ask_for_values=True)
+    #         else:
+    #             # self.skippy.instrument.write(argin)
+    #             self.skippy.Write(argin)
+    #             argout = float("NaN")
+    #         self.info_stream("In CMDfloat(%r): %r" % (argin, argout))
+    #     except Exception as e:
+    #         self.error_stream("In CMDfloat(%r) Exception: %s" % (argin, e))
+    #         argout = ""
+    #         self.skippy._change_state_status(
+    #             newState=PyTango.DevState.FAULT,
+    #             newLine="Exception while executing CMDfloat()")
+    #         # self.__reconnectInstrumentObj()
+    #     #----- PROTECTED REGION END -----#  //  Skippy.CMDfloat
+    #     return argout
         
-        :param argin: 
-        :type: PyTango.DevString
-        :return: 
-        :rtype: PyTango.DevVarFloatArray """
-        self.debug_stream("In CMDfloat()")
-        argout = [0.0]
-        #----- PROTECTED REGION ID(Skippy.CMDfloat) ENABLED START -----#
-        argin = str(argin)
-        self.info_stream("In %s::CMDfloat(%r)" % (self.get_name(), argin))
-        try:
-            if argin.find('?') >= 0:
-                # argout = self.skippy.instrument.ask_for_values(argin)
-                argout = self.skippy.Read(argin, ask_for_values=True)
-            else:
-                # self.skippy.instrument.write(argin)
-                self.skippy.Write(argin)
-                argout = float("NaN")
-            self.info_stream("In CMDfloat(%r): %r" % (argin, argout))
-        except Exception as e:
-            self.error_stream("In CMDfloat(%r) Exception: %s" % (argin, e))
-            argout = ""
-            self.skippy._change_state_status(
-                newState=PyTango.DevState.FAULT,
-                newLine="Exception while executing CMDfloat()")
-            # self.__reconnectInstrumentObj()
-        #----- PROTECTED REGION END -----#  //  Skippy.CMDfloat
-        return argout
-        
-    def is_CMDfloat_allowed(self):
-        self.debug_stream("In is_CMDfloat_allowed()")
-        state_ok = not(self.get_state() in [PyTango.DevState.OFF,
-            PyTango.DevState.FAULT,
-            PyTango.DevState.INIT])
-        #----- PROTECTED REGION ID(Skippy.is_CMDfloat_allowed) ENABLED START -----#
-
-        #----- PROTECTED REGION END -----#  //  Skippy.is_CMDfloat_allowed
-        return state_ok
+    # def is_CMDfloat_allowed(self):
+    #     self.debug_stream("In is_CMDfloat_allowed()")
+    #     state_ok = not(self.get_state() in [PyTango.DevState.OFF,
+    #         PyTango.DevState.FAULT,
+    #         PyTango.DevState.INIT])
+    #     #----- PROTECTED REGION ID(Skippy.is_CMDfloat_allowed) ENABLED START -----#
+    #
+    #     #----- PROTECTED REGION END -----#  //  Skippy.is_CMDfloat_allowed
+    #     return state_ok
         
     def Standby(self):
         """ Stablish communication with the instrument.
@@ -1218,12 +1220,12 @@ class SkippyClass(PyTango.DeviceClass):
             {
                 'Display level': PyTango.DispLevel.EXPERT,
             } ],
-        'CMDfloat':
-            [[PyTango.DevString, "none"],
-            [PyTango.DevVarFloatArray, "none"],
-            {
-                'Display level': PyTango.DispLevel.EXPERT,
-            } ],
+        # 'CMDfloat':
+        #     [[PyTango.DevString, "none"],
+        #     [PyTango.DevVarFloatArray, "none"],
+        #     {
+        #         'Display level': PyTango.DispLevel.EXPERT,
+        #     } ],
         'Standby':
             [[PyTango.DevVoid, "none"],
             [PyTango.DevBoolean, "none"]],

@@ -16,10 +16,10 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from .abstracts import AbstractSkippyAttribute
 from .features import RampFeature, RawDataFeature, ArrayDataInterpreterFeature
 import PyTango
-from .abstracts import AbstractSkippyAttribute
-from time import time
+from time import time, sleep
 import traceback
 
 __author__ = "Sergi Blanch-Torné"
@@ -199,6 +199,8 @@ class SkippyReadAttribute(SkippyAttribute):
                 self.warn_stream("Exception evaluating formula: %s" % (e))
         else:
             try:
+                # FIXME: split in submethods between data types and dimesions
+                #  this segment of code is getting to long and complex
                 if self.type in [PyTango.DevDouble, PyTango.DevFloat]:
                     if self.dim == 0:
                         self._lastReadValue = float(newReadValue)
@@ -211,15 +213,32 @@ class SkippyReadAttribute(SkippyAttribute):
                                    PyTango.DevInt, PyTango.DevLong,
                                    PyTango.DevULong, PyTango.DevLong64,
                                    PyTango.DevULong64]:
-                    if hasattr(newReadValue, 'count') and \
-                            newReadValue.count('.') == 1:
-                        self._lastReadValue = int(float(newReadValue))
+                    if self.dim == 0:
+                        if hasattr(newReadValue, 'count') and \
+                                newReadValue.count('.') == 1:
+                            self._lastReadValue = int(float(newReadValue))
+                        else:
+                            self._lastReadValue = int(newReadValue)
+                    elif self.dim == 1:
+                        raise BufferError("Unsupported array data")
+                        # FIXME:
+                        #  self._lastReadValue = nparray(eval(newReadValue))
                     else:
-                        self._lastReadValue = int(newReadValue)
+                        raise BufferError("Unsupported multidimensional data")
                 elif self.type in [PyTango.DevBoolean]:
-                    self._lastReadValue = bool(newReadValue)
+                    if self.dim == 0:
+                        self._lastReadValue = bool(newReadValue)
+                    elif self.dim == 1:
+                        raise BufferError("Unsupported array data")
+                    else:
+                        raise BufferError("Unsupported multidimensional data")
                 elif self.type in [PyTango.DevString]:
-                    self._lastReadValue = newReadValue
+                    if self.dim == 0:
+                        self._lastReadValue = newReadValue
+                    elif self.dim == 1:
+                        raise BufferError("Unsupported array data")
+                    else:
+                        raise BufferError("Unsupported multidimensional data")
                 else:
                     self.warn_stream(
                         "type {x} not in the list of managed types"
@@ -269,10 +288,11 @@ class SkippyReadWriteAttribute(SkippyReadAttribute):
     # FIXME: this class is getting dirty due to the ramp: too many specific
     #        methods when the ramp should be encapsulated apart.
     def __init__(self, writeCmd=None, writeFormula=None, rampeable=False,
-                 writeValues=None, *args, **kwargs):
+                 writeValues=None, delayAfterWrite=0.0, *args, **kwargs):
         super(SkippyReadWriteAttribute, self).__init__(*args, **kwargs)
         self._writeCmd = writeCmd
         self._writeFormula = writeFormula
+        self._delayAfterWrite = delayAfterWrite
         self._lastWriteValue = None
         self._ramp = None
         if rampeable:
@@ -306,10 +326,19 @@ class SkippyReadWriteAttribute(SkippyReadAttribute):
         if self._parent is not None and\
                 hasattr(self._parent, 'Write'):
             self._parent.Write(cmd)
+            if self._delayAfterWrite > 0.0:
+                self.debug_stream(
+                    "{name} forces a delay after write of {v:f} seconds"
+                    "".format(name=self.name, v=self._delayAfterWrite))
+                sleep(self._delayAfterWrite)
 
     @property
     def writeFormula(self):
         return self._writeFormula
+
+    @property
+    def delayAfterWrite(self):
+        return self._delayAfterWrite
 
     @property
     def wvalue(self):

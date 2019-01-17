@@ -219,12 +219,14 @@ Attribute('C_HighGain',
                                      "".format(v=value)
            })
 
-Attribute('TS_ThresholdsBest',
-          {'description': 'File tune of threshold per channel',
-           'type': PyTango.CmdArgType.DevLong,
-           'dim': [1, 8],
-           'readCmd': "ACQUire:THREshold:BEST?"
-           })
+# Attribute('TS_ThresholdsBest',
+#           {'description': 'File tune of threshold per channel',
+#            'type': PyTango.CmdArgType.DevLong,
+#            'dim': [1, 8],
+#            'readCmd': "ACQUire:THREshold:BEST?"
+#            })
+# FIXME: music returns a string evaluable as an array, but incorrectly
+# it doesn't sends a #NMMMMxxx.. array as scpi expect
 
 Attribute('TS_VBGBest',
           {'description': 'Global coarse tune of threshold',
@@ -282,7 +284,8 @@ Attribute('HVenable',
            'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
            'readCmd': "CONFigure:HV:ENABle?",
-           'writeCmd': lambda value: "CONFigure:HV:ENABle {v}".format(v=value)
+           'writeCmd': lambda value: "CONFigure:HV:ENABle {v}".format(v=value),
+           'delayAfterWrite': 0.2,
            })
 
 Attribute('HVvoltage',
