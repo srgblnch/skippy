@@ -33,25 +33,21 @@ import PyTango
 
 Attribute('MAC',
           {'description': 'MAC address',
-           'type': PyTango.CmdArgType.DevString,
+           'type': PyTango.CmdArgType.DevUShort,
            'dim': [0],
            'readCmd': "*MAC?",
            })
 
 Attribute('AcqMode',
           {'description': 'Acquisition Mode:\n'
-                          '0: CountMode\n'
-                          '1: TOFMode\n'
-                          '2: AnalogSingleEnded\n'
-                          '3: AnalogSummation',
+                          '0: Analog\n'
+                          '1: Digital\n',
            'type': PyTango.CmdArgType.DevString,
            'dim': [0],
            'readCmd': "CONFigure:ACQUisition:MODE?",
            'writeCmd':
-               lambda value: "CONFigure:ACQUisition:MODE {v}".format(value),
+               lambda value: "CONFigure:ACQUisition:MODE {v}".format(v=value),
            # TODO: improve this set of valid values
-           'writeValues': ['CountMode', 'TOFMode',
-                           'AnalogSingleEnded', 'AnalogSummation']
            })
 
 Attribute('IntTime',
@@ -60,7 +56,7 @@ Attribute('IntTime',
            'dim': [0],
            'readCmd': "CONFigure:COUNt:INTTime?",
            'writeCmd':
-               lambda value: "CONFigure:COUNt:INTTime {v}".format(value),
+               lambda value: "CONFigure:COUNt:INTTime {v}".format(v=value),
            })
 
 Attribute('CountRate',
@@ -69,7 +65,7 @@ Attribute('CountRate',
            'dim': [0],
            'readCmd': "CONFigure:COUNt:RATE?",
            'writeCmd':
-               lambda value: "CONFigure:COUNt:RATE {v}".format(value),
+               lambda value: "CONFigure:COUNt:RATE {v}".format(v=value),
            })
 
 Attribute('Count',
@@ -177,7 +173,7 @@ Attribute('PoleZeroEnable',
            'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
            'readCmd': "CONFigure:POLEzero:ENABle?",
-           'writeCmd': lambda value: "CONFigure:POLEzero:ENABle {v}"
+           'writeCmd': lambda value: "CONFigure:POLEzero:ENABle {v:d}"
                                      "".format(v=value)
            })
 
@@ -206,7 +202,7 @@ Attribute('PoleZeroAtt',
            'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
            'readCmd': "CONFigure:POLEzero:ATTEn?",
-           'writeCmd': lambda value: "CONFigure:POLEzero:ATTEn {v}"
+           'writeCmd': lambda value: "CONFigure:POLEzero:ATTEn {v:d}"
                                      "".format(v=value)
            })
 
@@ -215,7 +211,7 @@ Attribute('C_HighGain',
            'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
            'readCmd': "CONFigure:HIGHgain:ENABle?",
-           'writeCmd': lambda value: "CONFigure:HIGHgain:ENABle {v}"
+           'writeCmd': lambda value: "CONFigure:HIGHgain:ENABle {v:d}"
                                      "".format(v=value)
            })
 
