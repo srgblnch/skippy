@@ -143,8 +143,20 @@ class Skippy (PyTango.Device_4Impl):
     @AttrExc
     def read_attr(self, attr):
         if self.get_state() in [PyTango.DevState.FAULT]:
-            attr.set_value_date_quality(
-                0, time.time(), PyTango.AttrQuality.ATTR_INVALID)
+            # Try to return a quality invalid without knowing yet if the
+            # attribute is a number or an string.
+            try:
+                attr.set_value_date_quality(
+                    0, time.time(), PyTango.AttrQuality.ATTR_INVALID)
+                return
+            except:
+                pass
+            try:
+                attr.set_value_date_quality(
+                    "", time.time(), PyTango.AttrQuality.ATTR_INVALID)
+                return
+            except:
+                pass
             return
         attrName = attr.get_name()
         if attrName in self.skippy.attributes:
