@@ -44,7 +44,7 @@ def buildCommunicator(instrumentName, port=None, parent=None, extra_args=None,
     elif __isVisaDevice(instrumentName):
         return byVisa(instrumentName, parent=parent)
     elif __isSerialDevice(instrumentName):
-        return bySerialDevice(instumentName, parent=parent)
+        return bySerialDevice(instrumentName, parent=parent)
     elif __isSerial(instrumentName):
         return bySerial(instrumentName, parent=parent, serial_args=extra_args,
                         terminator=terminator)
@@ -61,7 +61,7 @@ def __isHostName(name):
 
 def __isSerialDevice(name):
     try:
-        devClass = PyTango.DeviceProxy(devName).info().dev_class
+        devClass = PyTango.DeviceProxy(name).info().dev_class
         if devClass in ('Serial', 'PySerial'):
             return True
         else:
