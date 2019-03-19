@@ -73,7 +73,7 @@ class CommunicatorBuilder(object):
             return ByVisaName(self._instrumentName, parent=self._parent)
         elif self.__isSerialDevice(self._instrumentName):
             self._log("identified %r as serial device" % self._instrumentName)
-            return BySerialDevice(self._instumentName, parent=self._parent)
+            return BySerialDevice(self._instrumentName, parent=self._parent)
         elif self.__isSerialName(self._instrumentName):
             self._log("identified %r as serial name" % self._instrumentName)
             return BySerialName(self._instrumentName, parent=self._parent,
@@ -90,7 +90,7 @@ class CommunicatorBuilder(object):
 
     def __isSerialDevice(self, name):
         try:
-            devClass = PyTango.DeviceProxy(devName).info().dev_class
+            devClass = PyTango.DeviceProxy(name).info().dev_class
             if devClass in ('Serial', 'PySerial'):
                 return True
             else:
