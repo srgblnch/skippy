@@ -50,6 +50,19 @@ Attribute('Temp',
            'writeCmd': lambda value: ":TEMP %s" % (value),
            })
 
+Attribute('VesselTemp',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': ":MEAS:VESSEL_TEMP?",
+
+           })
+
+Attribute('ExtrasnTemp',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': ":MEAS:EXTRASN_TEMP?",
+           })
+
 Attribute('Flow',
           {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
