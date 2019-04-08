@@ -11,7 +11,7 @@ else
     VERBOSE=$2
 fi
 
-DNAME=skippy
+DNAME=Skippy
 
-cd $SICILIA/ds/python/$DNAME
+cd $SICILIA/ds/$DNAME
 screen -dm -S $DNAME-$1 python $DNAME.py $1 $VERBOSE
