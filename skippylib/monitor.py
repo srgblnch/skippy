@@ -17,7 +17,9 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from .abstracts import AbstractSkippyObj
+from copy import copy
 from PyTango import DevState
+from time import time, sleep
 import traceback
 from threading import Event, Thread
 
@@ -80,11 +82,13 @@ class Monitor(AbstractSkippyObj):
             return id
 
     def __buildIdList(self, attrList):
-        multiattr = self.get_device_attr()
-        IdsList = []
-        for attrName in attrList:
-            IdsList.append(multiattr.get_attr_ind_by_name(attrName))
-        return IdsList
+        device = self.__getDevice()
+        if device is not None:
+            multiattr = device.get_device_attr()
+            IdsList = []
+            for attrName in attrList:
+                IdsList.append(multiattr.get_attr_ind_by_name(attrName))
+            return IdsList
 
     def __prepareMonitor(self):
         ''' - The lines in the property 'MonitoredAttributes' defines an
@@ -173,7 +177,7 @@ class Monitor(AbstractSkippyObj):
         while not self._generalMonitorEvent.is_set() and \
                 not monitorDict['Event'].is_set():
             if not len(attrList) == len(monitorDict['AttrList']):
-                attrList = copy.copy(monitorDict['AttrList'])
+                attrList = copy(monitorDict['AttrList'])
                 attrIds = self.__buildIdList(monitorDict['AttrList'])
                 self.info_stream("In __monitor(), thread %s, the "
                                  "attribute list has change to %r"
@@ -182,15 +186,15 @@ class Monitor(AbstractSkippyObj):
             if len(attrList) == 0:
                 monitorDict['Event'].set()
             else:
-                t0 = time.time()
+                t0 = time()
                 self._parent._readAttrProcedure(attrIds, fromMonitor=True)
-                tf = time.time()
+                tf = time()
                 delta_t = monitorDict['Period'] - (tf - t0)
                 if delta_t <= 0:  # it take longer than the period
                     self.__appendToAlarmCausingList(attrList)
                 else:
                     self.__removeFromAlarmCausingList(attrList)
-                    time.sleep(delta_t)
+                    sleep(delta_t)
         self.info_stream("Monitoring thread %s announcing its STOP"
                          % (monitorDict['Name']))
         for AttrName in monitorDict['AttrList']:
@@ -204,7 +208,7 @@ class Monitor(AbstractSkippyObj):
                    for monitorTag in self._monitorThreads.keys()]):
             self.info_stream("In %s.Stop() waiting for %d"
                              % (self.name, len(self._monitorThreads.keys())))
-            time.sleep(0.5)
+            sleep(0.5)
         self._change_state_status(newState=DevState.ON)
         self.__prepareMonitor()
 
@@ -260,15 +264,16 @@ class Monitor(AbstractSkippyObj):
         descriptor['Period'] = value
 
     def __set_change_event(self, attrName, implemented, detect):
-        if self.__getDevice() is not None:
-            self.set_change_event(attrName, implemented, detect)
+        device = self.__getDevice()
+        if device is not None:
+            device.set_change_event(attrName, implemented, detect)
 
     def __appendToAlarmCausingList(self, attrList):
         if self._parent:
-            statemachine = self._parent.statemachineObj()
+            statemachine = self._parent.statemachineObj
             statemachine.InsertAlarmDueToMonitoring(attrList)
 
     def __removeFromAlarmCausingList(self, attrList):
         if self._parent:
-            statemachine = self._parent.statemachineObj()
+            statemachine = self._parent.statemachineObj
             statemachine.RemoveAlarmDueToMonitoring(attrList)
