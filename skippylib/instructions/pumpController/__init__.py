@@ -16,9 +16,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from skippy import Skippy
-
 __author__ = "Sergi Blanch-Torné"
 __email__ = "sblanch@cells.es"
-__copyright__ = "Copyright 2016, CELLS / ALBA Synchrotron"
+__copyright__ = "Copyright 2018, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"

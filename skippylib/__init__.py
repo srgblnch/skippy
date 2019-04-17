@@ -16,9 +16,20 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from skippy import Skippy
+# from .abstracts import (AbstractSkippyObj, AbstractSkippyAttribute,
+#                         AbstractSkippyFeature)
+from .attributes import (SkippyAttribute, SkippyReadAttribute,
+                         SkippyReadWriteAttribute)
+from .builder import Builder, AttrExc
+from .communications import CommunicatorBuilder
+from .features import (SkippyFeature, RampFeature, RawDataFeature,
+                       ArrayDataInterpreterFeature)
+from .skippy import Skippy
+from .version import version
+from .watchdog import WatchDog
+
 
 __author__ = "Sergi Blanch-Torné"
 __email__ = "sblanch@cells.es"
-__copyright__ = "Copyright 2016, CELLS / ALBA Synchrotron"
+__copyright__ = "Copyright 2017, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"

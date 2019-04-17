@@ -24,7 +24,7 @@ __license__ = "GPLv3+"
 __status__ = "Production"
 
 # import scpi
-__version__ = '1.4.1'
+__version__ = '1.4.2'
 
 
 class InstrumentIdentification(object):
@@ -75,7 +75,7 @@ class InstrumentIdentification(object):
 
 def main():
     instrument = InstrumentIdentification('ALBA', 'test', 0, __version__)
-    print instrument.idn()
+    print(instrument.idn())
 
 if __name__ == '__main__':
     main()

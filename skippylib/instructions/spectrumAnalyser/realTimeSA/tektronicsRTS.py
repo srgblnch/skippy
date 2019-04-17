@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # ##### BEGIN GPL LICENSE BLOCK #####
 #
 #  This program is free software; you can redistribute it and/or
@@ -16,9 +15,9 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from skippy import Skippy
-
-__author__ = "Sergi Blanch-Torné"
+__author__ = "Sergi Blanch-Torne"
+__maintainer__ = "Sergi Blanch-Torne"
 __email__ = "sblanch@cells.es"
 __copyright__ = "Copyright 2016, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
+__status__ = "Production"

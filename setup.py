@@ -13,8 +13,7 @@
 #  GNU General Public License for more details.
 #
 #  You should have received a copy of the GNU General Public License
-#  along with this program; if not, write to the Free Software Foundation,
-#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
+#  along with this program; If not, see <http://www.gnu.org/licenses/>.
 #
 # ##### END GPL LICENSE BLOCK #####
 
@@ -40,7 +39,7 @@ See more details in the doc directory of the sources repository.
 __url__ = "https://github.com/srgblnch/skippy"
 # we use semantic versioning (http://semver.org/) and we update it using the
 # bumpversion script (https://github.com/peritus/bumpversion)
-__version__ = '1.4.1'
+__version__ = '1.4.2'
 
 
 from setuptools import setup, find_packages

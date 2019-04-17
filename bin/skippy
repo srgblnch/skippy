@@ -13,5 +13,4 @@ fi
 
 DNAME=skippy
 
-cd $SICILIA/ds/python/$DNAME
-screen -dm -S $DNAME-$1 python $DNAME.py $1 $VERBOSE
+screen -dm -S $DNAME-$1 $SICILIA/bin/$DNAME $1 $VERBOSE
