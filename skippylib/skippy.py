@@ -114,8 +114,8 @@ class Skippy(AbstractSkippyObj):
         elif not self.Start():
             self.warn_stream("Failed to go to the Running state")
             return
-        # self._watchdog = WatchDog(name="WatchDog", parent=self)
-        # self._watchdog.start()
+        self._watchdog = WatchDog(name="WatchDog", parent=self)
+        self._watchdog.start()
 
     @property
     def version(self):

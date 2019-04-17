@@ -415,8 +415,13 @@ class TestManager(object):
         testTitle = "Glitch"
         if device['State'].value in [PyTango.DevState.ON,
                                      PyTango.DevState.RUNNING]:
-            reactiontime = \
-                float(device.Exec("self.skippy.watchdogObj.checkPeriod"))
+            if device.Exec("self.skippy.watchdogObj") == 'None':
+                msg = "Device doesn't have the watchdog feature!"
+                self.log(msg, color=bcolors.WARNING)
+                return False, [testTitle, msg]
+            reactiontime = device.Exec("self.skippy.watchdogObj.checkPeriod")
+            self.log("reactiontime: %s" % reactiontime)
+            reactiontime = float(reactiontime)
             t_0 = datetime.now()
             self._instrument.close()
             self.log("Instrument closed", color=bcolors.OKBLUE)
