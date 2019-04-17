@@ -234,7 +234,11 @@ class TestManager(object):
 
     def _startTestDevice(self):
         if not self._isAlreadyRunning():
-            self._deviceProcess = Popen([DevServer, DevInstance, "-v4"])
+            try:
+                self._deviceProcess = Popen([DevServer, DevInstance, "-v4"])
+            except OSError:
+                launcher = "/usr/lib/tango/"+DevServer
+                self._deviceProcess = Popen([launcher, DevInstance, "-v4"])
             self.log("Launched the device server has pid %d"
                      % (self._deviceProcess.pid), color=bcolors.OKBLUE)
         else:
