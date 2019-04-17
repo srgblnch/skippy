@@ -862,36 +862,42 @@ class Skippy(AbstractSkippyObj):
             attrWithEvents = []
             for i, answer in enumerate(answers):
                 attrName = indexes[i][0]
+                self.debug_stream("__postHardwareSpectrumRead() for %s: %s"
+                                  % (attrName, repr(answer)))
+                attrStruct = self.attributes[attrName]
+
                 # TODO: hardcoded attrNames!!!
                 if 'WaveformDataFormat' in self.attributes:
-                    dataFormat =\
-                        self.attributes['WaveformDataFormat'].lastReadValue
+                    dataFormatAttr = self.attributes['WaveformDataFormat']
+                    dataFormat = dataFormatAttr.lastReadValue
                     if dataFormat.startswith('ASC'):
-                        if self.attributes[attrName].hasRawData():
-                            self.attributes[attrName].lastReadRaw = answer
-                        self.attributes[attrName].lastReadValue = \
-                            numpy.fromstring(answer, dtype=float, sep=',')
-                        self.attributes[attrName].timestamp = t
-                        self.attributes[attrName].quality = \
-                            AttrQuality.ATTR_VALID
+                        if attrStruct.hasRawData():
+                            attrStruct.lastReadRaw = answer
+                        if not attrStruct.hasArrayInterpreter():
+                            attrStruct.lastReadValue = numpy.fromstring(
+                                answer, dtype=float, sep=',')
+                        else:
+                            attrStruct.rvalue
+                        attrStruct.timestamp = t
+                        attrStruct.quality = AttrQuality.ATTR_VALID
                     else:
                         # process the header
                         if not answer[0] == '#':
-                            self.error_stream("Wrong data receiver for the "
-                                              "attribute %s" % (attrName))
+                            self.error_stream(
+                                "Wrong data receiver for the attribute %s"
+                                % (attrName))
                             return
                         # save values for debugging
-                        self.attributes[attrName].lastReadRaw = answer
+                        attrStruct.lastReadRaw = answer
                         # review the header, in answer[0] there is the '#' tag
                         headerSize = int(answer[1])
                         bodySize = int(answer[2:2+headerSize])
                         bodyBlock = answer[2+headerSize:
                                            2+headerSize+bodySize]
-                        self.debug_stream("In __postHardwareSpectrumRead() "
-                                          "waveform data: header size %d "
-                                          "bytes, wave size %d bytes (%d)"
-                                          % (2+headerSize, bodySize,
-                                             len(bodyBlock)))
+                        self.debug_stream(
+                            "In __postHardwareSpectrumRead() waveform data: "
+                            "header size %d bytes, wave size %d bytes (%d)"
+                            % (2+headerSize, bodySize, len(bodyBlock)))
                         # prepare interpretation of the raw data
                         if dataFormat.startswith('BYT'):
                             format = 'b'  # signed char, 1byte
@@ -903,37 +909,33 @@ class Skippy(AbstractSkippyObj):
                             format = 'I'
                             divisor = 4
                         else:
-                            self.error_stream("Cannot decodify data receiver "
-                                              "for the attribute %s (%s)"
-                                              % (attrName, dataFormat))
-                            self.attributes[attrName].lastReadValue = []
-                            self.attributes[attrName].timestamp = t
-                            self.attributes[attrName].quality = \
-                                AttrQuality.ATTR_INVALID
+                            self.error_stream(
+                                "Cannot decodify data receiver for the "
+                                "attribute %s (%s)" % (attrName, dataFormat))
+                            attrStruct.lastReadValue = []
+                            attrStruct.timestamp = t
+                            attrStruct.quality = AttrQuality.ATTR_INVALID
                             break
                         nIncompleteBytes = (len(bodyBlock) % divisor)
                         nCompletBytes = len(bodyBlock) - nIncompleteBytes
                         completBytes = bodyBlock[:nCompletBytes]
-                        self.debug_stream("With %d bytes, found %d "
-                                          "complete packs and %d "
-                                          "incomplete. (Expected %d "
-                                          "single values)"
-                                          % (len(bodyBlock), nCompletBytes,
-                                             nIncompleteBytes,
-                                             nCompletBytes/divisor))
+                        self.debug_stream(
+                            "With %d bytes, found %d complete packs and %d "
+                            "incomplete. (Expected %d single values)"
+                            % (len(bodyBlock), nCompletBytes, nIncompleteBytes,
+                               nCompletBytes/divisor))
                         # convert the received input to integers
                         try:
                             fmt = format*(nCompletBytes/divisor)
-                            self.debug_stream("Preparing to unpack with "
-                                              "%r format (len fmt %d, "
-                                              "len bytes %d)"
-                                              % (format, len(fmt),
-                                                 len(completBytes)))
+                            self.debug_stream(
+                                "Preparing to unpack with  %r format "
+                                "(len fmt %d, len bytes %d)"
+                                % (format, len(fmt), len(completBytes)))
                             unpackInt = struct.unpack(fmt, completBytes)
                             # self.debug_stream("Unpacked: %s" % unpackInt)
                         except Exception as e:
-                            self.error_stream("Data cannot be unpacked: %s"
-                                              % (e))
+                            self.error_stream(
+                                "Data cannot be unpacked: %s" % (e))
                             traceback.print_exc()
                         else:
                             # expand the input when each float is codified in
@@ -941,32 +943,28 @@ class Skippy(AbstractSkippyObj):
                             floats = numpy.array(unpackInt, dtype=float)
                             if 'WaveformOrigin' in self.attributes and \
                                     'WaveformIncrement' in self.attributes:
-                                waveorigin =\
-                                    self.attributes['WaveformOrigin'].\
-                                    lastReadValue
-                                waveincrement =\
-                                    self.attributes['WaveformIncrement'].\
-                                    lastReadValue
-                                self.attributes[attrName].lastReadValue = \
-                                    (waveorigin + (waveincrement * floats))
-                                self.attributes[attrName].timestamp = t
-                                self.attributes[attrName].quality = \
-                                    AttrQuality.ATTR_VALID
+                                waveorigin = self.attributes[
+                                    'WaveformOrigin'].lastReadValue
+                                waveincrement = self.attributes[
+                                    'WaveformIncrement'].lastReadValue
+                                attrStruct.lastReadValue = (
+                                        waveorigin + (waveincrement * floats))
+                                attrStruct.timestamp = t
+                                attrStruct.quality = AttrQuality.ATTR_VALID
                 else:
-                    self.warn_stream("In __postHardwareSpectrumRead() "
-                                     "Unrecognised spectrum attribute, "
-                                     "storing raw data")
-                    self.attributes[attrName].lastReadValue = answer
-                    self.attributes[attrName].timestamp = t
-                    self.attributes[attrName].quality = \
-                        AttrQuality.ATTR_VALID
-                attrId = self.attributes[attrName].id
+                    self.warn_stream(
+                        "In __postHardwareSpectrumRead() Unrecognised "
+                        "spectrum attribute, storing raw data")
+                    attrStruct.lastReadValue = answer
+                    attrStruct.timestamp = t
+                    attrStruct.quality = AttrQuality.ATTR_VALID
+                attrId = attrStruct.id
                 if attrId in self._monitor.monitoredIds:
                     attrWithEvents.append(
-                        [attrName, self.attributes[attrName].lastReadValue,
-                         self.attributes[attrName].quality])
+                        [attrName, attrStruct.lastReadValue,
+                         attrStruct.quality])
             self.fireEventsList(attrWithEvents)
         except Exception as e:
             self.error_stream("In __postHardwareSpectrumRead() Exception: %s"
-                              % (e))
+                             % (e))
             traceback.print_exc()
