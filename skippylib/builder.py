@@ -334,7 +334,8 @@ class Builder(AbstractSkippyObj):
             elif function is not None:
                 like = "function"
                 number = function
-            elif multiple is not None and 'scpiPrefix' in definition['multiple'] and\
+            elif multiple is not None and \
+                    'scpiPrefix' in definition['multiple'] and\
                     'attrSuffix' in definition['multiple']:
                 like = definition['multiple']['scpiPrefix']
                 number = multiple
@@ -387,43 +388,44 @@ class Builder(AbstractSkippyObj):
 
     def __buildROObj(self, attrName, attrId, definition):
         self._parent.attributes[attrName] =\
-            SkippyReadAttribute(name=attrName, id=attrId,
-                                type=definition['type'],
-                                dim=definition['dim'][0],
-                                readCmd=definition['readCmd'],
-                                readFormula=definition['readFormula'],
-                                parent=self._parent)
+            SkippyReadAttribute(
+                name=attrName, id=attrId, type=definition['type'],
+                dim=definition['dim'][0], readCmd=definition['readCmd'],
+                readFormula=definition['readFormula'], parent=self._parent)
 
     def __buildRWObj(self, attrName, attrId, definition, readmethod=None,
                      writemethod=None):
+        _type = definition['type']
+        _dim = definition['dim'][0]
+        _rcmd = definition['readCmd']
+        _wcmd = definition['writeCmd']
+        _rformula = definition['readFormula']
+        if 'writeFormula' in definition:
+            _wformula = definition['writeFormula']
+        else:
+            _wformula = None
+        if 'delayAfterWrite' in definition:
+            _delayAfterWrite = definition['delayAfterWrite']
+        else:
+            _delayAfterWrite = None
         if 'rampeable' in definition:
             self._parent.attributes[attrName] =\
-                SkippyReadWriteAttribute(name=attrName,
-                                         id=attrId,
-                                         type=definition['type'],
-                                         dim=definition['dim'][0],
-                                         readCmd=definition['readCmd'],
-                                         writeCmd=definition['writeCmd'],
-                                         readFormula=definition['readFormula'],
-                                         # writeFormula=definition['writeFormula'],
-                                         rampeable=True,
-                                         delayAfterWrite=definition['delayAfterWrite'],
-                                         parent=self._parent)
+                SkippyReadWriteAttribute(
+                    name=attrName, id=attrId, type=_type,
+                    dim=_dim, readCmd=_rcmd, writeCmd=_wcmd,
+                    readFormula=_rformula,  # writeFormula=_wformula,
+                    rampeable=True, delayAfterWrite=_delayAfterWrite,
+                    parent=self._parent)
             if readmethod is not None and writemethod is not None:
                 self.__configureRamping(attrName, definition,
                                         readmethod, writemethod)
         else:
             self._parent.attributes[attrName] =\
-                SkippyReadWriteAttribute(name=attrName,
-                                         id=attrId,
-                                         type=definition['type'],
-                                         dim=definition['dim'][0],
-                                         readCmd=definition['readCmd'],
-                                         writeCmd=definition['writeCmd'],
-                                         readFormula=definition['readFormula'],
-                                         # writeFormula=definition['writeFormula'],
-                                         delayAfterWrite=definition['delayAfterWrite'],
-                                         parent=self._parent)
+                SkippyReadWriteAttribute(
+                    name=attrName, id=attrId, type=_type,
+                    dim=_dim, readCmd=_rcmd, writeCmd=_wcmd,
+                    readFormula=_rformula,  # writeFormula=_wformula,
+                    delayAfterWrite=_delayAfterWrite, parent=self._parent)
 
     def __prepareWriteValues(self, attrName, definition, aprop, attr):
         self._parent.attributes[attrName].\
