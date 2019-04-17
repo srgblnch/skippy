@@ -47,10 +47,10 @@ class SkippyAttribute(AbstractSkippyAttribute):
             format = 'WaveformDataFormat'
             origin = 'WaveformOrigin'
             increment = 'WaveformIncrement'
-            self._interpreter = \
-                ArrayDataInterpreterFeature(name="array", parent=self,
-                                            rawObj=self._raw, format=format,
-                                            origin=origin, increment=increment)
+            self._array_interpreter = \
+                ArrayDataInterpreterFeature(
+                    name="array", parent=self, rawObj=self._raw, format=format,
+                    origin=origin, increment=increment)
 
     @property
     def id(self):
@@ -82,6 +82,11 @@ class SkippyAttribute(AbstractSkippyAttribute):
 
     def hasRawData(self):
         if self._raw is None:
+            return False
+        return True
+
+    def hasArrayInterpreter(self):
+        if self._array_interpreter is None:
             return False
         return True
 
@@ -141,8 +146,8 @@ class SkippyAttribute(AbstractSkippyAttribute):
 #         return property(getter, setter)
 
     def interpretArray(self):
-        if self._interpreter:
-            return self._interpreter.interpretArray()
+        if self._array_interpreter:
+            return self._array_interpreter.interpretArray()
 
 
 class SkippyReadAttribute(SkippyAttribute):
