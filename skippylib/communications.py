@@ -277,8 +277,8 @@ class BySocket(Communicator):
                 # self.debug_stream("From the beginning %s, understood a %d "
                 #                   "characters header with further %d "
                 #                   "elements to be read."
-                #                   %(repr(completeMsg[:10]),
-                #                     nBytesHeaderLength,nBytesWaveElement))
+                #                   % (repr(completeMsg[:10]),
+                #                      nBytesHeaderLength, nBytesWaveElement))
                 while len(completeMsg) < nBytesWaveElement:
                     buffer = self._socket.recv(bufsize)
                     completeMsg = ''.join([completeMsg, buffer])
