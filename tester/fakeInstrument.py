@@ -404,9 +404,9 @@ class TestManager(object):
                 if device[attrName].value == rvalue:
                     self.log("for %s: %s == %s"
                              % (attrName, device[attrName].value, rvalue))
-                    values.append(None)
-                else:
                     values.append(wvalue)
+                else:
+                    values.append(None)
         result, msg = self._checkTest(attrNames, values)
         self.log("%s:\t%s" % (testTitle, msg))
         return result, [testTitle, msg]
