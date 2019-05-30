@@ -1,0 +1,57 @@
+% Copyright 2019 by Sergi Blanch-Torn\'e
+%
+% This file may be distributed and/or modified
+%
+% 1. under the LaTeX Project Public License and/or
+% 2. under the GNU Public License.
+%
+% See the file doc/licenses/LICENSE for more details.
+
+\mode<presentation>
+
+%\usepackage{transparent}
+
+\definecolor{AlbaBlue}{RGB}{18,45,79}
+\definecolor{AlbaLightGray}{RGB}{245,245,245}
+\definecolor{AlbaDarkGray}{RGB}{203,203,203}
+\definecolor{AlbaGray}{RGB}{162,159,160}
+%\definecolor{transparent}{a=1, t=.3}
+
+\setbeamercolor{secsubsec}{fg=AlbaBlue,bg=black}
+\setbeamercolor{frametitle}{fg=AlbaBlue,bg=white}
+
+% TODO: change the color of the circles on the table of contents
+
+\setbeamercolor{section in toc}{fg=AlbaBlue,bg=white}
+\setbeamercolor{subsection in toc}{fg=AlbaBlue,bg=white}
+
+\setbeamercolor*{palette primary}{use=structure,fg=AlbaBlue,bg=AlbaDarkGray!10}
+\setbeamercolor*{palette secondary}{use=structure,fg=AlbaBlue,bg=AlbaDarkGray!30}
+\setbeamercolor*{palette tertiary}{use=structure,fg=AlbaBlue,bg=AlbaDarkGray!40}
+\setbeamercolor*{palette quaternary}{fg=AlbaLightGray,bg=AlbaDarkGray!50}
+
+\setbeamercolor*{sidebar}{use=structure,bg=AlbaBlue}
+  
+\setbeamercolor*{palette sidebar primary}{use=structure,fg=AlbaBlue!10}
+\setbeamercolor*{palette sidebar secondary}{fg=AlbaLightGray}
+\setbeamercolor*{palette sidebar tertiary}{use=structure,fg=AlbaBlue!50}
+\setbeamercolor*{palette sidebar quaternary}{fg=AlbaLightGray}
+
+\setbeamercolor*{titlelike}{parent=palette primary}
+
+\setbeamercolor*{separation line}{}
+\setbeamercolor*{fine separation line}{}
+
+\setbeamertemplate{blocks}[rounded][shadow=true]
+
+\setbeamercolor{block title}{fg=AlbaLightGray, bg=AlbaBlue}
+\setbeamercolor{block body}{fg=AlbaBlue, bg=AlbaLightGray}
+
+\setbeamercolor{block title alerted}{use={normal text,alerted text},fg=alerted text.fg!75!normal text.fg,bg=AlbaBlue!50}
+\setbeamercolor{block body alerted}{fg=AlbaBlue, bg=AlbaLightGray}
+
+\setbeamercolor{block title example}{use={normal text,example text},fg=example text.fg!75!normal text.fg,bg=AlbaBlue!50}
+\setbeamercolor{block body example}{fg=AlbaBlue, bg=AlbaLightGray}
+
+\mode
+<all>
