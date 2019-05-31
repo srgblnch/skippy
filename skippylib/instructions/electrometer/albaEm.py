@@ -164,6 +164,13 @@ Attribute('EmStatus',
            'readCmd': "ACQU:STUS?",
            })
 
+Attribute('AcqMode',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "ACQU:MODE?",
+           'writeCmd': lambda value: "ACQU:MODE {}".format(value),
+           })
+
 # Channels ---
 Attribute('I',
           {'type': PyTango.CmdArgType.DevDouble,
