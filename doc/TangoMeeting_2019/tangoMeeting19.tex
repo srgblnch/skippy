@@ -22,7 +22,7 @@
 {
   \inst{1}%
   ALBA Synchrotron, CELLS\\
-  Cerdanyola del Vall\'es
+  Cerdanyola del Vall\`es
   \and
   \inst{2}%
   MAX IV Laboratory\\
@@ -202,6 +202,20 @@
   \end{block}
 \end{frame}
 
+\begin{frame}
+  \frametitle{Instrument builder}
+  %\framesubtitle{Software patterns}
+  \centering{
+    \includegraphics[keepaspectratio=true,width=0.7\paperwidth]{Builder.png}
+  }
+\end{frame}
+
+\begin{frame}
+  \frametitle{Instrument requests}
+  \centering{
+    \includegraphics[keepaspectratio=true,width=0.7\paperwidth]{../groupedRequests.png}
+  }
+\end{frame}
 
 \subsection{Sardana Controller}
 
@@ -227,6 +241,18 @@
   \centering{
     \includegraphics[keepaspectratio=true,width=1\paperwidth]{SkippyGeneralClassDiagram.png}
   }
+  \begin{textblock*}{160pt}(10pt,200pt)
+    \begin{block}{{\tiny Software patterns}}
+      \begin{itemize}%[itemindent=0pt]
+        \setlength{\itemsep}{-7pt}
+        \setlength{\parskip}{0pt}
+        \setlength{\parsep}{-5pt}
+        \item[] {\tiny Strategy pattern on the communications} \\
+        \item[] {\tiny Singleton on statemanager, monitor and watchdog} \\
+        \item[] {\tiny Composite in the attributes}
+      \end{itemize}
+    \end{block}
+  \end{textblock*}
   \begin{textblock*}{260pt}(60pt,60pt)
     \begin{exampleblock}{Python console example}<2->
       \lstinputlisting[language=Python, basicstyle=\ttfamily\tiny]{skippyObj.py}
@@ -234,12 +260,36 @@
   \end{textblock*}
 \end{frame}
 
-% \begin{frame}
-%   \frametitle{python-skippy module}
-%   \centering{
-%     \includegraphics[keepaspectratio=true,width=0.7\paperwidth]{../groupedRequests.png}
-%   }
-% \end{frame}
+\begin{frame}
+  \frametitle{In practice @ ALBA}
+  \begin{itemize}
+    \item<2-> Master oscillator
+    \begin{itemize}
+      \item Radiofrequency generator
+    \end{itemize}
+    \item<3-> Measured Filling Pattern: 
+    \begin{itemize}
+      \item Oscilloscope with the filling pattern
+      \item Many Oscilloscopes in the accelerator with we can cross different source signals
+    \end{itemize}
+    \item<4-> Tune excitation:
+    \begin{itemize}
+      \item Arbitrary Function Generator
+      \item Spectrum analyzer
+    \end{itemize}
+    \item<5-> Beamline \& Laboratory instruments
+    \begin{itemize}
+      \item Source \& Multimeters
+      \item Pump controller \only<5->{\footnote{LN2 pump where J.Andreu has had to write the server side scpi in C\#}}
+      \item Temperature controller \only<5->{\footnote{It doesn't work as scpi but string-like protocol}}
+    \end{itemize}
+    \item<6-> Alba \#Em \& Music SiPM
+    \begin{itemize}
+      \item We close the circle with the scpilib
+    \end{itemize}
+  \end{itemize}
+\end{frame}
+
 
 \subsection{python-scpilib}
 
