@@ -1,11 +1,29 @@
 .project
 .pydevproject
+.idea
 .settings/
 skippy.egg-info/
 *.pyc
+
+build
+deb_dist
+dist
+usr
+venv
+.directory
 
 # documentation latex extra files
 doc/*.aux
 doc/*.log
 doc/*.out
 doc/*.backup
+doc/*.toc
+doc/*~
+doc/TangoMeeting_2019/*.aux
+doc/TangoMeeting_2019/*.log
+doc/TangoMeeting_2019/*.out
+doc/TangoMeeting_2019/*.backup
+doc/TangoMeeting_2019/*.toc
+doc/TangoMeeting_2019/*.nav
+doc/TangoMeeting_2019/*.snm
+doc/TangoMeeting_2019/*~
