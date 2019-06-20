@@ -16,15 +16,17 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from numpy.random import random, randint
+
 __author__ = "Sergi Blanch-Torne"
 __maintainer__ = "Sergi Blanch-Torne"
 __email__ = "sblanch@cells.es"
-__copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
+__copyright__ = "Copyright 2019, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 __status__ = "Production"
 
-from numpy.random import random, randint
-#from numpy import random as nprandom
+
+# First level
 
 
 class FakeNumber(object):
@@ -49,26 +51,8 @@ class FakeNumber(object):
         self._lowerLimit = int(value)
 
 
-class FakeString(object):
+# Second level
 
-    _value = None
-
-    def __init__(self, *args, **kwargs):
-        super(FakeString, self).__init__(*args, **kwargs)
-
-
-class FakeIntegerArray(FakeNumber):
- 
-    _samples = None
- 
-    def __init__(self, samples=10, *args, **kwargs):
-        super(FakeIntegerArray, self).__init__(*args, **kwargs)
-        self._samples = samples
- 
-    def samples(self, value=None):
-        if value is None:
-            return self._samples
-        self._samples = int(value)
 
 class FakeInteger(FakeNumber):
     def __init__(self, *args, **kwargs):
@@ -82,6 +66,22 @@ class FakeFloat(FakeNumber):
         self._value = randint(self._lowerLimit, self._upperLimit)+random()
 
 
+class FakeIntegerArray(FakeNumber):
+    _samples = None
+
+    def __init__(self, samples=10, *args, **kwargs):
+        super(FakeIntegerArray, self).__init__(*args, **kwargs)
+        self._samples = samples
+
+    def samples(self, value=None):
+        if value is None:
+            return self._samples
+        self._samples = int(value)
+
+
+# Third level
+
+
 class ROinteger(FakeInteger):
     """ Read Only Integer """
 
@@ -91,7 +91,8 @@ class ROinteger(FakeInteger):
     def value(self):
         r = random()
         if r < 0.3:
-            self._value += randint(self._lowerLimit/100, self._upperLimit/100)
+            self._value += randint(self._lowerLimit / 100,
+                                   self._upperLimit / 100)
         elif r < 0.6:
             self._value = randint(self._lowerLimit, self._upperLimit)
         return self._value
@@ -154,23 +155,11 @@ class ROIntegerFallible(ROinteger):
             return ROinteger.value(self)
 
 
-class Format(FakeString):
-    def __init__(self, *args, **kwargs):
-        super(Format, self).__init__(*args, **kwargs)
-        self._value = 'ASCII'
-
-    def value(self, value=None):
-        if value is None:
-            return self._value
-        if value in ['ASC', 'ASCI', 'ASCII', 'BYT', 'BYTE', 'WOR', 'WORD']:
-            self._value = value
-
-
 class ROIntegerArray(FakeIntegerArray):
     def __init__(self, *args, **kwargs):
         super(ROIntegerArray, self).__init__(*args, **kwargs)
         self.value()
- 
+
     def value(self):
         self._value = randint(self._lowerLimit, self._upperLimit,
                               size=self._samples)
