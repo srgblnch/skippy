@@ -83,13 +83,12 @@ Attribute("Fallible",
 #            'readCmd': "source:readable:array:boolean:value?",
 #            })
 
-# TODO: not yet implemented
-# Attribute('short_spectrum_ro',
-#           {'type': PyTango.CmdArgType.DevFloat,
-#            'format': '%9.6f',
-#            'dim': [1, 40000000],
-#            'readCmd': "source:readable:array:short:value?",
-#            })
+Attribute('short_spectrum_ro',
+          {'type': PyTango.CmdArgType.DevShort,
+           'format': '%9.6f',
+           'dim': [1, 40000000],
+           'readCmd': "source:readable:array:short:value?",
+           })
 
 Attribute('float_spectrum_ro',
           {'type': PyTango.CmdArgType.DevFloat,

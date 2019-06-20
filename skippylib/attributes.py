@@ -18,6 +18,7 @@
 
 from .abstracts import AbstractSkippyAttribute
 from .features import RampFeature, RawDataFeature, ArrayDataInterpreterFeature
+from numpy import int16, uint16, int32, uint32, int64, uint64
 import PyTango
 from time import time, sleep
 import traceback
@@ -145,9 +146,9 @@ class SkippyAttribute(AbstractSkippyAttribute):
 #
 #         return property(getter, setter)
 
-    def interpretArray(self):
+    def interpretArray(self, dtype):
         if self._array_interpreter:
-            return self._array_interpreter.interpretArray()
+            return self._array_interpreter.interpretArray(dtype)
 
 
 class SkippyReadAttribute(SkippyAttribute):
@@ -211,7 +212,7 @@ class SkippyReadAttribute(SkippyAttribute):
                         self._lastReadValue = float(newReadValue)
                     elif self.dim == 1:
                         self._raw.lastReadRaw = newReadValue
-                        self._lastReadValue = self.interpretArray()
+                        self._lastReadValue = self.interpretArray(dtype=float)
                     else:
                         raise BufferError("Unsuported multidimensional data")
                 elif self.type in [PyTango.DevShort, PyTango.DevUShort,
@@ -225,9 +226,16 @@ class SkippyReadAttribute(SkippyAttribute):
                         else:
                             self._lastReadValue = int(newReadValue)
                     elif self.dim == 1:
-                        raise BufferError("Unsupported array data")
-                        # FIXME:
-                        #  self._lastReadValue = nparray(eval(newReadValue))
+                        self._raw.lastReadRaw = newReadValue
+                        dtype = {PyTango.DevShort: int16,
+                                 PyTango.DevUShort: uint16,
+                                 PyTango.DevInt: int,
+                                 PyTango.DevLong: int32,
+                                 PyTango.DevULong: uint32,
+                                 PyTango.DevLong64: int64,
+                                 PyTango.DevULong64: uint64,
+                                 }[self.type]
+                        self._lastReadValue = self.interpretArray(dtype=dtype)
                     else:
                         raise BufferError("Unsupported multidimensional data")
                 elif self.type in [PyTango.DevBoolean]:

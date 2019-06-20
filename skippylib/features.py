@@ -256,7 +256,7 @@ class ArrayDataInterpreterFeature(SkippyFeature):
             return 1.0  # multiplier factor
         return value
 
-    def interpretArray(self):
+    def interpretArray(self, dtype):
         if self._rawObj is None or self._parent is None:
             raise AssertionError("It is necessary to have SkippyAttribute and "
                                  "RawDataFeature objects to interpret data")
@@ -268,7 +268,7 @@ class ArrayDataInterpreterFeature(SkippyFeature):
             format, divisor = self.__getFormatAndDivisor(dataFormat)
             data = self.__interpretBinaryFormat(data, format, divisor)
         if data is None:
-            return numpy.fromstring("", dtype=float)
+            return numpy.fromstring("", dtype=dtype)
         return data
 
     def __interpretAsciiFormat(self, data):
