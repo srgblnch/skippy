@@ -20,7 +20,8 @@ from __future__ import print_function
 import argparse
 from datetime import datetime
 from instrAttrs import (ROinteger, RWinteger, ROfloat, RWfloat,
-                        ROIntegerFallible, Format, ROIntegerArray)
+                        ROIntegerFallible, Format, ROIntegerArray,
+                        ROboolean, RWboolean)
 from instrIdn import InstrumentIdentification, __version__
 from psutil import process_iter, Process
 import PyTango
@@ -95,6 +96,16 @@ class FakeInstrument(object):
         self._scpiObj.addSpecialCommand('IDN', self._identity.idn)
 
     def _buildNormalCommands(self):
+        self._attrObjs['rointeger'] = self.__build_ROInteger()
+        self._attrObjs['rwinteger'] = self.__build_RWInteger()
+        self._attrObjs['rofloat'] = self.__build_ROfloat()
+        self._attrObjs['rwfloat'] = self.__build_RWfloat()
+        self._attrObjs['rampeable'] = self.__build_RampeableFloat()
+        self._attrObjs['fallible'] = self.__build_FallibleInteger()
+        self._attrObjs['formatarray'] = self.__build_ArrayFormater()
+        self._attrObjs['rointegerarray'] = self.__build_ROIntegerArray()
+
+    def __build_ROInteger(self):
         rointegerObj = ROinteger()
         self._scpiObj.addCommand('source:readable:short:value',
                                  readcb=rointegerObj.value, default=True)
@@ -104,7 +115,10 @@ class FakeInstrument(object):
         self._scpiObj.addCommand('source:readable:short:lower',
                                  readcb=rointegerObj.lowerLimit,
                                  writecb=rointegerObj.lowerLimit)
-        self._attrObjs['rointeger'] = rointegerObj
+
+        return rointegerObj
+
+    def __build_RWInteger(self):
         rwinteger = RWinteger()
         self._scpiObj.addCommand('source:writable:short:value',
                                  readcb=rwinteger.value,
@@ -116,7 +130,9 @@ class FakeInstrument(object):
         self._scpiObj.addCommand('source:writable:short:lower',
                                  readcb=rwinteger.lowerLimit,
                                  writecb=rwinteger.lowerLimit)
-        self._attrObjs['rwinteger'] = rwinteger
+        return rwinteger
+
+    def __build_ROfloat(self):
         rofloat = ROfloat()
         self._scpiObj.addCommand('source:readable:float:value',
                                  readcb=rofloat.value, default=True)
@@ -126,7 +142,9 @@ class FakeInstrument(object):
         self._scpiObj.addCommand('source:readable:float:lower',
                                  readcb=rofloat.lowerLimit,
                                  writecb=rofloat.lowerLimit)
-        self._attrObjs['rofloat'] = rofloat
+        return rofloat
+
+    def __build_RWfloat(self):
         rwfloat = RWfloat()
         self._scpiObj.addCommand('source:writable:float:value',
                                  readcb=rwfloat.value,
@@ -138,7 +156,9 @@ class FakeInstrument(object):
         self._scpiObj.addCommand('source:writable:float:lower',
                                  readcb=rwfloat.lowerLimit,
                                  writecb=rwfloat.lowerLimit)
-        self._attrObjs['rwfloat'] = rwfloat
+        return rwfloat
+
+    def __build_RampeableFloat(self):
         rampeable = RWfloat()
         self._scpiObj.addCommand('rampeable:value',
                                  readcb=rampeable.value,
@@ -150,7 +170,9 @@ class FakeInstrument(object):
         self._scpiObj.addCommand('rampeable:lower',
                                  readcb=rampeable.lowerLimit,
                                  writecb=rampeable.lowerLimit)
-        self._attrObjs['rampeable'] = rampeable
+        return rampeable
+
+    def __build_FallibleInteger(self):
         fallible = ROIntegerFallible()
         self._scpiObj.addCommand('fallible:value',
                                  readcb=fallible.value,
@@ -162,12 +184,16 @@ class FakeInstrument(object):
         self._scpiObj.addCommand('fallible:lower',
                                  readcb=fallible.lowerLimit,
                                  writecb=fallible.lowerLimit)
-        self._attrObjs['fallible'] = fallible
+        return fallible
+
+    def __build_ArrayFormater(self):
         formatarray = Format()
         self._scpiObj.addCommand('dataformat',
                                  readcb=formatarray.value,
                                  writecb=formatarray.value)
-        self._attrObjs['formatarray'] = formatarray
+        return formatarray
+
+    def __build_ROIntegerArray(self):
         rointegerarray = ROIntegerArray()
         self._scpiObj.addCommand('source:readable:array:short:value',
                                  readcb=rointegerarray.value, default=True)
@@ -180,8 +206,7 @@ class FakeInstrument(object):
         self._scpiObj.addCommand('source:readable:array:short:samples',
                                  readcb=rointegerarray.samples,
                                  writecb=rointegerarray.samples)
-        
-        self._attrObjs['rointegerarray'] = rointegerarray
+        return rointegerarray
 
 
 global manager
@@ -491,7 +516,7 @@ def main():
                                      'server using a fake instrument.')
     parser.add_argument('--no-remove', dest='no_remove',
                         action="store_true",
-                        #default=False,
+                        # default=False,
                         help="don't destroy the test until the user say")
     args = parser.parse_args()
     try:
