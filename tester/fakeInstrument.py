@@ -72,7 +72,8 @@ class FakeInstrument(object):
         version = "%s+scpilib_%s" % (__version__, scpilib.version.version())
         self._identity = InstrumentIdentification('FakeInstruments. Inc',
                                                   'Tester', 0, version)
-        self._scpiObj = scpilib.scpi(local=True, debug=True, log2File=True)
+        self._scpiObj = scpilib.scpi(local=True, debug=True, log2File=True,
+                                     loggerName="SkippyTester")
         self._buildSpecialCommands()
         self._buildNormalCommands()
         self.open()
@@ -97,6 +98,7 @@ class FakeInstrument(object):
 
     def _buildNormalCommands(self):
         self._attrObjs['roboolean'] = self.__build_ROBoolean()
+        self._attrObjs['rwboolean'] = self.__build_RWBoolean()
         self._attrObjs['rointeger'] = self.__build_ROInteger()
         self._attrObjs['rwinteger'] = self.__build_RWInteger()
         self._attrObjs['rofloat'] = self.__build_ROfloat()
@@ -112,6 +114,14 @@ class FakeInstrument(object):
         self._scpiObj.addCommand('source:readable:boolean:value',
                                  readcb=robooleanObj.value, default=True)
         return robooleanObj
+
+    def __build_RWBoolean(self):
+        rwbooleanObj = RWboolean()
+        self._scpiObj.addCommand('source:writable:boolean:value',
+                                 readcb=rwbooleanObj.value,
+                                 writecb=rwbooleanObj.value,
+                                 default=True)
+        return rwbooleanObj
 
     def __build_ROInteger(self):
         rointegerObj = ROinteger()
@@ -440,6 +450,8 @@ class TestManager(object):
                     wvalue = rvalue/1.1
                 elif device[attrName].type == PyTango.DevShort:
                     wvalue = rvalue+1
+                elif device[attrName].type == PyTango.DevBoolean:
+                    wvalue = not rvalue
                 device[attrName] = wvalue
                 # Time between those two reads must be below the
                 # 'TimeStampsThreshold' to check that, even the time hasn't

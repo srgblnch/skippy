@@ -30,6 +30,13 @@ Attribute("boolean_scalar_ro",
            'dim': [0],
            'readCmd': 'source:readable:boolean:value?'})
 
+Attribute("boolean_scalar_rw",
+          {'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': "source:writable:boolean:value?",
+           'writeCmd': lambda value: "source:writable:boolean:value %s"
+           % (value)})
+
 Attribute("short_scalar_ro",
           {'type': PyTango.CmdArgType.DevShort,
            'dim': [0],

@@ -63,11 +63,19 @@ class RWboolean(FakeBoolean):
 
     def __init__(self, *args, **kwargs):
         super(RWboolean, self).__init__(*args, **kwargs)
+        self._value = False
 
     def value(self, value=None):
         if value is None:
             return self._value
-        self._value = bool(value)
+        if isinstance(value, str):
+            if value.lower() in ['false', 'true']:
+                self._value = True if value.lower() == 'true' else False
+            else:
+                try:
+                    self._value = bool(int(value))
+                except:
+                    pass
 
 
 class ROBooleanArray(FakeBooleanArray):

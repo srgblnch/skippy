@@ -756,7 +756,7 @@ class Skippy(AbstractSkippyObj):
                 [CmdArgType.DevBoolean]:
             try:
                 if attrValue.lower() in ['true', 'false']:
-                    value = bool(attrValue)
+                    value = True if attrValue.lower() == 'true' else False
                 else:
                     try:
                         value = bool(int(attrValue))
