@@ -17,7 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 
-from fakeBoolean import ROboolean, RWboolean
+from fakeBoolean import ROboolean, RWboolean, ROBooleanArray
 from .fakeNumber import ROinteger, RWinteger
 from .fakeNumber import ROfloat, RWfloat
 from .fakeNumber import ROIntegerFallible

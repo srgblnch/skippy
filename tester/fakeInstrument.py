@@ -21,7 +21,7 @@ import argparse
 from datetime import datetime
 from instrAttrs import (ROinteger, RWinteger, ROfloat, RWfloat,
                         ROIntegerFallible, Format, ROIntegerArray,
-                        ROboolean, RWboolean)
+                        ROboolean, RWboolean, ROBooleanArray)
 from instrIdn import InstrumentIdentification, __version__
 from psutil import process_iter, Process
 import PyTango
@@ -96,6 +96,7 @@ class FakeInstrument(object):
         self._scpiObj.addSpecialCommand('IDN', self._identity.idn)
 
     def _buildNormalCommands(self):
+        self._attrObjs['roboolean'] = self.__build_ROBoolean()
         self._attrObjs['rointeger'] = self.__build_ROInteger()
         self._attrObjs['rwinteger'] = self.__build_RWInteger()
         self._attrObjs['rofloat'] = self.__build_ROfloat()
@@ -103,7 +104,14 @@ class FakeInstrument(object):
         self._attrObjs['rampeable'] = self.__build_RampeableFloat()
         self._attrObjs['fallible'] = self.__build_FallibleInteger()
         self._attrObjs['formatarray'] = self.__build_ArrayFormater()
+        self._attrObjs['robooleanarray'] = self.__build_ROBooleanArray()
         self._attrObjs['rointegerarray'] = self.__build_ROIntegerArray()
+
+    def __build_ROBoolean(self):
+        robooleanObj = ROboolean()
+        self._scpiObj.addCommand('source:readable:boolean:value',
+                                 readcb=robooleanObj.value, default=True)
+        return robooleanObj
 
     def __build_ROInteger(self):
         rointegerObj = ROinteger()
@@ -192,6 +200,12 @@ class FakeInstrument(object):
                                  readcb=formatarray.value,
                                  writecb=formatarray.value)
         return formatarray
+
+    def __build_ROBooleanArray(self):
+        robooleanarray = ROBooleanArray()
+        self._scpiObj.addCommand('source:readable:array:boolean:value',
+                                 readcb=robooleanarray.value, default=True)
+        return robooleanarray
 
     def __build_ROIntegerArray(self):
         rointegerarray = ROIntegerArray()

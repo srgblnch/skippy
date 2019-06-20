@@ -16,6 +16,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from numpy import array
 from random import getrandbits
 
 __author__ = "Sergi Blanch-Torne"
@@ -33,6 +34,19 @@ class FakeBoolean(object):
         super(FakeBoolean, self).__init__(*args, **kwargs)
 
 
+class FakeBooleanArray(FakeBoolean):
+    _samples = None
+
+    def __init__(self, samples=8, *args, **kwargs):
+        super(FakeBooleanArray, self).__init__(*args, **kwargs)
+        self._samples = samples
+
+    def samples(self, value=None):
+        if value is None:
+            return self._samples
+        self._samples = int(value)
+
+
 class ROboolean(FakeBoolean):
     """ Read Only Boolean """
 
@@ -41,7 +55,7 @@ class ROboolean(FakeBoolean):
 
     def value(self):
         self._value = bool(getrandbits(1))
-        self._value
+        return self._value
 
 
 class RWboolean(FakeBoolean):
@@ -54,3 +68,16 @@ class RWboolean(FakeBoolean):
         if value is None:
             return self._value
         self._value = bool(value)
+
+
+class ROBooleanArray(FakeBooleanArray):
+    def __init__(self, *args, **kwargs):
+        super(ROBooleanArray, self).__init__(*args, **kwargs)
+        self.value()
+
+    def value(self):
+        self._value = getrandbits(self._samples)
+        lst = []
+        for i in range(self._samples):
+            lst.insert(0, bool(self._value >> i & 1))
+        return array(lst)

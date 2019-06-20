@@ -25,6 +25,11 @@ __license__ = "GPLv3+"
 __status__ = "Development"
 
 
+Attribute("boolean_scalar_ro",
+          {'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': 'source:readable:boolean:value?'})
+
 Attribute("short_scalar_ro",
           {'type': PyTango.CmdArgType.DevShort,
            'dim': [0],
@@ -64,12 +69,20 @@ Attribute("Fallible",
            'dim': [0],
            'readCmd': "fallible?"})
 
-Attribute('short_spectrum_ro',
-          {'type': PyTango.CmdArgType.DevDouble,
-           'format': '%9.6f',
-           'dim': [1, 40000000],
-           'readCmd': "source:readable:array:short:value?",
-           })
+# TODO: not yet implemented
+# Attribute('boolean_spectrum_ro',
+#           {'type': PyTango.CmdArgType.DevBoolean,
+#            'dim': [1, 40000000],
+#            'readCmd': "source:readable:array:boolean:value?",
+#            })
+
+# TODO: not yet implemented
+# Attribute('short_spectrum_ro',
+#           {'type': PyTango.CmdArgType.DevFloat,
+#            'format': '%9.6f',
+#            'dim': [1, 40000000],
+#            'readCmd': "source:readable:array:short:value?",
+#            })
 
 # FIXME: generalise this attrName and specify in the spectrum attr
 Attribute('WaveformDataFormat',
