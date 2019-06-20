@@ -20,7 +20,8 @@ from __future__ import print_function
 import argparse
 from datetime import datetime
 from instrAttrs import (ROinteger, RWinteger, ROfloat, RWfloat,
-                        ROIntegerFallible, Format, ROIntegerArray,
+                        ROIntegerFallible, Format,
+                        ROIntegerArray, ROFloatArray,
                         ROboolean, RWboolean, ROBooleanArray)
 from instrIdn import InstrumentIdentification, __version__
 from psutil import process_iter, Process
@@ -108,6 +109,7 @@ class FakeInstrument(object):
         self._attrObjs['formatarray'] = self.__build_ArrayFormater()
         self._attrObjs['robooleanarray'] = self.__build_ROBooleanArray()
         self._attrObjs['rointegerarray'] = self.__build_ROIntegerArray()
+        self._attrObjs['rofloatarray'] = self.__build_ROFloatArray()
 
     def __build_ROBoolean(self):
         robooleanObj = ROboolean()
@@ -231,6 +233,21 @@ class FakeInstrument(object):
                                  readcb=rointegerarray.samples,
                                  writecb=rointegerarray.samples)
         return rointegerarray
+
+    def __build_ROFloatArray(self):
+        rofloatarray = ROFloatArray()
+        self._scpiObj.addCommand('source:readable:array:float:value',
+                                 readcb=rofloatarray.value, default=True)
+        self._scpiObj.addCommand('source:readable:array:float:upper',
+                                 readcb=rofloatarray.upperLimit,
+                                 writecb=rofloatarray.upperLimit)
+        self._scpiObj.addCommand('source:readable:array:float:lower',
+                                 readcb=rofloatarray.lowerLimit,
+                                 writecb=rofloatarray.lowerLimit)
+        self._scpiObj.addCommand('source:readable:array:float:samples',
+                                 readcb=rofloatarray.samples,
+                                 writecb=rofloatarray.samples)
+        return rofloatarray
 
 
 global manager

@@ -66,11 +66,11 @@ class FakeFloat(FakeNumber):
         self._value = randint(self._lowerLimit, self._upperLimit)+random()
 
 
-class FakeIntegerArray(FakeNumber):
+class FakeArray(FakeNumber):
     _samples = None
 
     def __init__(self, samples=10, *args, **kwargs):
-        super(FakeIntegerArray, self).__init__(*args, **kwargs)
+        super(FakeArray, self).__init__(*args, **kwargs)
         self._samples = samples
 
     def samples(self, value=None):
@@ -155,7 +155,7 @@ class ROIntegerFallible(ROinteger):
             return ROinteger.value(self)
 
 
-class ROIntegerArray(FakeIntegerArray):
+class ROIntegerArray(FakeArray):
     def __init__(self, *args, **kwargs):
         super(ROIntegerArray, self).__init__(*args, **kwargs)
         self.value()
@@ -163,4 +163,17 @@ class ROIntegerArray(FakeIntegerArray):
     def value(self):
         self._value = randint(self._lowerLimit, self._upperLimit,
                               size=self._samples)
+        return self._value
+
+
+class ROFloatArray(FakeArray):
+    def __init__(self, *args, **kwargs):
+        super(ROFloatArray, self).__init__(*args, **kwargs)
+        self.value()
+
+    def value(self):
+        up = self._upperLimit
+        low = self._lowerLimit
+        arr = random(self._samples)
+        self._value = (up - low) * arr + low
         return self._value

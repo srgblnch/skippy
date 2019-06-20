@@ -91,6 +91,13 @@ Attribute("Fallible",
 #            'readCmd': "source:readable:array:short:value?",
 #            })
 
+Attribute('float_spectrum_ro',
+          {'type': PyTango.CmdArgType.DevFloat,
+           'format': '%9.6f',
+           'dim': [1, 40000000],
+           'readCmd': "source:readable:array:float:value?",
+           })
+
 # FIXME: generalise this attrName and specify in the spectrum attr
 Attribute('WaveformDataFormat',
           {'type': PyTango.CmdArgType.DevString,
