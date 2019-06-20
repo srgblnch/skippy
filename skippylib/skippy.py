@@ -755,7 +755,17 @@ class Skippy(AbstractSkippyObj):
         if self.attributes[attrName].type in \
                 [CmdArgType.DevBoolean]:
             try:
-                self.attributes[attrName].lastReadValue = bool(int(attrValue))
+                if attrValue.lower() in ['true', 'false']:
+                    value = bool(attrValue)
+                else:
+                    try:
+                        value = bool(int(attrValue))
+                    except ValueError as e:
+                        self.warn_stream(
+                            "Couldn't interpret {!r} as boolean".format(
+                                attrValue))
+                        raise e
+                self.attributes[attrName].lastReadValue = value
                 self.attributes[attrName].quality = \
                     AttrQuality.ATTR_VALID
             except:
