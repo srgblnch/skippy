@@ -260,32 +260,48 @@ class ArrayDataInterpreterFeature(SkippyFeature):
         if self._rawObj is None or self._parent is None:
             raise AssertionError("It is necessary to have SkippyAttribute and "
                                  "RawDataFeature objects to interpret data")
-        data = self._rawObj.lastReadRaw
-        dataFormat = self._dataFormat
-        if dataFormat.startswith('ASC'):
-            data = self.__interpretAsciiFormat(data)
+        if dtype in [numpy.bool, numpy.int16, numpy.uint16, int,
+                     numpy.int32, numpy.uint32, numpy.int64, numpy.uint64]:
+            # FIXME: Binary data formats may only apply to floats
+            #  Or perhaps also to numericals, but booleans may only have
+            #  4 simbols (0, false, 1, true) in ascii and bit arrays in binary
+            dataFormat = 'ASC'
         else:
-            format, divisor = self.__getFormatAndDivisor(dataFormat)
-            data = self.__interpretBinaryFormat(data, format, divisor)
+            dataFormat = self._dataFormat
+        data = self._rawObj.lastReadRaw
+        if dataFormat.startswith('ASC'):
+            data = self.__interpretAsciiFormat(data, dtype)
+        else:
+
+            data = self.__interpretBinaryFormat(data, dataFormat, dtype)
         if data is None:
             return numpy.fromstring("", dtype=dtype)
         return data
 
-    def __interpretAsciiFormat(self, data):
+    def __interpretAsciiFormat(self, data, dtype):
         if data[0] == '#':
             bodyBlock = self.__interpretHeader(data)
             if not bodyBlock:
                 self.error_stream('Impossible to interpret the header')
                 return
-            return numpy.fromstring(bodyBlock, dtype=float, sep=',')
+            if dtype == numpy.bool:
+                return numpy.array([bool(i.lower() not in ['0', 'false'])
+                                    for i in bodyBlock.split(',')])
+            else:
+                return numpy.fromstring(bodyBlock, dtype=dtype, sep=',')
         else:
             try:
-                return numpy.fromstring(data, dtype=float, sep=',')
+                if dtype == numpy.bool:
+                    return numpy.array([bool(i.lower() not in ['0', 'false'])
+                                        for i in bodyBlock.split(',')])
+                else:
+                    return numpy.fromstring(data, dtype=dtype, sep=',')
             except Exception as e:
                 self.error_stream("Impossible to interpret raw data")
                 self.debug_stream("Exception: %s" % (e))
 
-    def __interpretBinaryFormat(self, data, format, divisor):
+    def __interpretBinaryFormat(self, data, dataFormat, dtype):
+        format, divisor = self.__getFormatAndDivisor(dataFormat)
         bodyBlock = self.__interpretHeader(data)
         if not bodyBlock:
             self.error_stream('Impossible to interpret the header')
@@ -293,7 +309,7 @@ class ArrayDataInterpreterFeature(SkippyFeature):
         completBytes = self.__getCompleteBytes(bodyBlock, divisor)
         unpackedData = self.__unpackBytes(data, format, divisor)
         if unpackedData:
-            floats = numpy.array(unpackInt, dtype=float)
+            floats = numpy.array(unpackInt, dtype=dtype)
             return self._Origin + (self._increment * floats)
 
     def __interpretHeader(self, buffer):

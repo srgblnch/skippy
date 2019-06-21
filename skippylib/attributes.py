@@ -18,7 +18,7 @@
 
 from .abstracts import AbstractSkippyAttribute
 from .features import RampFeature, RawDataFeature, ArrayDataInterpreterFeature
-from numpy import int16, uint16, int32, uint32, int64, uint64
+from numpy import bool, int16, uint16, int32, uint32, int64, uint64
 import PyTango
 from time import time, sleep
 import traceback
@@ -242,7 +242,8 @@ class SkippyReadAttribute(SkippyAttribute):
                     if self.dim == 0:
                         self._lastReadValue = bool(newReadValue)
                     elif self.dim == 1:
-                        raise BufferError("Unsupported array data")
+                        self._raw.lastReadRaw = newReadValue
+                        self._lastReadValue = self.interpretArray(dtype=bool)
                     else:
                         raise BufferError("Unsupported multidimensional data")
                 elif self.type in [PyTango.DevString]:

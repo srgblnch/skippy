@@ -76,12 +76,22 @@ Attribute("Fallible",
            'dim': [0],
            'readCmd': "fallible?"})
 
-# TODO: not yet implemented
-# Attribute('boolean_spectrum_ro',
-#           {'type': PyTango.CmdArgType.DevBoolean,
-#            'dim': [1, 40000000],
-#            'readCmd': "source:readable:array:boolean:value?",
-#            })
+# FIXME: generalise this attrName and specify in the spectrum attr
+Attribute('WaveformDataFormat',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "dataformat?",
+           'writeCmd': lambda value: "dataformat %s" % (str(value)),
+           'writeValues': ['BYTE', 'BYT',
+                           'WORD', 'WOR',
+                           'ASCII', 'ASCI', 'ASC'],
+           })
+
+Attribute('boolean_spectrum_ro',
+          {'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [1, 40000000],
+           'readCmd': "source:readable:array:boolean:value?",
+           })
 
 Attribute('short_spectrum_ro',
           {'type': PyTango.CmdArgType.DevShort,
@@ -97,13 +107,4 @@ Attribute('float_spectrum_ro',
            'readCmd': "source:readable:array:float:value?",
            })
 
-# FIXME: generalise this attrName and specify in the spectrum attr
-Attribute('WaveformDataFormat',
-          {'type': PyTango.CmdArgType.DevString,
-           'dim': [0],
-           'readCmd': "dataformat?",
-           'writeCmd': lambda value: "dataformat %s" % (str(value)),
-           'writeValues': ['BYTE', 'BYT',
-                           'WORD', 'WOR',
-                           'ASCII', 'ASCI', 'ASC'],
-           })
+
