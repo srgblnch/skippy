@@ -30,6 +30,7 @@ class StateManager(AbstractSkippyObj):
     _state = DevState.UNKNOWN
     _allowedStates = [DevState.UNKNOWN, DevState.INIT, DevState.OFF,
                       DevState.STANDBY, DevState.ON, DevState.RUNNING,
+                      DevState.MOVING,  # FIXME: special with ramped attrs.
                       DevState.ALARM, DevState.FAULT, DevState.DISABLE]
     _device = None
 

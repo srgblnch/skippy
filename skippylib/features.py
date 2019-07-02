@@ -18,6 +18,7 @@
 
 import numpy
 from .abstracts import AbstractSkippyAttribute, AbstractSkippyFeature
+from PyTango import DevState
 import struct
 from threading import Thread
 from time import sleep
@@ -67,7 +68,7 @@ class RampFeature(SkippyFeature):
     def __init__(self, *args, **kwargs):
         super(RampFeature, self).__init__(*args, **kwargs)
         self._rampStep = None
-        self._rampStepSpeep = None
+        self._rampStepSpeed = None
         self._rampThread = None
     # FIXME: this is only a ramping for float attributes, should also support
     #        integers.
@@ -86,13 +87,13 @@ class RampFeature(SkippyFeature):
             self._rampStep = float(value)
 
     @property
-    def rampStepSpeep(self):
-        return self._rampStepSpeep
+    def rampStepSpeed(self):
+        return self._rampStepSpeed
 
-    @rampStepSpeep.setter
-    def rampStepSpeep(self, value):
+    @rampStepSpeed.setter
+    def rampStepSpeed(self, value):
         if value is not None:
-            self._rampStepSpeep = float(value)
+            self._rampStepSpeed = float(value)
 
     @property
     def rampThread(self):
@@ -150,8 +151,7 @@ class RampFeature(SkippyFeature):
         '''
         # prepare
         backup_state = self._get_state()
-        self._change_state_status(newState=PyTango.DevState.MOVING,
-                                  rebuild=True)
+        self._change_state_status(newState=DevState.MOVING)
         orig_pos = self._parent.rvalue
         dest_pos = self._parent.wvalue
         self.info_stream("In _rampProcedure(): ramp will start from %g to %g"
