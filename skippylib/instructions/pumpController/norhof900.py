@@ -63,6 +63,13 @@ Attribute('ExtrasnTemp',
            'readCmd': ":MEAS:EXTRASN_TEMP?",
            })
 
+Attribute('PressureIn',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': ":MEAS:PRESSURE_IN?",
+
+           })
+
 Attribute('Flow',
           {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
