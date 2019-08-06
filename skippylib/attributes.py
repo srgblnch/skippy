@@ -146,6 +146,14 @@ class SkippyAttribute(AbstractSkippyAttribute):
 #
 #         return property(getter, setter)
 
+    def interpretBoolean(self, value):
+        if isinstance(value, str):
+            value = value.lower()
+        if newReadValue in [False, 0, '0', 'false', 'off']:
+            self._lastReadValue = False
+        elif newReadValue in [True, 1, '1', 'true', 'on']:
+            self._lastReadValue = True
+
     def interpretArray(self, dtype):
         if self._array_interpreter:
             return self._array_interpreter.interpretArray(dtype)
@@ -240,7 +248,8 @@ class SkippyReadAttribute(SkippyAttribute):
                         raise BufferError("Unsupported multidimensional data")
                 elif self.type in [PyTango.DevBoolean]:
                     if self.dim == 0:
-                        self._lastReadValue = bool(newReadValue)
+                        self._lastReadValue = self.interpretBoolean(
+                            newReadValue)
                     elif self.dim == 1:
                         self._raw.lastReadRaw = newReadValue
                         self._lastReadValue = self.interpretArray(dtype=bool)
