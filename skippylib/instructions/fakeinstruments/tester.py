@@ -28,38 +28,44 @@ __status__ = "Development"
 Attribute("boolean_scalar_ro",
           {'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
-           'readCmd': 'source:readable:boolean:value?'})
+           'readCmd': 'source:readable:boolean:value?'
+           })
 
 Attribute("boolean_scalar_rw",
           {'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
            'readCmd': "source:writable:boolean:value?",
            'writeCmd': lambda value: "source:writable:boolean:value %s"
-           % (value)})
+           % (value)
+           })
 
 Attribute("short_scalar_ro",
           {'type': PyTango.CmdArgType.DevShort,
            'dim': [0],
-           'readCmd': "source:readable:short:value?"})
+           'readCmd': "source:readable:short:value?"
+           })
 
 Attribute("short_scalar_rw",
           {'type': PyTango.CmdArgType.DevShort,
            'dim': [0],
            'readCmd': "source:writable:short:value?",
            'writeCmd': lambda value: "source:writable:short:value %s"
-           % (value)})
+                                     % (value)
+           })
 
 Attribute("float_scalar_ro",
           {'type': PyTango.CmdArgType.DevFloat,
            'dim': [0],
-           'readCmd': "source:readable:float:value?"})
+           'readCmd': "source:readable:float:value?"
+           })
 
 Attribute("float_scalar_rw",
           {'type': PyTango.CmdArgType.DevFloat,
            'dim': [0],
            'readCmd': "source:writable:float:value?",
            'writeCmd': lambda value: "source:writable:float:value %s"
-           % (value)})
+                                     % (value)
+           })
 
 # Test rampeable attributes ---
 Attribute('Rampeable',
@@ -107,4 +113,34 @@ Attribute('float_spectrum_ro',
            'readCmd': "source:readable:array:float:value?",
            })
 
+Attribute('Waveform',
+          {'type': PyTango.CmdArgType.DevFloat,
+           'format': '%9.6f',
+           'dim': [1, 40000000],
+           'readCmd': "source:switchable:array:float:value?",
+           'switch': 'Waveform_switch',
+           })
 
+Attribute('Waveform_switch',
+          {'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': "source:switchable:array:float:switch?",
+           'writeCmd': lambda value: "source:switchable:array:float:switch %s"
+                                     % ("ON" if value else "OFF")
+           })
+
+Attribute('Waveform_samples',
+          {'type': PyTango.CmdArgType.DevUShort,
+           'dim': [0],
+           'readCmd': "source:switchable:array:float:samples?",
+           'writeCmd': lambda value: "source:switchable:array:"
+                                     "float:samples %s" % (value),
+           })
+
+Attribute('Waveform_periods',
+          {'type': PyTango.CmdArgType.DevUShort,
+           'dim': [0],
+           'readCmd': "source:switchable:array:float:periods?",
+           'writeCmd': lambda value: "source:switchable:array:"
+                                     "float:periods %s" % (value),
+           })

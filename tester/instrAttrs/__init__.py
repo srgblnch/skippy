@@ -21,7 +21,7 @@ from fakeBoolean import ROboolean, RWboolean, ROBooleanArray
 from .fakeNumber import ROinteger, RWinteger
 from .fakeNumber import ROfloat, RWfloat
 from .fakeNumber import ROIntegerFallible
-from .fakeNumber import ROIntegerArray, ROFloatArray
+from .fakeNumber import ROIntegerArray, ROFloatArray, Waveform
 from .fakeString import Format
 
 __author__ = "Sergi Blanch-Torne"

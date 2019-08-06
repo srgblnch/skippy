@@ -21,7 +21,7 @@ import argparse
 from datetime import datetime
 from instrAttrs import (ROinteger, RWinteger, ROfloat, RWfloat,
                         ROIntegerFallible, Format,
-                        ROIntegerArray, ROFloatArray,
+                        ROIntegerArray, ROFloatArray, Waveform,
                         ROboolean, RWboolean, ROBooleanArray)
 from instrIdn import InstrumentIdentification, __version__
 from psutil import process_iter, Process
@@ -110,6 +110,7 @@ class FakeInstrument(object):
         self._attrObjs['robooleanarray'] = self.__build_ROBooleanArray()
         self._attrObjs['rointegerarray'] = self.__build_ROIntegerArray()
         self._attrObjs['rofloatarray'] = self.__build_ROFloatArray()
+        self._attrObjs['waveform'] = self.__build_Waveform()
 
     def __build_ROBoolean(self):
         robooleanObj = ROboolean()
@@ -248,6 +249,23 @@ class FakeInstrument(object):
                                  readcb=rofloatarray.samples,
                                  writecb=rofloatarray.samples)
         return rofloatarray
+
+    def __build_Waveform(self):
+        # TODO: this should become a test for channel as well as state for them
+        waveform = Waveform()
+        self._scpiObj.addCommand('source:switchable:array:float:value',
+                                 readcb=waveform.value, default=True)
+        self._scpiObj.addCommand('source:switchable:array:float:switch',
+                                 readcb=waveform.switch,
+                                 writecb=waveform.switch)
+        self._scpiObj.addCommand('source:switchable:array:float:samples',
+                                 readcb=waveform.samples,
+                                 writecb=waveform.samples)
+        self._scpiObj.addCommand('source:switchable:array:float:periods',
+                                 readcb=waveform.periods,
+                                 writecb=waveform.periods)
+        return waveform
+
 
 
 global manager
@@ -431,7 +449,8 @@ class TestManager(object):
     def test_readings(self, device):
         testTitle = "Readings"
         exclude = ['QueryWindow', 'TimeStampsThreshold', 'State', 'Status',
-                   'RampeableStep', 'RampeableStepSpeed', 'Fallible']
+                   'RampeableStep', 'RampeableStepSpeed', 'Fallible',
+                   'Waveform', 'Waveform_switch']
         attrNames = []
         results = []
         for attrName in device.get_attribute_list():

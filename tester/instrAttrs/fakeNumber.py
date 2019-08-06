@@ -16,6 +16,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from numpy import linspace, pi, sin
 from numpy.random import random, randint
 
 __author__ = "Sergi Blanch-Torne"
@@ -177,3 +178,47 @@ class ROFloatArray(FakeArray):
         arr = random(self._samples)
         self._value = (up - low) * arr + low
         return self._value
+
+class Waveform(FakeArray):
+    def __init__(self, *args, **kwargs):
+        super(Waveform, self).__init__(*args, **kwargs)
+        self._switch = False
+        self._periods = 1
+        self.samples()
+
+    def samples(self, value=None):
+        # overloaded to recalculate only if nsample changes
+        were = self._samples
+        ret = super(Waveform, self).samples(value)
+        if were != self._samples:
+            self._refreshValue()
+        return ret
+
+    def switch(self, value=None):
+        if value is None:
+            return "ON" if self._switch else "OFF"
+        if isinstance(value, str):
+            value = value.lower()
+        if value in [False, 0, '0', 'false', 'off']:
+            self._switch = False
+        elif value in [True, 1, '1', 'true', 'on']:
+            self._switch = True
+        if self._switch:
+            self._refreshValue()
+
+    def periods(self, value=None):
+        if value is None:
+            return self._periods
+        self._periods = int(value)
+        self._refreshValue()
+
+    def value(self):
+        if self._switch:
+            return self._value
+        return ''
+        # This else return does something bad on purpose. Empty string to
+        # the device means possible communication error. So the device must be
+        # robust.
+
+    def _refreshValue(self):
+        self._value = sin(linspace(0, self._periods * 2 * pi, self._samples))
