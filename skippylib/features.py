@@ -292,8 +292,9 @@ class ArrayDataInterpreterFeature(SkippyFeature):
         else:
             try:
                 if dtype == numpy.bool:
-                    return numpy.array([bool(i.lower() not in ['0', 'false'])
-                                        for i in bodyBlock.split(',')])
+                    return numpy.array(
+                        [bool(i.lower() not in ['0', 'false', 'off'])
+                         for i in bodyBlock.split(',')])
                 else:
                     return numpy.fromstring(data, dtype=dtype, sep=',')
             except Exception as e:
