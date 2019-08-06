@@ -766,14 +766,15 @@ class Skippy (PyTango.Device_4Impl):
             # handles errors on both eval and exec level
             argout = traceback.format_exc()
         if type(argout) == StringType:
-            return argout
+            pass  # return argout
         elif isinstance(argout, BaseException):
-            return "%s!\n%s" % (argout.__class__.__name__, str(argout))
+            argout = "%s!\n%s" % (argout.__class__.__name__, str(argout))
         else:
             try:
-                return pprint.pformat(argout)
+                argout = pprint.pformat(argout)
             except Exception:
-                return str(argout)
+                argout = str(argout)
+        self.debug_stream("argout %s"%(repr(argout)))
         #----- PROTECTED REGION END -----#  //  Skippy.Exec
         return argout
         
