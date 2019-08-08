@@ -476,6 +476,7 @@ class Skippy (PyTango.Device_4Impl):
         self.attr_Idn_read = ''
         self.attr_QueryWindow_read = 0
         self.attr_TimeStampsThreshold_read = 0.0
+        self.attr_ReadAfterWrite_read = False
         self.attr_Version_read = ''
         #----- PROTECTED REGION ID(Skippy.init_device) ENABLED START -----#
         if self.get_state() in [PyTango.DevState.FAULT]:
@@ -576,7 +577,35 @@ class Skippy (PyTango.Device_4Impl):
         ## TODO: function of an instrument attribute ---
         #        for a lower limit or to force as unique possibility.
         #----- PROTECTED REGION END -----#  //  Skippy.TimeStampsThreshold_write
-        
+
+    def read_ReadAfterWrite(self, attr):
+        self.debug_stream("In read_ReadAfterWrite()")
+        #----- PROTECTED REGION ID(Skippy.ReadAfterWrite_read) ENABLED START -----#
+        try:
+            read_after_write = self.skippy.read_after_write
+            if read_after_write is None:
+                raise Exception
+            self.attr_ReadAfterWrite_read = read_after_write
+            attr.set_value(self.attr_ReadAfterWrite_read)
+        except Exception as e:
+            self.error_stream("Couldn't read the ReadAfterWrite "
+                              "attribute: %s" % (e))
+            attr.set_value_date_quality(False, time.time(),
+                                        PyTango.AttrQuality.ATTR_INVALID)
+        #----- PROTECTED REGION END -----#  //  Skippy.ReadAfterWrite_read
+
+    def write_ReadAfterWrite(self, attr):
+        self.debug_stream("In write_ReadAfterWrite()")
+        data=attr.get_write_value()
+        #----- PROTECTED REGION ID(Skippy.ReadAfterWrite_write) ENABLED START -----#
+        if hasattr(self, 'skippy') and self.skippy is not None:
+            self.skippy.read_after_write = float(data)
+            self.attr_ReadAfterWrite_read = \
+                self.skippy.read_after_write
+        ## TODO: function of an instrument attribute ---
+        #        for a lower limit or to force as unique possibility.
+        #----- PROTECTED REGION END -----#  //  Skippy.ReadAfterWrite_write
+
     def read_Version(self, attr):
         self.debug_stream("In read_Version()")
         #----- PROTECTED REGION ID(Skippy.Version_read) ENABLED START -----#
@@ -1287,6 +1316,16 @@ class SkippyClass(PyTango.DeviceClass):
                 'Display level': PyTango.DispLevel.EXPERT,
                 'Memorized':"true"
             } ],
+        'ReadAfterWrite':
+            [[PyTango.DevBoolean,
+              PyTango.SCALAR,
+              PyTango.READ_WRITE],
+             {
+                 'label': "Read after write",
+                 'description': "This boolean says the device to read the ACK answer after a write",
+                 'Display level': PyTango.DispLevel.EXPERT,
+                 'Memorized': "true"
+             }],
         'Version':
             [[PyTango.DevString,
             PyTango.SCALAR,

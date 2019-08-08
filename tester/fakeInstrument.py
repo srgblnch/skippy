@@ -409,6 +409,11 @@ class TestManager(object):
             sleep(1)
         self.log("Start the test", color=bcolors.HEADER)
         deviceProxy = PyTango.DeviceProxy(DevName)
+        # FIXME: once the scpilib supports it, the tests must be made with
+        #  and without this flag raised.
+        deviceProxy['ReadAfterWrite'] = True
+        self.log("Testing {0} a read after write".format(
+            "with" if deviceProxy['ReadAfterWrite'].value else "with out"))
         testMethods = [self.test_communications,
                        self.test_readings,
                        self.test_writes,
@@ -439,7 +444,8 @@ class TestManager(object):
 
     def test_communications(self, device):
         testTitle = "Communications"
-        attrNames = ['QueryWindow', 'TimeStampsThreshold', 'State', 'Status']
+        attrNames = ['QueryWindow', 'TimeStampsThreshold', 'ReadAfterWrite',
+                     'State', 'Status']
         attrs = device.read_attributes(attrNames)
         values = [attr.value for attr in attrs]
         result, msg = self._checkTest(attrNames, values)
@@ -448,7 +454,8 @@ class TestManager(object):
 
     def test_readings(self, device):
         testTitle = "Readings"
-        exclude = ['QueryWindow', 'TimeStampsThreshold', 'State', 'Status',
+        exclude = ['QueryWindow', 'TimeStampsThreshold', 'ReadAfterWrite',
+                   'State', 'Status',
                    'RampeableStep', 'RampeableStepSpeed', 'Fallible',
                    'Waveform', 'Waveform_switch']
         attrNames = []

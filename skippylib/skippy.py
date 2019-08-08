@@ -53,6 +53,7 @@ class Skippy(AbstractSkippyObj):
 
     _timestampsThreshold = MINIMUM_TIMESTAMPS_THRESHOLD
     _queryWindow = MINIMUM_QUERY_WINDOW
+    _read_after_write = False
 
     _attributes = {}
     _attributesFlags = {}
@@ -192,6 +193,17 @@ class Skippy(AbstractSkippyObj):
                               % (value, e))
 
     @property
+    def read_after_write(self):
+        if self._communications:
+            return self._communications.read_after_write
+
+    @read_after_write.setter
+    def read_after_write(self, value):
+        self._read_after_write = value
+        if self._communications:
+            self._communications.read_after_write = value
+
+    @property
     def nChannels(self):
         return self._nChannels
 
@@ -211,6 +223,8 @@ class Skippy(AbstractSkippyObj):
                       'terminator': self._terminator}
             builder = CommunicatorBuilder(**kwargs)
             self._communications = builder.build()
+            if self._read_after_write != self._communications.read_after_write:
+                self._communications.read_after_write = self._read_after_write
         except SyntaxError as e:
             self.error_stream("Error in the instrument name: %s" % (e))
             self._change_state_status(newState=DevState.FAULT,
