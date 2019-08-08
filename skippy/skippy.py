@@ -481,13 +481,13 @@ class Skippy (PyTango.Device_4Impl):
         if self.get_state() in [PyTango.DevState.FAULT]:
             self.info_stream("Init() call from a fault state")
         else:
-            DS_MODULE = __import__(self.__class__.__module__)
-            kM = dir(DS_MODULE)
-            vM = map(DS_MODULE.__getattribute__, kM)
-            self._globals = dict(zip(kM, vM))
-            self._globals['self'] = self
-            self._globals['module'] = DS_MODULE
-            self._locals = {}
+            # DS_MODULE = __import__(self.__class__.__module__)
+            # kM = dir(DS_MODULE)
+            # vM = map(DS_MODULE.__getattribute__, kM)
+            self._globals = globals()  # dict(zip(kM, vM))
+            # self._globals['self'] = self
+            # self._globals['module'] = DS_MODULE
+            self._locals = {'self': self}
             # prepare the attribute building
             self.set_change_event('State', True, False)
             self.set_change_event('Status', True, False)
@@ -754,17 +754,21 @@ class Skippy (PyTango.Device_4Impl):
         argout = ''
         #----- PROTECTED REGION ID(Skippy.Exec) ENABLED START -----#
         self.debug_stream("argin %s" % (repr(argin)))
-        try:
+        if argin.count("=") == 0:
             try:
-                # interpretation as expression
                 argout = eval(argin, self._globals, self._locals)
-            except SyntaxError:
-                # interpretation as statement
-                exec(argin in self._globals, self._locals)
+            except SyntaxError as expression_exception:
+                self.warn_stream("Interpreting as expression Exception: "
+                                 "{0}".format(expression_exception))
+                argout = traceback.format_exc()
+        else:
+            try:
+                exec argin in self._globals, self._locals
                 argout = self._locals.get("y")
-        except Exception as exc:
-            # handles errors on both eval and exec level
-            argout = traceback.format_exc()
+            except Exception as statement_exception:
+                self.warn_stream("Interpreting as statement Exception: "
+                                 "{0}".format(statement_exception))
+                argout = traceback.format_exc()
         if type(argout) == StringType:
             pass  # return argout
         elif isinstance(argout, BaseException):
