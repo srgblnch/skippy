@@ -35,8 +35,8 @@ Attribute("boolean_scalar_rw",
           {'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
            'readCmd': "source:writable:boolean:value?",
-           'writeCmd': lambda value: "source:writable:boolean:value %s"
-           % (value)
+           'writeCmd': lambda value: "source:writable:boolean:"
+                                     "value {0}".format(value)
            })
 
 Attribute("short_scalar_ro",
@@ -49,8 +49,8 @@ Attribute("short_scalar_rw",
           {'type': PyTango.CmdArgType.DevShort,
            'dim': [0],
            'readCmd': "source:writable:short:value?",
-           'writeCmd': lambda value: "source:writable:short:value %s"
-                                     % (value)
+           'writeCmd': lambda value: "source:writable:short:"
+                                     "value{0}".format(value)
            })
 
 Attribute("float_scalar_ro",
@@ -63,8 +63,8 @@ Attribute("float_scalar_rw",
           {'type': PyTango.CmdArgType.DevFloat,
            'dim': [0],
            'readCmd': "source:writable:float:value?",
-           'writeCmd': lambda value: "source:writable:float:value %s"
-                                     % (value)
+           'writeCmd': lambda value: "source:writable:float:"
+                                     "value {0}".format(value)
            })
 
 # Test rampeable attributes ---
@@ -72,7 +72,7 @@ Attribute('Rampeable',
           {'type': PyTango.CmdArgType.DevDouble,
            'dim': [0],
            'readCmd': "rampeable?",
-           'writeCmd': lambda value: "rampeable %s" % (str(value)),
+           'writeCmd': lambda value: "rampeable {0}".format(str(value)),
            'rampeable': True,
            'memorized': True,
            })
@@ -87,7 +87,7 @@ Attribute('WaveformDataFormat',
           {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
            'readCmd': "dataformat?",
-           'writeCmd': lambda value: "dataformat %s" % (str(value)),
+           'writeCmd': lambda value: "dataformat {0}".format(str(value)),
            'writeValues': ['BYTE', 'BYT',
                            'WORD', 'WOR',
                            'ASCII', 'ASCI', 'ASC'],
@@ -125,8 +125,9 @@ Attribute('Waveform_switch',
           {'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
            'readCmd': "source:switchable:array:float:switch?",
-           'writeCmd': lambda value: "source:switchable:array:float:switch %s"
-                                     % ("ON" if value else "OFF")
+           'writeCmd': lambda value: "source:switchable:array:float:"
+                                     "switch {0}".format(
+               "ON" if value else "OFF")
            })
 
 Attribute('Waveform_samples',
@@ -134,7 +135,7 @@ Attribute('Waveform_samples',
            'dim': [0],
            'readCmd': "source:switchable:array:float:samples?",
            'writeCmd': lambda value: "source:switchable:array:"
-                                     "float:samples %s" % (value),
+                                     "float:samples {0}".format(value),
            })
 
 Attribute('Waveform_periods',
@@ -142,5 +143,5 @@ Attribute('Waveform_periods',
            'dim': [0],
            'readCmd': "source:switchable:array:float:periods?",
            'writeCmd': lambda value: "source:switchable:array:"
-                                     "float:periods %s" % (value),
+                                     "float:periods {0}".format(value),
            })
