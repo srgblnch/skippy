@@ -367,10 +367,36 @@ class Builder(AbstractSkippyObj):
                 self.__prepareWriteValues(attrName, definition, aprop, attr)
         if 'switch' in definition:
             switchName = definition['switch']
-            self.info_stream("{0} has {1} as switch attribute".format(attrName, switchName))
+            self.debug_stream(
+                "{0} has {1} as switch attribute".format(attrName, switchName))
             attrObj = self._parent.attributes[attrName]
             attrObj.setSwitchAttrName(switchName)
+        if 'dataFormat' in definition:
+            self.__prepareDataInterpreterFields(
+                attrName, 'dataFormat', definition)
+        if 'dataOrigin' in definition:
+            self.__prepareDataInterpreterFields(
+                attrName, 'dataOrigin', definition)
+        if 'dataIncrement' in definition:
+            self.__prepareDataInterpreterFields(
+                attrName, 'dataIncrement', definition)
         return attr
+
+    def __prepareDataInterpreterFields(self, attrName, fieldName, definition):
+        attrObj = self._parent.attributes[attrName]
+        if not attrObj.hasArrayInterpreter():
+            self.error_stream(
+                "{0} cannot setup {1} definition without array interpreter"
+                "".format(attrName, fieldName))
+        else:
+            fieldAttrName = definition[fieldName]
+            self.debug_stream("{0} has {1} in {2} field"
+                              "".format(attrName, fieldAttrName, fieldName))
+            featureObj = self._parent.attributes[attrName].arrayInterpreter
+            {'dataFormat': featureObj.dataFormatAttr,
+             'dataOrigin': featureObj.originAttr,
+             'dataIncrement': featureObj.incrementAttr
+            }[fieldName] = fieldAttrName
 
     def __prepareChannelLikeAttr(self, like, number, definition, attrName):
         if like == 'channel':

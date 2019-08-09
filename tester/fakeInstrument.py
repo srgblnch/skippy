@@ -107,6 +107,8 @@ class FakeInstrument(object):
         self._attrObjs['rampeable'] = self.__build_RampeableFloat()
         self._attrObjs['fallible'] = self.__build_FallibleInteger()
         self._attrObjs['formatarray'] = self.__build_ArrayFormater()
+        self._attrObjs['originarray'] = self.__build_ArrayOrigin()
+        self._attrObjs['incrementarray'] = self.__build_ArrayIncrement()
         self._attrObjs['robooleanarray'] = self.__build_ROBooleanArray()
         self._attrObjs['rointegerarray'] = self.__build_ROIntegerArray()
         self._attrObjs['rofloatarray'] = self.__build_ROFloatArray()
@@ -213,6 +215,20 @@ class FakeInstrument(object):
                                  readcb=formatarray.value,
                                  writecb=formatarray.value)
         return formatarray
+
+    def __build_ArrayOrigin(self):
+        origin4arrays = RWfloat()
+        self._scpiObj.addCommand('dataorigin',
+                                 readcb=origin4arrays.value,
+                                 writecb=origin4arrays.value)
+        return origin4arrays
+
+    def __build_ArrayIncrement(self):
+        increment4arrays = RWfloat()
+        self._scpiObj.addCommand('dataincrement',
+                                 readcb=increment4arrays.value,
+                                 writecb=increment4arrays.value)
+        return increment4arrays
 
     def __build_ROBooleanArray(self):
         robooleanarray = ROBooleanArray()

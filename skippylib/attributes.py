@@ -48,14 +48,9 @@ class SkippyAttribute(AbstractSkippyAttribute):
         if self.dim == 1:
             if not hasattr(self, '_raw') or not self._raw:
                 self._raw = RawDataFeature(name="rawdata", parent=self)
-            # FIXME: format, origin, increment
-            format = 'WaveformDataFormat'
-            origin = 'WaveformOrigin'
-            increment = 'WaveformIncrement'
             self._array_interpreter = \
                 ArrayDataInterpreterFeature(
-                    name="array", parent=self, rawObj=self._raw, format=format,
-                    origin=origin, increment=increment)
+                    name="array", parent=self, rawObj=self._raw)
 
     @property
     def id(self):
@@ -188,6 +183,10 @@ class SkippyAttribute(AbstractSkippyAttribute):
         elif value in [True, 1, '1', 'true', 'on']:
             return True
         return False
+
+    @property
+    def arrayInterpreter(self):
+        return self._array_interpreter
 
     def interpretArray(self, dtype):
         if self._array_interpreter:

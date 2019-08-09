@@ -93,6 +93,20 @@ Attribute('WaveformDataFormat',
                            'ASCII', 'ASCI', 'ASC'],
            })
 
+Attribute('WaveformOrigin',
+          {'type': PyTango.CmdArgType.DevFloat,
+           'dim': [0],
+           'readCmd': "dataorigin?",
+           'writeCmd': lambda value: "dataorigin {0}".format(str(value)),
+           })
+
+Attribute('WaveformIncrement',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "dataincrement?",
+           'writeCmd': lambda value: "dataincrement {0}".format(str(value)),
+           })
+
 Attribute('boolean_spectrum_ro',
           {'type': PyTango.CmdArgType.DevBoolean,
            'dim': [1, 40000000],
@@ -119,6 +133,9 @@ Attribute('Waveform',
            'dim': [1, 40000000],
            'readCmd': "source:switchable:array:float:value?",
            'switch': 'Waveform_switch',
+           'dataFormat': 'WaveformDataFormat',
+           'dataOrigin': 'WaveformOrigin',
+           'dataIncrement': 'WaveformIncrement'
            })
 
 Attribute('Waveform_switch',

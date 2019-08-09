@@ -201,20 +201,34 @@ class RawDataFeature(SkippyFeature):
         self._lastReadRaw = value
 
 
+DEFAULT_WAVEFORM_DATAFORMAT = 'WaveformDataFormat'
+DEFAULT_WAVEFORM_ORIGIN = 'WaveformOrigin'
+DEFAULT_WAVEFORM_INCREMENT = 'WaveformIncrement'
+
 class ArrayDataInterpreterFeature(SkippyFeature):
-    def __init__(self, rawObj, format, origin=None, increment=None,
+
+    _dataFormatAttrName = None
+    _dataFormatAttrObj = None
+
+    _originAttrName = None
+    _originAttrObj = None
+
+    _incrementAttrName = None
+    _incrementAttrObj = None
+
+    def __init__(self, rawObj, format=None, origin=None, increment=None,
                  *args, **kwargs):
         super(ArrayDataInterpreterFeature, self).__init__(*args, **kwargs)
         self._rawObj = rawObj
-        self._dataFormatAttrName = format
-        self._originAttrName = origin
-        self._incrementAttrName = increment
+        self.dataFormatAttr = format
+        self.originAttr = origin
+        self.incrementAttr = increment
 
     @property
     def rawObj(self):
         return self._rawObj
 
-    def __getParentAttrValue(self, attrName):
+    def __getParentAttr(self, attrName):
         if self._parent is not None:
             attrObj = self._parent
             if attrObj._parent is not None:
@@ -223,7 +237,7 @@ class ArrayDataInterpreterFeature(SkippyFeature):
                     attributes = getattr(container, 'attributes')
                     if attrName:
                         if attrName in attributes:
-                            return attributes[attrName].lastReadValue
+                            return attributes[attrName]
                         else:
                             self.debug_stream("%s not in attributes"
                                               % (attrName))
@@ -237,24 +251,88 @@ class ArrayDataInterpreterFeature(SkippyFeature):
 
     @property
     def _dataFormat(self):
-        value = self.__getParentAttrValue(self._dataFormatAttrName)
-        if not value:
-            return ''
-        return value
+        attrObj = self.dataFormatAttr
+        if attrObj is not None:
+            value = attrObj.rvalue
+            if value is not None:
+                return value
+        return ''
+
+    @property
+    def dataFormatAttr(self):
+        if self._dataFormatAttrObj is None:
+            if self._dataFormatAttrName is None:
+                self._dataFormatAttrObj = self.__getParentAttr(
+                    DEFAULT_WAVEFORM_DATAFORMAT)
+            else:
+                self._dataFormatAttrObj = self.__getParentAttr(
+                    self._dataFormatAttrName)
+        return self._dataFormatAttrObj
+
+    @dataFormatAttr.setter
+    def dataFormatAttr(self, attrName):
+        if attrName is None:
+            self._dataFormatAttrName = DEFAULT_WAVEFORM_DATAFORMAT
+        else:
+            self._dataFormatAttrName = attrName
+        self._dataFormatAttrObj = self.__getParentAttr(
+            self._dataFormatAttrName)
 
     @property
     def _origin(self):
-        value = self.__getParentAttrValue(self._originAttrName)
-        if not value:
-            return 0.0  # addition factor
-        return value
+        attrObj = self.originAttr
+        if attrObj is not None:
+            value = attrObj.rvalue
+            if value is not None:
+                return value
+        return 0.0  # addition factor
+
+    @property
+    def originAttr(self):
+        if self._originAttrObj is None:
+            if self._originAttrName is None:
+                self._originAttrObj = self.__getParentAttr(
+                    DEFAULT_WAVEFORM_ORIGIN)
+            else:
+                self._originAttrObj = self.__getParentAttr(
+                    self._originAttrName)
+        return self._originAttrObj
+
+    @originAttr.setter
+    def originAttr(self, attrName):
+        if attrName is None:
+            self._originAttrName = DEFAULT_WAVEFORM_ORIGIN
+        else:
+            self._originAttrName = attrName
+        self._originAttrObj = self.__getParentAttr(self._originAttrName)
 
     @property
     def _increment(self):
-        value = self.__getParentAttrValue(self._originAttrName)
-        if not value:
-            return 1.0  # multiplier factor
-        return value
+        attrObj = self.originAttr
+        if attrObj is not None:
+            value = attrObj.rvalue
+            if value is not None:
+                return value
+        return 1.0  # multiplier factor
+
+    @property
+    def incrementAttr(self):
+        if self._incrementAttrObj is None:
+            if self._incrementAttrName is None:
+                self._incrementAttrObj = self.__getParentAttr(
+                    DEFAULT_WAVEFORM_INCREMENT)
+            else:
+                self._incrementAttrObj = self.__getParentAttr(
+                    self._incrementAttrName)
+        return self._incrementAttrObj
+
+    @incrementAttr.setter
+    def incrementAttr(self, attrName):
+        if attrName is None:
+            self._incrementAttrName = DEFAULT_WAVEFORM_INCREMENT
+        else:
+            self._incrementAttrName = attrName
+        self._incrementAttrObj = self.__getParentAttr(self._incrementAttrName)
 
     def interpretArray(self, dtype):
         if self._rawObj is None or self._parent is None:
