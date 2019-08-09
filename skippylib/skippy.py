@@ -457,7 +457,8 @@ class Skippy(AbstractSkippyObj):
             else:
                 self.debug_stream("Answer: %r" % (answer))
             if answer == '':
-                raise Exception("No answer from the instrument")
+                # raise Exception("No answer from the instrument")
+                self.error_stream("No answer from the instrument")
             return answer
         except MemoryError as e:
             self.error_stream("In Read() MemoryError exception: %s"

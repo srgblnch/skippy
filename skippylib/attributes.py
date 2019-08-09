@@ -200,6 +200,10 @@ class SkippyReadAttribute(SkippyAttribute):
         if newReadValue is None:
             self.quality = PyTango.AttrQuality.ATTR_INVALID
             return
+        elif isinstance(newReadValue, str) and len(newReadValue) == 0:
+            self.debug_stream("Uninterpretable data received")
+            self.quality = PyTango.AttrQuality.ATTR_INVALID
+            return
         t = time()
         if self._readFormula:
             self.debug_stream("Evaluating %r with VALUE=%r"
