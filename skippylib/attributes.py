@@ -149,10 +149,11 @@ class SkippyAttribute(AbstractSkippyAttribute):
     def interpretBoolean(self, value):
         if isinstance(value, str):
             value = value.lower()
-        if newReadValue in [False, 0, '0', 'false', 'off']:
-            self._lastReadValue = False
-        elif newReadValue in [True, 1, '1', 'true', 'on']:
-            self._lastReadValue = True
+        if value in [False, 0, '0', 'false', 'off']:
+            return False
+        elif value in [True, 1, '1', 'true', 'on']:
+            return True
+        return False
 
     def interpretArray(self, dtype):
         if self._array_interpreter:
