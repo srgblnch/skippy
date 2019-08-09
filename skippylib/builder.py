@@ -365,6 +365,11 @@ class Builder(AbstractSkippyObj):
             self.__buildRWObj(attrName, attrId, definition)
             if 'writeValues' in definition:
                 self.__prepareWriteValues(attrName, definition, aprop, attr)
+        if 'switch' in definition:
+            switchName = definition['switch']
+            self.info_stream("{0} has {1} as switch attribute".format(attrName, switchName))
+            attrObj = self._parent.attributes[attrName]
+            attrObj.setSwitchAttrName(switchName)
         return attr
 
     def __prepareChannelLikeAttr(self, like, number, definition, attrName):

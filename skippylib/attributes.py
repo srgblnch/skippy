@@ -30,6 +30,10 @@ __license__ = "GPLv3+"
 
 
 class SkippyAttribute(AbstractSkippyAttribute):
+
+    _switchObj = None
+    _switchName = None
+
     def __init__(self, id, type, dim, parent=None, withRawData=False,
                  *args, **kwargs):
         super(SkippyAttribute, self).__init__(*args, **kwargs)
@@ -91,9 +95,18 @@ class SkippyAttribute(AbstractSkippyAttribute):
             return False
         return True
 
+    def hasSwitchAttribute(self):
+        return self._switchName is not None
+
     def _buildrepr_(self, attributes):
         def lambda2str(func):
-            self.info_stream("constants: {x}".format(x=func.__code__.co_consts))
+            try:
+                self.debug_stream(
+                    "constants: {0!r}".format(func.func_code.co_consts))
+            except Exception as exc:
+                self.error_stream(
+                    "for attr {}, couldn't print the {} lambda consts "
+                    "{}".format(self.name, key, func.func_code))
             if isinstance(func.__code__.co_consts[1], str):
                 return func.__code__.co_consts[1]
             elif str(type(func.__code__.co_consts[1])) == "<type 'code'>":
@@ -102,6 +115,7 @@ class SkippyAttribute(AbstractSkippyAttribute):
                 self.error_stream(
                     "unknown how to represent {x}"
                     "".format(x=func.__code__.co_consts))
+
         repr = "%s (%s):\n" % (self.name, self.__class__.__name__)
         for key in attributes:
             if hasattr(self, key):
@@ -145,6 +159,26 @@ class SkippyAttribute(AbstractSkippyAttribute):
 #             self._raw.lastReadRaw = value
 #
 #         return property(getter, setter)
+
+    def getSwitchAttrObj(self):
+        if self._switchName is not None and self._switchObj is None:
+            self._linkSwitchAttr()
+        return self._switchObj
+
+    def setSwitchAttrName(self, attrName):
+        if self._parent is not None:
+            if attrName == self._switchName:
+                self.warn_stream(
+                    "{0} changing switch attribute from {1} to {2}".format(
+                        self.name, self._switchName, attrName))
+            self._switchName = attrName
+            self._linkSwitchAttr()
+
+    def _linkSwitchAttr(self):
+        if self._switchName in self._parent._attributes:
+            self._switchObj = self._parent._attributes[self._switchName]
+            self.info_stream("Link {0} with {1} switch attribute".format(
+                self.name, self._switchObj.name))
 
     def interpretBoolean(self, value):
         if isinstance(value, str):
@@ -193,10 +227,17 @@ class SkippyReadAttribute(SkippyAttribute):
 
     @property
     def rvalue(self):
+        if self.getSwitchAttrObj() is not None and \
+                self.getSwitchAttrObj().rvalue is False:
+            self.info_stream(
+                "Inhibit {0} reading because the {1} switch attribute is OFF"
+                "".format(self.name, self._switchName))
+            self.quality = PyTango.AttrQuality.ATTR_INVALID
+            self._lastReadValue = None
+            return
         if self._timestamp is not None and \
                 time() - self._timestamp < self.timestampsThreshold:
             return self._lastReadValue
-        # TODO: check if has to be read from cache
         newReadValue = self._read(self.readCmd)
         if newReadValue is None:
             self.quality = PyTango.AttrQuality.ATTR_INVALID
