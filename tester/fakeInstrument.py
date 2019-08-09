@@ -417,7 +417,8 @@ class TestManager(object):
         testMethods = [self.test_communications,
                        self.test_readings,
                        self.test_writes,
-                       self.test_glitch]
+                       self.test_glitch,
+                       self.test_waveform_switch]
         reports = []
         for i, test in enumerate(testMethods):
             result, report = test(deviceProxy)
@@ -556,6 +557,39 @@ class TestManager(object):
                     + bcolors.ENDC
             self.log("%s:\t%s" % (testTitle, msg))
             return False, [testTitle, msg]
+
+    def test_waveform_switch(self, device):
+        testTitle = "Waveform Switch"
+        self.log("attributes for the {0} test".format(testTitle),
+                 color=bcolors.OKBLUE)
+
+        def check():
+            if switch is False and quality != PyTango.AttrQuality.ATTR_INVALID:
+                raise Exception("Attributes read when shouldn't")
+            elif switch is True and quality != PyTango.AttrQuality.ATTR_VALID:
+                raise Exception("Attributes not read when should")
+
+        try:
+            waveformAttr = 'Waveform'
+            switchAttr = 'Waveform_switch'
+            quality = device[waveformAttr].quality
+            switch = device[switchAttr].value
+            check()
+            device[switchAttr] = not switch
+            quality = device[waveformAttr].quality
+            switch = device[switchAttr].value
+            check()
+            device[switchAttr] = not switch
+            msg = bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC
+            self.log("%s:\t%s"%(testTitle, msg))
+            return True, [testTitle, msg]
+        except Exception as exc:
+            msg = "{0}TEST FAILED{1}:\n\t{2}{3}{1}" \
+                  "".format(bcolors.FAIL, bcolors.ENDC, bcolors.WARNING, exc)
+            self.log("{0}:\t{1}".format(testTitle, msg))
+            return False, [testTitle, msg]
+
+
 
     def _waitUntilReaction(self, device, reactionPeriod, statesLst):
         tries = 0
