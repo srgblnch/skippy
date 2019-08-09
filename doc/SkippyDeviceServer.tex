@@ -1,5 +1,5 @@
 \documentclass[a4paper,10pt]{article}
-\usepackage[utf8x]{inputenc}
+\usepackage{inputenc}
 
 \usepackage[left=2.5cm,right=2.5cm,top=2cm,bottom=2cm]{geometry}
 \usepackage{amsmath,amsfonts,amssymb}
@@ -141,8 +141,9 @@ An example of an attribute definition:
 Attribute('State',
           {'type':PyTango.CmdArgType.DevBoolean,
            'dim':[0],
-           'readCmd':lambda ch,num:":%s%d:DISPlay?"%(ch,num),
-           'writeCmd':lambda ch,num:(lambda value:":%s%d:DISPlay %s"%(ch,num,value)),
+           'readCmd':lambda ch,num:":{0}{1:02d}:DISPlay?".format(ch,num),
+           'writeCmd':lambda ch,num:(
+               lambda value:":{0}{1:02d}:DISPlay {2}".format(ch,num,value)),
            'channels':True, 'functions':True})
 \end{lstlisting}
 
@@ -155,7 +156,7 @@ Attribute('Frequency',
           {'type':PyTango.CmdArgType.DevDouble,
            'dim':[0],
            'readCmd':":FREQ?",
-           'writeCmd':lambda value:":FREQ %s"%(str(value)),
+           'writeCmd':lambda value:":FREQ {0}".format(str(value)),
            'rampeable':True})
 \end{lstlisting}
 
@@ -167,8 +168,10 @@ Here an example of an spectrum attribute definition:
 Attribute('Waveform',
           {'type':PyTango.CmdArgType.DevDouble,
            'dim':[1,40000000],
-           'readCmd':lambda ch,num:":WAVeform:SOURce %s%d;:WAVeform:DATA?"%(ch,num),
-           'channels':True, 'functions':True})
+           'readCmd':lambda ch,num:":WAVeform:SOURce {0}{1:02d};"
+                                   ":WAVeform:DATA?".format(ch,num),
+           'channels':True, 'functions':True,
+           'switch': lambda ch, num:"State{0}{1}".format(ch, num)})
 \end{lstlisting}
 
 With this attribute is broken a backward compatibility with \emph{PyVisaInstrWrapper} because there those spectrum attributes did not follow the naming of name. There is a naming convention in attribute definitions with channels and functions, to the name given in the definition is concatenated at the end two characters ({\tt Ch} or {\tt Fn}) followed by the number of the channel.
@@ -179,9 +182,9 @@ There is an alternative that allow to stablish the naming with a bigger flexibil
 Attribute('IO',
           {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
-           'readCmd': lambda mult, num: "%s%.2d:VALU?" % (mult, num),
-           'writeCmd': lambda mult, num: (lambda value: "%s%.2d:VALU %s"
-                                          % (mult, num, value)),
+           'readCmd': lambda mult, num: "{0}{1:02d}:VALU?".format(mult, num),
+           'writeCmd': lambda mult, num: (
+               lambda value: "{0}{1:02d}:VALU {3}".format(mult, num, value)),
            'multiple': {'scpiPrefix': 'IOPOrt', 'attrSuffix': 'Port'}
            })
 \end{lstlisting}
