@@ -807,7 +807,12 @@ class Skippy (PyTango.Device_4Impl):
                 argout = pprint.pformat(argout)
             except Exception:
                 argout = str(argout)
-        self.debug_stream("argout %s"%(repr(argout)))
+        try:
+            self.debug_stream("argout {0!r}".format(argout))
+        except Exception as exc:
+            self.error_stream(
+                "In Exec command: "
+                "couldn't format string the argout: {0}".format(exc))
         #----- PROTECTED REGION END -----#  //  Skippy.Exec
         return argout
         
