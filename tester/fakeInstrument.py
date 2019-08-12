@@ -22,7 +22,7 @@ from datetime import datetime
 from instrAttrs import (ROinteger, RWinteger, ROfloat, RWfloat,
                         ROIntegerFallible, Format,
                         ROIntegerArray, ROFloatArray, Waveform,
-                        ROboolean, RWboolean, ROBooleanArray)
+                        ROboolean, RWboolean, ROBooleanArray, ROFloatChannel)
 from instrIdn import InstrumentIdentification, __version__
 from psutil import process_iter, Process
 import PyTango
@@ -113,6 +113,9 @@ class FakeInstrument(object):
         self._attrObjs['rointegerarray'] = self.__build_ROIntegerArray()
         self._attrObjs['rofloatarray'] = self.__build_ROFloatArray()
         self._attrObjs['waveform'] = self.__build_Waveform()
+        self._attrObjs['rofloatarray_ch'] = self.__build_ROFloatArray_Ch()
+        self._attrObjs['rofloatarray_fn'] = self.__build_ROFloatArray_Fn()
+        # self._attrObjs['multiple'] = self._build_ROFloatArray_Multiple()
 
     def __build_ROBoolean(self):
         robooleanObj = ROboolean()
@@ -266,6 +269,40 @@ class FakeInstrument(object):
                                  writecb=rofloatarray.samples)
         return rofloatarray
 
+    def __build_ROFloatArray_Ch(self):
+        return self.__build_ROFloatArray_aux('channel', 4)
+
+    def __build_ROFloatArray_Fn(self):
+        return self.__build_ROFloatArray_aux('functions', 8)
+
+    def __build_ROFloatArray_aux(self, name, how_many):
+        root_obj = self._scpiObj._commandTree
+        source_obj = self._scpiObj.addComponent('source', root_obj)
+        readable_obj = self._scpiObj.addComponent('readable', source_obj)
+        channels_obj = self._scpiObj.addChannel(name, how_many, readable_obj)
+        rofloatarray_ch = ROFloatChannel(how_many)
+        for i in range(1, how_many+1):
+
+            floatcomponent_obj = self._scpiObj.addComponent(
+                'float', channels_obj)
+            for (attrName, cb_func) in \
+                    [('upper', rofloatarray_ch.upperLimit),
+                     ('lower', rofloatarray_ch.lowerLimit),
+                     ('samples', rofloatarray_ch.samples),
+                     ('value', rofloatarray_ch.value)]:
+                if attrName == 'value':
+                    default = True
+                else:
+                    default = False
+                self._scpiObj.addAttribute(
+                    attrName, floatcomponent_obj,
+                    readcb=cb_func, writecb=cb_func, default=default)
+        return rofloatarray_ch
+
+    def _build_ROFloatArray_Multiple(self):
+        pass
+
+
     def __build_Waveform(self):
         # TODO: this should become a test for channel as well as state for them
         waveform = Waveform()
@@ -324,13 +361,15 @@ class TestManager(object):
         tangodb.add_device(devInfo)
         self.log("Server %s added" % (DevServer+"/"+DevInstance),
                  color=bcolors.OKBLUE)
-        propertyName = 'Instrument'
-        propertyValue = 'localhost'
-        property = PyTango.DbDatum(propertyName)
-        property.value_string.append(propertyValue)
-        self.log("Set property %s: %s" % (propertyName, propertyValue),
-                 color=bcolors.OKBLUE)
-        tangodb.put_device_property(DevName, property)
+        for (propertyName, propertyValue) in [
+            ['Instrument', 'localhost'],
+            ['NumChannels', '4'], ['NumFunctions', '8']]:
+            property = PyTango.DbDatum(propertyName)
+            property.value_string.append(propertyValue)
+            self.log("Set property %s: %s" % (propertyName, propertyValue),
+                     color=bcolors.OKBLUE)
+            tangodb.put_device_property(DevName, property)
+
 
     def _startTestDevice(self):
         if not self._isAlreadyRunning():
@@ -471,14 +510,20 @@ class TestManager(object):
 
     def test_readings(self, device):
         testTitle = "Readings"
-        exclude = ['QueryWindow', 'TimeStampsThreshold', 'ReadAfterWrite',
-                   'State', 'Status',
-                   'RampeableStep', 'RampeableStepSpeed', 'Fallible',
-                   'Waveform', 'Waveform_switch']
+        excludeName = ['Idn', 'QueryWindow', 'TimeStampsThreshold', 'Version',
+                       'ReadAfterWrite', 'State', 'Status',
+                       'RampeableStep', 'RampeableStepSpeed', 'Fallible']
+        excludePattern = {'startswith': ['wfChannels', 'Waveform']}
         attrNames = []
         results = []
         for attrName in device.get_attribute_list():
-            if attrName not in exclude:
+            if attrName in excludeName:
+                continue  # next step in the loop
+            in_the_loop = False
+            for startstr in excludePattern['startswith']:
+                if attrName.startswith(startstr):
+                    in_the_loop = True
+            if not in_the_loop:
                 attrNames.append(attrName)
             # TODO: special attributes like ramps descriptors or spectra
         self.log("attributes for the %s test" % (testTitle),

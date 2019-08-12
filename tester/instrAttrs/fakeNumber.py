@@ -222,3 +222,39 @@ class Waveform(FakeArray):
 
     def _refreshValue(self):
         self._value = sin(linspace(0, self._periods * 2 * pi, self._samples))
+
+class ROFloatChannel(FakeArray):
+
+    _value = None
+    _upperLimit = None
+    _lowerLimit = None
+    _samples = None
+
+    def __init__(self, channels, *args, **kwargs):
+        super(ROFloatChannel, self).__init__(*args, **kwargs)
+        self._upperLimit = [self._upperLimit]*channels
+        self._lowerLimit = [self._lowerLimit]*channels
+        self._samples = [self._samples]*channels
+        self._value = [None]*channels
+
+    def value(self, ch):
+        up = self._upperLimit[ch-1]
+        low = self._lowerLimit[ch-1]
+        arr = random(self._samples[ch-1])
+        self._value[ch-1] = (up-low)*arr+low
+        return self._value[ch-1]
+
+    def upperLimit(self, ch, value=None):
+        if value is None:
+            return self._upperLimit[ch-1]
+        self._upperLimit[ch-1] = float(value)
+
+    def lowerLimit(self, ch, value=None):
+        if value is None:
+            return self._lowerLimit[ch-1]
+        self._lowerLimit[ch-1] = float(value)
+
+    def samples(self, ch, value=None):
+        if value is None:
+            return self._samples
+        self._samples = int(value)

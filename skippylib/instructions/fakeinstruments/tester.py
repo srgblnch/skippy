@@ -162,3 +162,20 @@ Attribute('Waveform_periods',
            'writeCmd': lambda value: "source:switchable:array:"
                                      "float:periods {0}".format(value),
            })
+
+Attribute('wfChannels',
+          {'type': PyTango.CmdArgType.DevDouble,
+           'dim': [1, 40000000],
+           'readCmd': lambda ch, num: "source:readable:{0}{1:02d}:float:"
+                                      "value?".format(ch, num),
+           'channels': True,
+           'functions': True,
+           })
+
+# Attribute('wfMultiple',
+#           {'type': PyTango.CmdArgType.DevDouble,
+#            'dim': [1, 40000000],
+#            'readCmd': lambda ch, num: "source:{0}{1:02d}:array:"
+#                                       "float?".format(ch, num),
+#            'multiple': {'scpiPrefix': 'multiple', 'attrSuffix': 'Multi'}
+#            })
