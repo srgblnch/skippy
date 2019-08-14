@@ -18,6 +18,7 @@
 
 import numpy
 from .abstracts import AbstractSkippyAttribute, AbstractSkippyFeature
+from .dataformat import interpret_binary_format
 from PyTango import DevState
 import struct
 from threading import Thread
@@ -404,15 +405,7 @@ class ArrayDataInterpreterFeature(SkippyFeature):
                 return bodyBlock
 
     def __getFormatAndDivisor(self, dataFormat):
-        if dataFormat.startswith('BYT'):  # signed char, 1byte
-            format, divisor = 'b', 1
-        elif dataFormat.startswith('WORD'):  # signed short, 2byte
-            format, divisor = 'h', 2
-        elif dataFormat.lower() in ['real,32', 'asc']:
-            format, divisor = 'I', 4
-        else:
-            raise AssertionError("Cannot decodify data received with format %r"
-                                 % (dataFormat))
+        format, divisor = interpret_binary_format(dataFormat)
         self.debug_stream("dataFormat %s: unpack with %s, %d"
                           % (dataFormat, format, divisor))
         return format, divisor

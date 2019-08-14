@@ -88,9 +88,7 @@ Attribute('WaveformDataFormat',
            'dim': [0],
            'readCmd': "dataformat?",
            'writeCmd': lambda value: "dataformat {0}".format(str(value)),
-           'writeValues': ['BYTE', 'BYT',
-                           'WORD', 'WOR',
-                           'ASCII', 'ASCI', 'ASC'],
+           'writeValues': ['HALF', 'SINGLE', 'DOUBLE', 'QUADRUPLE'],
            })
 
 Attribute('WaveformOrigin',
