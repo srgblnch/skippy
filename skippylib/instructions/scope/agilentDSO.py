@@ -55,7 +55,6 @@ Attribute('State',
                                         % (ch, num, 'ON' if value else 'OFF')),
            'channels': True,
            'functions': True,
-           'manager': True,
            })
 
 Attribute('Impedance',
@@ -72,6 +71,7 @@ Attribute('Area',
            'readCmd': lambda ch, num: ":MEAS:AREA? Display,%s%d" % (ch, num),
            'channels': True,
            'functions': True,
+           'switch': 'State',
            })
 
 Attribute('Amplitude',
@@ -81,6 +81,7 @@ Attribute('Amplitude',
            'readCmd': lambda ch, num: ":MEAS:VAMP? %s%d" % (ch, num),
            'channels': True,
            'functions': True,
+           'switch': 'State',
            })
 
 Attribute('Scale',
@@ -91,6 +92,7 @@ Attribute('Scale',
            'writeCmd': lambda ch, num: (lambda value: ":%s%d:SCALe %s"
                                         % (ch, num, value)),
            'channels': True,
+           'switch': 'State',
            })
 
 Attribute('Offset',
@@ -101,6 +103,7 @@ Attribute('Offset',
            'writeCmd': lambda ch, num: (lambda value: ":%s%d:OFFS %s"
                                         % (ch, num, value)),
            'channels': True,
+           'switch': 'State',
            })
 
 Attribute('VPeakToPeak',
@@ -110,6 +113,7 @@ Attribute('VPeakToPeak',
            'readCmd': lambda ch, num: ":MEAS:VPP? %s%d" % (ch, num),
            'channels': True,
            'functions': True,
+           'switch': 'State',
            })
 
 Attribute('VoltageMin',
@@ -119,6 +123,7 @@ Attribute('VoltageMin',
            'readCmd': lambda ch, num: ":MEAS:VMIN? %s%d" % (ch, num),
            'channels': True,
            'functions': True,
+           'switch': 'State',
            })
 
 Attribute('VoltageMax',
@@ -128,6 +133,7 @@ Attribute('VoltageMax',
            'readCmd': lambda ch, num: ":MEAS:VMAX? %s%d" % (ch, num),
            'channels': True,
            'functions': True,
+           'switch': 'State',
            })
 
 Attribute('VoltageUpper',
@@ -136,6 +142,7 @@ Attribute('VoltageUpper',
            'dim': [0],
            'readCmd': lambda ch, num: ":MEAS:VUPPER? %s%d" % (ch, num),
            'channels': True,
+           'switch': 'State',
            })
 
 Attribute('VoltageLower',
@@ -144,6 +151,7 @@ Attribute('VoltageLower',
            'dim': [0],
            'readCmd': lambda ch, num: ":MEAS:VLOWER? %s%d" % (ch, num),
            'channels': True,
+           'switch': 'State',
            })
 
 Attribute('Frequency',
@@ -152,6 +160,7 @@ Attribute('Frequency',
            'dim': [0],
            'readCmd': lambda ch, num: ":MEAS:FREQ? %s%d" % (ch, num),
            'channels': True,
+           'switch': 'State',
            })
 
 Attribute('Period',
@@ -160,6 +169,7 @@ Attribute('Period',
            'dim': [0],
            'readCmd': lambda ch, num: ":MEAS:PERIOD? %s%d" % (ch, num),
            'channels': True,
+           'switch': 'State',
            })
 
 Attribute('RiseTime',
@@ -168,6 +178,7 @@ Attribute('RiseTime',
            'dim': [0],
            'readCmd': lambda ch, num: ":MEAS:RISETIME? %s%d" % (ch, num),
            'channels': True,
+           'switch': 'State',
            })
 
 Attribute('FallTime',
@@ -176,6 +187,7 @@ Attribute('FallTime',
            'dim': [0],
            'readCmd': lambda ch, num: ":MEAS:FALLTIME? %s%d" % (ch, num),
            'channels': True,
+           'switch': 'State',
            })
 
 Attribute('OverShoot',
@@ -184,6 +196,7 @@ Attribute('OverShoot',
            'dim': [0],
            'readCmd': lambda ch, num: ":MEAS:OVERSHOOT? %s%d" % (ch, num),
            'channels': True,
+           'switch': 'State',
            })
 
 Attribute('PreShoot',
@@ -192,6 +205,7 @@ Attribute('PreShoot',
            'dim': [0],
            'readCmd': lambda ch, num: ":MEAS:PRESHOOT? %s%d" % (ch, num),
            'channels': True,
+           'switch': 'State',
            })
 
 Attribute('Waveform',
@@ -202,6 +216,7 @@ Attribute('Waveform',
                                       % (ch, num),
            'channels': True,
            'functions': True,
+           'switch': 'State',
            })
 
 Attribute('CurrentSampleRate',
