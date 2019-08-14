@@ -40,7 +40,7 @@ See more details in the doc directory of the sources repository.
 __url__ = "https://github.com/srgblnch/skippy"
 # we use semantic versioning (http://semver.org/) and we update it using the
 # bumpversion script (https://github.com/peritus/bumpversion)
-__version__ = '1.4.6-alpha7'
+__version__ = '1.4.6-alpha8'
 
 
 from setuptools import setup, find_packages
