@@ -53,8 +53,8 @@ classifiers = [
     'License :: OSI Approved :: '
     'GNU General Public License v3 or later (GPLv3+)',
     'Operating System :: POSIX',
-#     'Programming Language :: Python :: 2.6',
-#     'Programming Language :: Python :: 2.7',
+    'Programming Language :: Python :: 2.6',
+    'Programming Language :: Python :: 2.7',
 #     'Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator',
 #     'Topic :: Software Development :: Embedded Systems',
 #     'Topic :: Software Development :: Libraries :: Python Modules',
