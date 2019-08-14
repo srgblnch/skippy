@@ -229,12 +229,14 @@ class ROFloatChannel(FakeArray):
     _upperLimit = None
     _lowerLimit = None
     _samples = None
+    _switches = None
 
     def __init__(self, channels, *args, **kwargs):
         super(ROFloatChannel, self).__init__(*args, **kwargs)
         self._upperLimit = [self._upperLimit]*channels
         self._lowerLimit = [self._lowerLimit]*channels
         self._samples = [self._samples]*channels
+        self._switches = [False]*channels
         self._value = [None]*channels
 
     def value(self, ch):
@@ -258,3 +260,13 @@ class ROFloatChannel(FakeArray):
         if value is None:
             return self._samples
         self._samples = int(value)
+
+    def switch(self, ch, value=None):
+        if value is None:
+            return "ON" if self._switches[ch-1] else "OFF"
+        if isinstance(value, str):
+            value = value.lower()
+        if value in [False, 0, '0', 'false', 'off']:
+            self._switches[ch-1] = False
+        elif value in [True, 1, '1', 'true', 'on']:
+            self._switches[ch-1] = True

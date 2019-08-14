@@ -289,6 +289,7 @@ class FakeInstrument(object):
                     [('upper', rofloatarray_ch.upperLimit),
                      ('lower', rofloatarray_ch.lowerLimit),
                      ('samples', rofloatarray_ch.samples),
+                     ('switch', rofloatarray_ch.switch),
                      ('value', rofloatarray_ch.value)]:
                 if attrName == 'value':
                     default = True
@@ -513,7 +514,7 @@ class TestManager(object):
         excludeName = ['Idn', 'QueryWindow', 'TimeStampsThreshold', 'Version',
                        'ReadAfterWrite', 'State', 'Status',
                        'RampeableStep', 'RampeableStepSpeed', 'Fallible']
-        excludePattern = {'startswith': ['wfChannels', 'Waveform']}
+        excludePattern = {'startswith': ['Waveform', 'wfState', 'wfChannels']}
         attrNames = []
         results = []
         for attrName in device.get_attribute_list():

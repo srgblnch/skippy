@@ -161,6 +161,19 @@ Attribute('Waveform_periods',
                                      "float:periods {0}".format(value),
            })
 
+Attribute('wfState',
+          {'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': lambda ch, num: "source:readable:{0}{1:02d}:float:"
+                                      "switch?".format(ch, num),
+           'writeCmd': lambda ch, num: (
+               lambda value: "source:readable:{0}{1:02d}:float:"
+                             "switch {2}".format(ch, num,
+                                                  'ON' if value else 'OFF')),
+           'channels': True,
+           'functions': True,
+           })
+
 Attribute('wfChannels',
           {'type': PyTango.CmdArgType.DevDouble,
            'dim': [1, 40000000],
@@ -168,6 +181,7 @@ Attribute('wfChannels',
                                       "value?".format(ch, num),
            'channels': True,
            'functions': True,
+           'switch': 'wfState'
            })
 
 # Attribute('wfMultiple',
