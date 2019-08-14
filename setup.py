@@ -55,9 +55,9 @@ classifiers = [
     'Operating System :: POSIX',
     'Programming Language :: Python :: 2.6',
     'Programming Language :: Python :: 2.7',
-#     'Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator',
-#     'Topic :: Software Development :: Embedded Systems',
-#     'Topic :: Software Development :: Libraries :: Python Modules',
+    'Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator',
+    'Topic :: Software Development :: Embedded Systems',
+    'Topic :: Software Development :: Libraries :: Python Modules',
     ]
 
 
