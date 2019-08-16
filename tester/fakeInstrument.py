@@ -556,18 +556,24 @@ class TestManager(object):
             if attrName.endswith('_rw'):
                 rvalue = device[attrName].value
                 if device[attrName].type == PyTango.DevFloat:
-                    wvalue = rvalue/1.1
+                    wvalue = int(rvalue/1.1) + (rvalue % 1)
                 elif device[attrName].type == PyTango.DevShort:
                     wvalue = rvalue+1
                 elif device[attrName].type == PyTango.DevBoolean:
                     wvalue = not rvalue
+                self.log(
+                    "*** {0} has {1} and going to write {2}".format(
+                        attrName, rvalue, wvalue))
                 device[attrName] = wvalue
                 # Time between those two reads must be below the
                 # 'TimeStampsThreshold' to check that, even the time hasn't
                 # passed, it has been change by the write.
-                if device[attrName].value == rvalue:
-                    self.log("for %s: %s == %s"
-                             % (attrName, device[attrName].value, rvalue))
+                sleep(0.05)
+                new_rvalue = device[attrName].value
+                self.log(
+                    "*** {0}: had {1}, sent {2}, now {3}".format(
+                        attrName, rvalue, wvalue, new_rvalue))
+                if new_rvalue == wvalue:
                     values.append(wvalue)
                 else:
                     values.append(None)
