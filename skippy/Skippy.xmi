@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="ASCII"?>
 <pogoDsl:PogoSystem xmi:version="2.0" xmlns:xmi="http://www.omg.org/XMI" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:pogoDsl="http://www.esrf.fr/tango/pogo/PogoDsl">
-  <classes name="Skippy" pogoRevision="8.4">
-    <description description="Standard Commands for Programmable Instruments (SCPI) DeviceServer " title="SCPI" sourcePath="/home/serguei/src/Diagnostics/Skippy/src" language="Python" filestogenerate="XMI   file,Code files,html Pages" hasMandatoryProperty="true" hasConcreteProperty="true" hasAbstractCommand="false" hasAbstractAttribute="false" descriptionHtmlExists="false">
+  <classes name="Skippy" pogoRevision="9.4">
+    <description description="Standard Commands for Programmable Instruments (SCPI) DeviceServer " title="SCPI" sourcePath="/media/serguei/333a23fb-282d-42c9-8869-882dd37ebfb2/src/ctrls/Diagnostics/skippy/skippy" language="Python" filestogenerate="XMI   file,Protected Regions,html Pages" hasMandatoryProperty="true" hasConcreteProperty="true" hasAbstractCommand="false" hasAbstractAttribute="false" descriptionHtmlExists="false">
       <inheritances classname="Device_Impl" sourcePath=""/>
       <identification contact="at cells.es - sblanch" author="sblanch" emailDomain="cells.es" classFamily="Communication" siteSpecific="" platform="All Platforms" bus="Socket" manufacturer="none" reference=""/>
     </description>
@@ -244,6 +244,14 @@
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
       <properties description="This value sets the threshold time to use a cached value or hardware read it" label="Time stamps threshold" unit="seconds" standardUnit="" displayUnit="" format="%3.2g" maxValue="3" minValue="0.1" maxAlarm="" minAlarm="" maxWarning="" minWarning="" deltaTime="" deltaValue=""/>
     </attributes>
+    <attributes name="ReadAfterWrite" attType="Scalar" rwType="READ_WRITE" displayLevel="EXPERT" polledPeriod="0" maxX="" maxY="" memorized="true" memorizedAtInit="true" allocReadMember="true" isDynamic="false">
+      <dataType xsi:type="pogoDsl:BooleanType"/>
+      <changeEvent fire="false" libCheckCriteria="false"/>
+      <archiveEvent fire="false" libCheckCriteria="false"/>
+      <dataReadyEvent fire="false" libCheckCriteria="true"/>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+      <properties description="This boolean says the device to read the ACK answer after a write" label="Read after write" unit="" standardUnit="" displayUnit="" format="" maxValue="" minValue="" maxAlarm="" minAlarm="" maxWarning="" minWarning="" deltaTime="" deltaValue=""/>
+    </attributes>
     <states name="OFF" description="No connection stablished with the instrument.">
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </states>
@@ -265,6 +273,6 @@
     <states name="STANDBY" description="">
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
     </states>
-    <preferences docHome="./doc_html" makefileHome="$(TANGO_HOME)"/>
+    <preferences docHome="./doc_html" makefileHome="/usr/share/pogo/preferences"/>
   </classes>
 </pogoDsl:PogoSystem>
