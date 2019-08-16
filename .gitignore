@@ -2,7 +2,7 @@
 .pydevproject
 .idea
 .settings/
-skippy.egg-info/
+skippylib.egg-info/
 *.pyc
 
 build
