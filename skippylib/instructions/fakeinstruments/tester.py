@@ -50,7 +50,7 @@ Attribute("short_scalar_rw",
            'dim': [0],
            'readCmd': "source:writable:short:value?",
            'writeCmd': lambda value: "source:writable:short:"
-                                     "value{0}".format(value)
+                                     "value {0}".format(value)
            })
 
 Attribute("float_scalar_ro",
