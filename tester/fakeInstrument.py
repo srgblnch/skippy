@@ -17,7 +17,10 @@ from __future__ import print_function
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import argparse
+try:
+    import argparse
+except:
+    argparse = None
 from datetime import datetime
 from instrAttrs import (ROinteger, RWinteger, ROfloat, RWfloat,
                         ROIntegerFallible, Format,
@@ -530,7 +533,7 @@ class TestManager(object):
         self.log("attributes for the %s test" % (testTitle),
                  color=bcolors.OKBLUE)
         for attrName in attrNames:
-            self.log("\t{}".format(attrName))
+            self.log("\t{0}".format(attrName))
         reports = []
         for i in range(1, len(attrNames)+1):
             device['QueryWindow'] = i
@@ -677,13 +680,18 @@ def signalHandler(signum, frame):
 
 def main():
     global exitCode
-    parser = argparse.ArgumentParser(description='Test the Skippy device '
-                                     'server using a fake instrument.')
-    parser.add_argument('--no-remove', dest='no_remove',
-                        action="store_true",
-                        # default=False,
-                        help="don't destroy the test until the user say")
-    args = parser.parse_args()
+    if argparse is not None:
+        parser = argparse.ArgumentParser(description='Test the Skippy device '
+                                         'server using a fake instrument.')
+        parser.add_argument('--no-remove', dest='no_remove',
+                            action="store_true",
+                            # default=False,
+                            help="don't destroy the test until the user say")
+        args = parser.parse_args()
+    else:
+        class Object(object):
+            no_remove = False
+        args = Object()
     try:
         global manager
         manager = TestManager()

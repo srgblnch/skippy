@@ -373,7 +373,7 @@ class ArrayDataInterpreterFeature(SkippyFeature):
                 if dtype == numpy.bool:
                     return numpy.array(
                         [bool(i.lower() not in ['0', 'false', 'off'])
-                         for i in bodyBlock.split(',')])
+                         for i in data.split(',')])
                 else:
                     return numpy.fromstring(data, dtype=dtype, sep=',')
             except Exception as e:
