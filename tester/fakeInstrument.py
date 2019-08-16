@@ -440,7 +440,8 @@ class TestManager(object):
         for proc in process_iter():
             if proc.name() == 'python':
                 cmd = proc.cmdline()
-                if cmd[1].lower().startswith(DevServer.lower()) and\
+                if len(cmd) == 3 and \
+                        cmd[1].lower().startswith(DevServer.lower()) and\
                         cmd[2].lower() == DevInstance.lower():
                     self.log("found process %d" % (proc.pid))
                     procs.append(proc)
