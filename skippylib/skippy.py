@@ -18,6 +18,7 @@
 
 from .abstracts import AbstractSkippyObj
 from .communications import CommunicatorBuilder
+from .dataformat import interpret_binary_format
 from .identify import identifier
 import numpy
 from .monitor import Monitor
@@ -53,6 +54,7 @@ class Skippy(AbstractSkippyObj):
 
     _timestampsThreshold = MINIMUM_TIMESTAMPS_THRESHOLD
     _queryWindow = MINIMUM_QUERY_WINDOW
+    _read_after_write = False
 
     _attributes = {}
     _attributesFlags = {}
@@ -192,6 +194,17 @@ class Skippy(AbstractSkippyObj):
                               % (value, e))
 
     @property
+    def read_after_write(self):
+        if self._communications:
+            return self._communications.read_after_write
+
+    @read_after_write.setter
+    def read_after_write(self, value):
+        self._read_after_write = value
+        if self._communications:
+            self._communications.read_after_write = value
+
+    @property
     def nChannels(self):
         return self._nChannels
 
@@ -211,6 +224,8 @@ class Skippy(AbstractSkippyObj):
                       'terminator': self._terminator}
             builder = CommunicatorBuilder(**kwargs)
             self._communications = builder.build()
+            if self._read_after_write != self._communications.read_after_write:
+                self._communications.read_after_write = self._read_after_write
         except SyntaxError as e:
             self.error_stream("Error in the instrument name: %s" % (e))
             self._change_state_status(newState=DevState.FAULT,
@@ -432,18 +447,20 @@ class Skippy(AbstractSkippyObj):
             to the instrument and return what the instrument responds.
         '''
         try:
-            self.debug_stream("Asking: %r" % (query))
+            self.debug_stream("Asking: {0!r}".format(query))
             if ask_for_values:
                 answer = self._communications.ask_for_values(query)
             else:
                 answer = self._communications.ask(query)
             if len(answer) > 100:
-                shorted = "%r(...)%r" % (answer[:25], answer[len(answer)-25:])
-                self.debug_stream("Answer: %r" % (shorted))
+                answer_repr = "{0!r}(...){1!r}".format(answer[:25],
+                                                       answer[len(answer)-25:])
             else:
-                self.debug_stream("Answer: %r" % (answer))
+                answer_repr = "{0!r}".format(answer)
+            self.debug_stream("Answer: {0}".format(answer_repr))
             if answer == '':
-                raise Exception("No answer from the instrument")
+                # raise Exception("No answer from the instrument")
+                self.error_stream("No answer from the instrument")
             return answer
         except MemoryError as e:
             self.error_stream("In Read() MemoryError exception: %s"
@@ -755,7 +772,18 @@ class Skippy(AbstractSkippyObj):
         if self.attributes[attrName].type in \
                 [CmdArgType.DevBoolean]:
             try:
-                self.attributes[attrName].lastReadValue = bool(int(attrValue))
+                if attrValue.lower() in ['true', 'false', 'on', 'off']:
+                    value = True if attrValue.lower() in ['true', 'on'] \
+                        else False
+                else:
+                    try:
+                        value = bool(int(attrValue))
+                    except ValueError as e:
+                        self.warn_stream(
+                            "Couldn't interpret {!r} as boolean".format(
+                                attrValue))
+                        raise e
+                self.attributes[attrName].lastReadValue = value
                 self.attributes[attrName].quality = \
                     AttrQuality.ATTR_VALID
             except:
@@ -899,19 +927,13 @@ class Skippy(AbstractSkippyObj):
                             "header size %d bytes, wave size %d bytes (%d)"
                             % (2+headerSize, bodySize, len(bodyBlock)))
                         # prepare interpretation of the raw data
-                        if dataFormat.startswith('BYT'):
-                            format = 'b'  # signed char, 1byte
-                            divisor = 1
-                        elif dataFormat.startswith('WORD'):
-                            format = 'h'  # signed short, 2byte
-                            divisor = 2
-                        elif dataFormat.lower() in ['real,32', 'asc']:
-                            format = 'I'
-                            divisor = 4
-                        else:
+                        try:
+                            format, divisor = interpret_binary_format(
+                                dataFormat)
+                        except AssertionError as exc:
                             self.error_stream(
-                                "Cannot decodify data receiver for the "
-                                "attribute %s (%s)" % (attrName, dataFormat))
+                                "From attribute {0}: {1}".format(attrName,
+                                                                 exc))
                             attrStruct.lastReadValue = []
                             attrStruct.timestamp = t
                             attrStruct.quality = AttrQuality.ATTR_INVALID
@@ -940,15 +962,12 @@ class Skippy(AbstractSkippyObj):
                         else:
                             # expand the input when each float is codified in
                             # less than 4 bytes
-                            floats = numpy.array(unpackInt, dtype=float)
-                            if 'WaveformOrigin' in self.attributes and \
-                                    'WaveformIncrement' in self.attributes:
-                                waveorigin = self.attributes[
-                                    'WaveformOrigin'].lastReadValue
-                                waveincrement = self.attributes[
-                                    'WaveformIncrement'].lastReadValue
-                                attrStruct.lastReadValue = (
-                                        waveorigin + (waveincrement * floats))
+                            if attrStruct.hasArrayInterpreter():
+                                interpreter = attrStruct.arrayInterpreter
+                                f = numpy.array(unpackInt, dtype=float)
+                                o = float(interpreter.originAttr.rvalue)
+                                i = float(interpreter.incrementAttr.rvalue)
+                                attrStruct.lastReadValue = o+(i*f)
                                 attrStruct.timestamp = t
                                 attrStruct.quality = AttrQuality.ATTR_VALID
                 else:

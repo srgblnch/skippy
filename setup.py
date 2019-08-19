@@ -23,12 +23,13 @@ __email__ = "sblanch@cells.es"
 __copyright__ = "Copyright 2016, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 
-__project__ = 'skippy'
-__description__ = "Tango Device Server to control instruments that support "\
-                  "the scpi protocol"
+__project__ = 'skippylib'
+__description__ = "Python module and a Tango Device Server to gain control " \
+                  "to instruments that support the scpi protocol. Brother " \
+                  "project of the scpilib."
 __longDesc__ = """
-This Tango Device Server has been developed to provide access to instruments
-that listen for SCPI protocol connections.
+This module has been developed to provide access to instruments that listen 
+for SCPI protocol connections. It also provides a Tango Device Server.
 
 This code is the natural evolution of previous device servers that had provided
 many functionalities to, with this device, merge them together and make easy
@@ -39,7 +40,7 @@ See more details in the doc directory of the sources repository.
 __url__ = "https://github.com/srgblnch/skippy"
 # we use semantic versioning (http://semver.org/) and we update it using the
 # bumpversion script (https://github.com/peritus/bumpversion)
-__version__ = '1.4.5'
+__version__ = '1.4.6'
 
 
 from setuptools import setup, find_packages
@@ -52,11 +53,12 @@ classifiers = [
     'License :: OSI Approved :: '
     'GNU General Public License v3 or later (GPLv3+)',
     'Operating System :: POSIX',
-    'Programming Language :: Python',
+    'Programming Language :: Python :: 2.6',
+    'Programming Language :: Python :: 2.7',
     'Topic :: Scientific/Engineering :: Interface Engine/Protocol Translator',
     'Topic :: Software Development :: Embedded Systems',
     'Topic :: Software Development :: Libraries :: Python Modules',
-    ''],
+    ]
 
 
 setup(name=__project__,

@@ -11,28 +11,22 @@
 #  GNU General Public License for more details.
 #
 #  You should have received a copy of the GNU General Public License
-#  along with this program; If not, see <http://www.gnu.org/licenses/>.
+#  along with this program; if not, write to the Free Software Foundation,
+#  Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA.
 #
 # ##### END GPL LICENSE BLOCK #####
 
+
+from fakeBoolean import ROboolean, RWboolean, ROBooleanArray
+from .fakeNumber import ROinteger, RWinteger
+from .fakeNumber import ROfloat, RWfloat
+from .fakeNumber import ROIntegerFallible
+from .fakeNumber import ROIntegerArray, ROFloatArray, Waveform, ROFloatChannel
+from .fakeString import Format
+
 __author__ = "Sergi Blanch-Torne"
+__maintainer__ = "Sergi Blanch-Torne"
 __email__ = "sblanch@cells.es"
-__copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
+__copyright__ = "Copyright 2019, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
-
-__version__ = '1.4.6'
-
-
-def VERSION():
-    if '-' in __version__:
-        _v, _rel = __version__.split('-')
-    else:
-        _v, _rel = __version__, ''
-    _v = [int(n) for n in _v.split('.')]
-    if len(_rel) > 0:
-        _v += [_rel]
-    return tuple(_v)
-
-
-def version():
-    return __version__
+__status__ = "Production"

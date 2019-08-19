@@ -17,10 +17,15 @@ from __future__ import print_function
 #
 # ##### END GPL LICENSE BLOCK #####
 
-import argparse
+try:
+    import argparse
+except:
+    argparse = None
 from datetime import datetime
 from instrAttrs import (ROinteger, RWinteger, ROfloat, RWfloat,
-                        ROIntegerFallible, Format, ROIntegerArray)
+                        ROIntegerFallible, Format,
+                        ROIntegerArray, ROFloatArray, Waveform,
+                        ROboolean, RWboolean, ROBooleanArray, ROFloatChannel)
 from instrIdn import InstrumentIdentification, __version__
 from psutil import process_iter, Process
 import PyTango
@@ -71,7 +76,8 @@ class FakeInstrument(object):
         version = "%s+scpilib_%s" % (__version__, scpilib.version.version())
         self._identity = InstrumentIdentification('FakeInstruments. Inc',
                                                   'Tester', 0, version)
-        self._scpiObj = scpilib.scpi(local=True, debug=True, log2File=True)
+        self._scpiObj = scpilib.scpi(local=True, debug=True, log2File=True,
+                                     loggerName="SkippyTester")
         self._buildSpecialCommands()
         self._buildNormalCommands()
         self.open()
@@ -95,6 +101,40 @@ class FakeInstrument(object):
         self._scpiObj.addSpecialCommand('IDN', self._identity.idn)
 
     def _buildNormalCommands(self):
+        self._attrObjs['roboolean'] = self.__build_ROBoolean()
+        self._attrObjs['rwboolean'] = self.__build_RWBoolean()
+        self._attrObjs['rointeger'] = self.__build_ROInteger()
+        self._attrObjs['rwinteger'] = self.__build_RWInteger()
+        self._attrObjs['rofloat'] = self.__build_ROfloat()
+        self._attrObjs['rwfloat'] = self.__build_RWfloat()
+        self._attrObjs['rampeable'] = self.__build_RampeableFloat()
+        self._attrObjs['fallible'] = self.__build_FallibleInteger()
+        self._attrObjs['formatarray'] = self.__build_ArrayFormater()
+        self._attrObjs['originarray'] = self.__build_ArrayOrigin()
+        self._attrObjs['incrementarray'] = self.__build_ArrayIncrement()
+        self._attrObjs['robooleanarray'] = self.__build_ROBooleanArray()
+        self._attrObjs['rointegerarray'] = self.__build_ROIntegerArray()
+        self._attrObjs['rofloatarray'] = self.__build_ROFloatArray()
+        self._attrObjs['waveform'] = self.__build_Waveform()
+        self._attrObjs['rofloatarray_ch'] = self.__build_ROFloatArray_Ch()
+        self._attrObjs['rofloatarray_fn'] = self.__build_ROFloatArray_Fn()
+        # self._attrObjs['multiple'] = self._build_ROFloatArray_Multiple()
+
+    def __build_ROBoolean(self):
+        robooleanObj = ROboolean()
+        self._scpiObj.addCommand('source:readable:boolean:value',
+                                 readcb=robooleanObj.value, default=True)
+        return robooleanObj
+
+    def __build_RWBoolean(self):
+        rwbooleanObj = RWboolean()
+        self._scpiObj.addCommand('source:writable:boolean:value',
+                                 readcb=rwbooleanObj.value,
+                                 writecb=rwbooleanObj.value,
+                                 default=True)
+        return rwbooleanObj
+
+    def __build_ROInteger(self):
         rointegerObj = ROinteger()
         self._scpiObj.addCommand('source:readable:short:value',
                                  readcb=rointegerObj.value, default=True)
@@ -104,7 +144,10 @@ class FakeInstrument(object):
         self._scpiObj.addCommand('source:readable:short:lower',
                                  readcb=rointegerObj.lowerLimit,
                                  writecb=rointegerObj.lowerLimit)
-        self._attrObjs['rointeger'] = rointegerObj
+
+        return rointegerObj
+
+    def __build_RWInteger(self):
         rwinteger = RWinteger()
         self._scpiObj.addCommand('source:writable:short:value',
                                  readcb=rwinteger.value,
@@ -116,7 +159,9 @@ class FakeInstrument(object):
         self._scpiObj.addCommand('source:writable:short:lower',
                                  readcb=rwinteger.lowerLimit,
                                  writecb=rwinteger.lowerLimit)
-        self._attrObjs['rwinteger'] = rwinteger
+        return rwinteger
+
+    def __build_ROfloat(self):
         rofloat = ROfloat()
         self._scpiObj.addCommand('source:readable:float:value',
                                  readcb=rofloat.value, default=True)
@@ -126,7 +171,9 @@ class FakeInstrument(object):
         self._scpiObj.addCommand('source:readable:float:lower',
                                  readcb=rofloat.lowerLimit,
                                  writecb=rofloat.lowerLimit)
-        self._attrObjs['rofloat'] = rofloat
+        return rofloat
+
+    def __build_RWfloat(self):
         rwfloat = RWfloat()
         self._scpiObj.addCommand('source:writable:float:value',
                                  readcb=rwfloat.value,
@@ -138,7 +185,9 @@ class FakeInstrument(object):
         self._scpiObj.addCommand('source:writable:float:lower',
                                  readcb=rwfloat.lowerLimit,
                                  writecb=rwfloat.lowerLimit)
-        self._attrObjs['rwfloat'] = rwfloat
+        return rwfloat
+
+    def __build_RampeableFloat(self):
         rampeable = RWfloat()
         self._scpiObj.addCommand('rampeable:value',
                                  readcb=rampeable.value,
@@ -150,7 +199,9 @@ class FakeInstrument(object):
         self._scpiObj.addCommand('rampeable:lower',
                                  readcb=rampeable.lowerLimit,
                                  writecb=rampeable.lowerLimit)
-        self._attrObjs['rampeable'] = rampeable
+        return rampeable
+
+    def __build_FallibleInteger(self):
         fallible = ROIntegerFallible()
         self._scpiObj.addCommand('fallible:value',
                                  readcb=fallible.value,
@@ -162,12 +213,36 @@ class FakeInstrument(object):
         self._scpiObj.addCommand('fallible:lower',
                                  readcb=fallible.lowerLimit,
                                  writecb=fallible.lowerLimit)
-        self._attrObjs['fallible'] = fallible
+        return fallible
+
+    def __build_ArrayFormater(self):
         formatarray = Format()
         self._scpiObj.addCommand('dataformat',
                                  readcb=formatarray.value,
                                  writecb=formatarray.value)
-        self._attrObjs['formatarray'] = formatarray
+        return formatarray
+
+    def __build_ArrayOrigin(self):
+        origin4arrays = RWfloat()
+        self._scpiObj.addCommand('dataorigin',
+                                 readcb=origin4arrays.value,
+                                 writecb=origin4arrays.value)
+        return origin4arrays
+
+    def __build_ArrayIncrement(self):
+        increment4arrays = RWfloat()
+        self._scpiObj.addCommand('dataincrement',
+                                 readcb=increment4arrays.value,
+                                 writecb=increment4arrays.value)
+        return increment4arrays
+
+    def __build_ROBooleanArray(self):
+        robooleanarray = ROBooleanArray()
+        self._scpiObj.addCommand('source:readable:array:boolean:value',
+                                 readcb=robooleanarray.value, default=True)
+        return robooleanarray
+
+    def __build_ROIntegerArray(self):
         rointegerarray = ROIntegerArray()
         self._scpiObj.addCommand('source:readable:array:short:value',
                                  readcb=rointegerarray.value, default=True)
@@ -180,8 +255,74 @@ class FakeInstrument(object):
         self._scpiObj.addCommand('source:readable:array:short:samples',
                                  readcb=rointegerarray.samples,
                                  writecb=rointegerarray.samples)
-        
-        self._attrObjs['rointegerarray'] = rointegerarray
+        return rointegerarray
+
+    def __build_ROFloatArray(self):
+        rofloatarray = ROFloatArray()
+        self._scpiObj.addCommand('source:readable:array:float:value',
+                                 readcb=rofloatarray.value, default=True)
+        self._scpiObj.addCommand('source:readable:array:float:upper',
+                                 readcb=rofloatarray.upperLimit,
+                                 writecb=rofloatarray.upperLimit)
+        self._scpiObj.addCommand('source:readable:array:float:lower',
+                                 readcb=rofloatarray.lowerLimit,
+                                 writecb=rofloatarray.lowerLimit)
+        self._scpiObj.addCommand('source:readable:array:float:samples',
+                                 readcb=rofloatarray.samples,
+                                 writecb=rofloatarray.samples)
+        return rofloatarray
+
+    def __build_ROFloatArray_Ch(self):
+        return self.__build_ROFloatArray_aux('channel', 4)
+
+    def __build_ROFloatArray_Fn(self):
+        return self.__build_ROFloatArray_aux('functions', 8)
+
+    def __build_ROFloatArray_aux(self, name, how_many):
+        root_obj = self._scpiObj._commandTree
+        source_obj = self._scpiObj.addComponent('source', root_obj)
+        readable_obj = self._scpiObj.addComponent('readable', source_obj)
+        channels_obj = self._scpiObj.addChannel(name, how_many, readable_obj)
+        rofloatarray_ch = ROFloatChannel(how_many)
+        for i in range(1, how_many+1):
+
+            floatcomponent_obj = self._scpiObj.addComponent(
+                'float', channels_obj)
+            for (attrName, cb_func) in \
+                    [('upper', rofloatarray_ch.upperLimit),
+                     ('lower', rofloatarray_ch.lowerLimit),
+                     ('samples', rofloatarray_ch.samples),
+                     ('switch', rofloatarray_ch.switch),
+                     ('value', rofloatarray_ch.value)]:
+                if attrName == 'value':
+                    default = True
+                else:
+                    default = False
+                self._scpiObj.addAttribute(
+                    attrName, floatcomponent_obj,
+                    readcb=cb_func, writecb=cb_func, default=default)
+        return rofloatarray_ch
+
+    def _build_ROFloatArray_Multiple(self):
+        pass
+
+
+    def __build_Waveform(self):
+        # TODO: this should become a test for channel as well as state for them
+        waveform = Waveform()
+        self._scpiObj.addCommand('source:switchable:array:float:value',
+                                 readcb=waveform.value, default=True)
+        self._scpiObj.addCommand('source:switchable:array:float:switch',
+                                 readcb=waveform.switch,
+                                 writecb=waveform.switch)
+        self._scpiObj.addCommand('source:switchable:array:float:samples',
+                                 readcb=waveform.samples,
+                                 writecb=waveform.samples)
+        self._scpiObj.addCommand('source:switchable:array:float:periods',
+                                 readcb=waveform.periods,
+                                 writecb=waveform.periods)
+        return waveform
+
 
 
 global manager
@@ -224,13 +365,15 @@ class TestManager(object):
         tangodb.add_device(devInfo)
         self.log("Server %s added" % (DevServer+"/"+DevInstance),
                  color=bcolors.OKBLUE)
-        propertyName = 'Instrument'
-        propertyValue = 'localhost'
-        property = PyTango.DbDatum(propertyName)
-        property.value_string.append(propertyValue)
-        self.log("Set property %s: %s" % (propertyName, propertyValue),
-                 color=bcolors.OKBLUE)
-        tangodb.put_device_property(DevName, property)
+        for (propertyName, propertyValue) in [
+            ['Instrument', 'localhost'],
+            ['NumChannels', '4'], ['NumFunctions', '8']]:
+            property = PyTango.DbDatum(propertyName)
+            property.value_string.append(propertyValue)
+            self.log("Set property %s: %s" % (propertyName, propertyValue),
+                     color=bcolors.OKBLUE)
+            tangodb.put_device_property(DevName, property)
+
 
     def _startTestDevice(self):
         if not self._isAlreadyRunning():
@@ -297,7 +440,8 @@ class TestManager(object):
         for proc in process_iter():
             if proc.name() == 'python':
                 cmd = proc.cmdline()
-                if cmd[1].lower().startswith(DevServer.lower()) and\
+                if len(cmd) == 3 and \
+                        cmd[1].lower().startswith(DevServer.lower()) and\
                         cmd[2].lower() == DevInstance.lower():
                     self.log("found process %d" % (proc.pid))
                     procs.append(proc)
@@ -325,10 +469,16 @@ class TestManager(object):
             sleep(1)
         self.log("Start the test", color=bcolors.HEADER)
         deviceProxy = PyTango.DeviceProxy(DevName)
+        # FIXME: once the scpilib supports it, the tests must be made with
+        #  and without this flag raised.
+        deviceProxy['ReadAfterWrite'] = True
+        self.log("Testing {0} a read after write".format(
+            "with" if deviceProxy['ReadAfterWrite'].value else "with out"))
         testMethods = [self.test_communications,
                        self.test_readings,
                        self.test_writes,
-                       self.test_glitch]
+                       self.test_glitch,
+                       self.test_waveform_switch]
         reports = []
         for i, test in enumerate(testMethods):
             result, report = test(deviceProxy)
@@ -355,7 +505,8 @@ class TestManager(object):
 
     def test_communications(self, device):
         testTitle = "Communications"
-        attrNames = ['QueryWindow', 'TimeStampsThreshold', 'State', 'Status']
+        attrNames = ['QueryWindow', 'TimeStampsThreshold', 'ReadAfterWrite',
+                     'State', 'Status']
         attrs = device.read_attributes(attrNames)
         values = [attr.value for attr in attrs]
         result, msg = self._checkTest(attrNames, values)
@@ -364,18 +515,26 @@ class TestManager(object):
 
     def test_readings(self, device):
         testTitle = "Readings"
-        exclude = ['QueryWindow', 'TimeStampsThreshold', 'State', 'Status',
-                   'RampeableStep', 'RampeableStepSpeed', 'Fallible']
+        excludeName = ['Idn', 'QueryWindow', 'TimeStampsThreshold', 'Version',
+                       'ReadAfterWrite', 'State', 'Status',
+                       'RampeableStep', 'RampeableStepSpeed', 'Fallible']
+        excludePattern = {'startswith': ['Waveform', 'wfState', 'wfChannels']}
         attrNames = []
         results = []
         for attrName in device.get_attribute_list():
-            if attrName not in exclude:
+            if attrName in excludeName:
+                continue  # next step in the loop
+            in_the_loop = False
+            for startstr in excludePattern['startswith']:
+                if attrName.startswith(startstr):
+                    in_the_loop = True
+            if not in_the_loop:
                 attrNames.append(attrName)
             # TODO: special attributes like ramps descriptors or spectra
         self.log("attributes for the %s test" % (testTitle),
                  color=bcolors.OKBLUE)
         for attrName in attrNames:
-            self.log("\t{}".format(attrName))
+            self.log("\t{0}".format(attrName))
         reports = []
         for i in range(1, len(attrNames)+1):
             device['QueryWindow'] = i
@@ -398,16 +557,24 @@ class TestManager(object):
             if attrName.endswith('_rw'):
                 rvalue = device[attrName].value
                 if device[attrName].type == PyTango.DevFloat:
-                    wvalue = rvalue/1.1
+                    wvalue = int(rvalue/1.1) + (rvalue % 1)
                 elif device[attrName].type == PyTango.DevShort:
                     wvalue = rvalue+1
+                elif device[attrName].type == PyTango.DevBoolean:
+                    wvalue = not rvalue
+                self.log(
+                    "*** {0} has {1} and going to write {2}".format(
+                        attrName, rvalue, wvalue))
                 device[attrName] = wvalue
                 # Time between those two reads must be below the
                 # 'TimeStampsThreshold' to check that, even the time hasn't
                 # passed, it has been change by the write.
-                if device[attrName].value == rvalue:
-                    self.log("for %s: %s == %s"
-                             % (attrName, device[attrName].value, rvalue))
+                sleep(0.05)
+                new_rvalue = device[attrName].value
+                self.log(
+                    "*** {0}: had {1}, sent {2}, now {3}".format(
+                        attrName, rvalue, wvalue, new_rvalue))
+                if new_rvalue == wvalue:
                     values.append(wvalue)
                 else:
                     values.append(None)
@@ -463,6 +630,39 @@ class TestManager(object):
             self.log("%s:\t%s" % (testTitle, msg))
             return False, [testTitle, msg]
 
+    def test_waveform_switch(self, device):
+        testTitle = "Waveform Switch"
+        self.log("attributes for the {0} test".format(testTitle),
+                 color=bcolors.OKBLUE)
+
+        def check():
+            if switch is False and quality != PyTango.AttrQuality.ATTR_INVALID:
+                raise Exception("Attributes read when shouldn't")
+            elif switch is True and quality != PyTango.AttrQuality.ATTR_VALID:
+                raise Exception("Attributes not read when should")
+
+        try:
+            waveformAttr = 'Waveform'
+            switchAttr = 'Waveform_switch'
+            quality = device[waveformAttr].quality
+            switch = device[switchAttr].value
+            check()
+            device[switchAttr] = not switch
+            quality = device[waveformAttr].quality
+            switch = device[switchAttr].value
+            check()
+            device[switchAttr] = not switch
+            msg = bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC
+            self.log("%s:\t%s"%(testTitle, msg))
+            return True, [testTitle, msg]
+        except Exception as exc:
+            msg = "{0}TEST FAILED{1}:\n\t{2}{3}{1}" \
+                  "".format(bcolors.FAIL, bcolors.ENDC, bcolors.WARNING, exc)
+            self.log("{0}:\t{1}".format(testTitle, msg))
+            return False, [testTitle, msg]
+
+
+
     def _waitUntilReaction(self, device, reactionPeriod, statesLst):
         tries = 0
         state = device['State'].value
@@ -487,13 +687,18 @@ def signalHandler(signum, frame):
 
 def main():
     global exitCode
-    parser = argparse.ArgumentParser(description='Test the Skippy device '
-                                     'server using a fake instrument.')
-    parser.add_argument('--no-remove', dest='no_remove',
-                        action="store_true",
-                        #default=False,
-                        help="don't destroy the test until the user say")
-    args = parser.parse_args()
+    if argparse is not None:
+        parser = argparse.ArgumentParser(description='Test the Skippy device '
+                                         'server using a fake instrument.')
+        parser.add_argument('--no-remove', dest='no_remove',
+                            action="store_true",
+                            # default=False,
+                            help="don't destroy the test until the user say")
+        args = parser.parse_args()
+    else:
+        class Object(object):
+            no_remove = False
+        args = Object()
     try:
         global manager
         manager = TestManager()

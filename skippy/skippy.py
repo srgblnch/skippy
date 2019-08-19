@@ -476,18 +476,19 @@ class Skippy (PyTango.Device_4Impl):
         self.attr_Idn_read = ''
         self.attr_QueryWindow_read = 0
         self.attr_TimeStampsThreshold_read = 0.0
+        self.attr_ReadAfterWrite_read = False
         self.attr_Version_read = ''
         #----- PROTECTED REGION ID(Skippy.init_device) ENABLED START -----#
         if self.get_state() in [PyTango.DevState.FAULT]:
             self.info_stream("Init() call from a fault state")
         else:
-            DS_MODULE = __import__(self.__class__.__module__)
-            kM = dir(DS_MODULE)
-            vM = map(DS_MODULE.__getattribute__, kM)
-            self._globals = dict(zip(kM, vM))
-            self._globals['self'] = self
-            self._globals['module'] = DS_MODULE
-            self._locals = {}
+            # DS_MODULE = __import__(self.__class__.__module__)
+            # kM = dir(DS_MODULE)
+            # vM = map(DS_MODULE.__getattribute__, kM)
+            self._globals = globals()  # dict(zip(kM, vM))
+            # self._globals['self'] = self
+            # self._globals['module'] = DS_MODULE
+            self._locals = {'self': self}
             # prepare the attribute building
             self.set_change_event('State', True, False)
             self.set_change_event('Status', True, False)
@@ -576,7 +577,35 @@ class Skippy (PyTango.Device_4Impl):
         ## TODO: function of an instrument attribute ---
         #        for a lower limit or to force as unique possibility.
         #----- PROTECTED REGION END -----#  //  Skippy.TimeStampsThreshold_write
-        
+
+    def read_ReadAfterWrite(self, attr):
+        self.debug_stream("In read_ReadAfterWrite()")
+        #----- PROTECTED REGION ID(Skippy.ReadAfterWrite_read) ENABLED START -----#
+        try:
+            read_after_write = self.skippy.read_after_write
+            if read_after_write is None:
+                raise Exception
+            self.attr_ReadAfterWrite_read = read_after_write
+            attr.set_value(self.attr_ReadAfterWrite_read)
+        except Exception as e:
+            self.error_stream("Couldn't read the ReadAfterWrite "
+                              "attribute: %s" % (e))
+            attr.set_value_date_quality(False, time.time(),
+                                        PyTango.AttrQuality.ATTR_INVALID)
+        #----- PROTECTED REGION END -----#  //  Skippy.ReadAfterWrite_read
+
+    def write_ReadAfterWrite(self, attr):
+        self.debug_stream("In write_ReadAfterWrite()")
+        data=attr.get_write_value()
+        #----- PROTECTED REGION ID(Skippy.ReadAfterWrite_write) ENABLED START -----#
+        if hasattr(self, 'skippy') and self.skippy is not None:
+            self.skippy.read_after_write = float(data)
+            self.attr_ReadAfterWrite_read = \
+                self.skippy.read_after_write
+        ## TODO: function of an instrument attribute ---
+        #        for a lower limit or to force as unique possibility.
+        #----- PROTECTED REGION END -----#  //  Skippy.ReadAfterWrite_write
+
     def read_Version(self, attr):
         self.debug_stream("In read_Version()")
         #----- PROTECTED REGION ID(Skippy.Version_read) ENABLED START -----#
@@ -754,26 +783,36 @@ class Skippy (PyTango.Device_4Impl):
         argout = ''
         #----- PROTECTED REGION ID(Skippy.Exec) ENABLED START -----#
         self.debug_stream("argin %s" % (repr(argin)))
-        try:
+        if argin.count("=") == 0:
             try:
-                # interpretation as expression
                 argout = eval(argin, self._globals, self._locals)
-            except SyntaxError:
-                # interpretation as statement
-                exec(argin in self._globals, self._locals)
-                argout = self._locals.get("y")
-        except Exception as exc:
-            # handles errors on both eval and exec level
-            argout = traceback.format_exc()
-        if type(argout) == StringType:
-            return argout
-        elif isinstance(argout, BaseException):
-            return "%s!\n%s" % (argout.__class__.__name__, str(argout))
+            except SyntaxError as expression_exception:
+                self.warn_stream("Interpreting as expression Exception: "
+                                 "{0}".format(expression_exception))
+                argout = traceback.format_exc()
         else:
             try:
-                return pprint.pformat(argout)
+                exec argin in self._globals, self._locals
+                argout = self._locals.get("y")
+            except Exception as statement_exception:
+                self.warn_stream("Interpreting as statement Exception: "
+                                 "{0}".format(statement_exception))
+                argout = traceback.format_exc()
+        if type(argout) == StringType:
+            pass  # return argout
+        elif isinstance(argout, BaseException):
+            argout = "%s!\n%s" % (argout.__class__.__name__, str(argout))
+        else:
+            try:
+                argout = pprint.pformat(argout)
             except Exception:
-                return str(argout)
+                argout = str(argout)
+        try:
+            self.debug_stream("argout {0!r}".format(argout))
+        except Exception as exc:
+            self.error_stream(
+                "In Exec command: "
+                "couldn't format string the argout: {0}".format(exc))
         #----- PROTECTED REGION END -----#  //  Skippy.Exec
         return argout
         
@@ -1282,6 +1321,16 @@ class SkippyClass(PyTango.DeviceClass):
                 'Display level': PyTango.DispLevel.EXPERT,
                 'Memorized':"true"
             } ],
+        'ReadAfterWrite':
+            [[PyTango.DevBoolean,
+              PyTango.SCALAR,
+              PyTango.READ_WRITE],
+             {
+                 'label': "Read after write",
+                 'description': "This boolean says the device to read the ACK answer after a write",
+                 'Display level': PyTango.DispLevel.EXPERT,
+                 'Memorized': "true"
+             }],
         'Version':
             [[PyTango.DevString,
             PyTango.SCALAR,

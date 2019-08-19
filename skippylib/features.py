@@ -18,6 +18,8 @@
 
 import numpy
 from .abstracts import AbstractSkippyAttribute, AbstractSkippyFeature
+from .dataformat import interpret_binary_format
+from PyTango import DevState
 import struct
 from threading import Thread
 from time import sleep
@@ -67,7 +69,7 @@ class RampFeature(SkippyFeature):
     def __init__(self, *args, **kwargs):
         super(RampFeature, self).__init__(*args, **kwargs)
         self._rampStep = None
-        self._rampStepSpeep = None
+        self._rampStepSpeed = None
         self._rampThread = None
     # FIXME: this is only a ramping for float attributes, should also support
     #        integers.
@@ -86,13 +88,13 @@ class RampFeature(SkippyFeature):
             self._rampStep = float(value)
 
     @property
-    def rampStepSpeep(self):
-        return self._rampStepSpeep
+    def rampStepSpeed(self):
+        return self._rampStepSpeed
 
-    @rampStepSpeep.setter
-    def rampStepSpeep(self, value):
+    @rampStepSpeed.setter
+    def rampStepSpeed(self, value):
         if value is not None:
-            self._rampStepSpeep = float(value)
+            self._rampStepSpeed = float(value)
 
     @property
     def rampThread(self):
@@ -150,8 +152,7 @@ class RampFeature(SkippyFeature):
         '''
         # prepare
         backup_state = self._get_state()
-        self._change_state_status(newState=PyTango.DevState.MOVING,
-                                  rebuild=True)
+        self._change_state_status(newState=DevState.MOVING)
         orig_pos = self._parent.rvalue
         dest_pos = self._parent.wvalue
         self.info_stream("In _rampProcedure(): ramp will start from %g to %g"
@@ -201,20 +202,34 @@ class RawDataFeature(SkippyFeature):
         self._lastReadRaw = value
 
 
+DEFAULT_WAVEFORM_DATAFORMAT = 'WaveformDataFormat'
+DEFAULT_WAVEFORM_ORIGIN = 'WaveformOrigin'
+DEFAULT_WAVEFORM_INCREMENT = 'WaveformIncrement'
+
 class ArrayDataInterpreterFeature(SkippyFeature):
-    def __init__(self, rawObj, format, origin=None, increment=None,
+
+    _dataFormatAttrName = None
+    _dataFormatAttrObj = None
+
+    _originAttrName = None
+    _originAttrObj = None
+
+    _incrementAttrName = None
+    _incrementAttrObj = None
+
+    def __init__(self, rawObj, format=None, origin=None, increment=None,
                  *args, **kwargs):
         super(ArrayDataInterpreterFeature, self).__init__(*args, **kwargs)
         self._rawObj = rawObj
-        self._dataFormatAttrName = format
-        self._originAttrName = origin
-        self._incrementAttrName = increment
+        self.dataFormatAttr = format
+        self.originAttr = origin
+        self.incrementAttr = increment
 
     @property
     def rawObj(self):
         return self._rawObj
 
-    def __getParentAttrValue(self, attrName):
+    def __getParentAttr(self, attrName):
         if self._parent is not None:
             attrObj = self._parent
             if attrObj._parent is not None:
@@ -223,7 +238,7 @@ class ArrayDataInterpreterFeature(SkippyFeature):
                     attributes = getattr(container, 'attributes')
                     if attrName:
                         if attrName in attributes:
-                            return attributes[attrName].lastReadValue
+                            return attributes[attrName]
                         else:
                             self.debug_stream("%s not in attributes"
                                               % (attrName))
@@ -237,55 +252,136 @@ class ArrayDataInterpreterFeature(SkippyFeature):
 
     @property
     def _dataFormat(self):
-        value = self.__getParentAttrValue(self._dataFormatAttrName)
-        if not value:
-            return ''
-        return value
+        attrObj = self.dataFormatAttr
+        if attrObj is not None:
+            value = attrObj.rvalue
+            if value is not None:
+                return value
+        return ''
+
+    @property
+    def dataFormatAttr(self):
+        if self._dataFormatAttrObj is None:
+            if self._dataFormatAttrName is None:
+                self._dataFormatAttrObj = self.__getParentAttr(
+                    DEFAULT_WAVEFORM_DATAFORMAT)
+            else:
+                self._dataFormatAttrObj = self.__getParentAttr(
+                    self._dataFormatAttrName)
+        return self._dataFormatAttrObj
+
+    @dataFormatAttr.setter
+    def dataFormatAttr(self, attrName):
+        if attrName is None:
+            self._dataFormatAttrName = DEFAULT_WAVEFORM_DATAFORMAT
+        else:
+            self._dataFormatAttrName = attrName
+        self._dataFormatAttrObj = self.__getParentAttr(
+            self._dataFormatAttrName)
 
     @property
     def _origin(self):
-        value = self.__getParentAttrValue(self._originAttrName)
-        if not value:
-            return 0.0  # addition factor
-        return value
+        attrObj = self.originAttr
+        if attrObj is not None:
+            value = attrObj.rvalue
+            if value is not None:
+                return value
+        return 0.0  # addition factor
+
+    @property
+    def originAttr(self):
+        if self._originAttrObj is None:
+            if self._originAttrName is None:
+                self._originAttrObj = self.__getParentAttr(
+                    DEFAULT_WAVEFORM_ORIGIN)
+            else:
+                self._originAttrObj = self.__getParentAttr(
+                    self._originAttrName)
+        return self._originAttrObj
+
+    @originAttr.setter
+    def originAttr(self, attrName):
+        if attrName is None:
+            self._originAttrName = DEFAULT_WAVEFORM_ORIGIN
+        else:
+            self._originAttrName = attrName
+        self._originAttrObj = self.__getParentAttr(self._originAttrName)
 
     @property
     def _increment(self):
-        value = self.__getParentAttrValue(self._originAttrName)
-        if not value:
-            return 1.0  # multiplier factor
-        return value
+        attrObj = self.originAttr
+        if attrObj is not None:
+            value = attrObj.rvalue
+            if value is not None:
+                return value
+        return 1.0  # multiplier factor
 
-    def interpretArray(self):
+    @property
+    def incrementAttr(self):
+        if self._incrementAttrObj is None:
+            if self._incrementAttrName is None:
+                self._incrementAttrObj = self.__getParentAttr(
+                    DEFAULT_WAVEFORM_INCREMENT)
+            else:
+                self._incrementAttrObj = self.__getParentAttr(
+                    self._incrementAttrName)
+        return self._incrementAttrObj
+
+    @incrementAttr.setter
+    def incrementAttr(self, attrName):
+        if attrName is None:
+            self._incrementAttrName = DEFAULT_WAVEFORM_INCREMENT
+        else:
+            self._incrementAttrName = attrName
+        self._incrementAttrObj = self.__getParentAttr(self._incrementAttrName)
+
+    def interpretArray(self, dtype):
         if self._rawObj is None or self._parent is None:
             raise AssertionError("It is necessary to have SkippyAttribute and "
                                  "RawDataFeature objects to interpret data")
-        data = self._rawObj.lastReadRaw
-        dataFormat = self._dataFormat
-        if dataFormat.startswith('ASC'):
-            data = self.__interpretAsciiFormat(data)
+        if dtype in [numpy.bool, numpy.int16, numpy.uint16, int,
+                     numpy.int32, numpy.uint32, numpy.int64, numpy.uint64]:
+            # FIXME: Binary data formats may only apply to floats
+            #  Or perhaps also to numericals, but booleans may only have
+            #  4 simbols (0, false, 1, true) in ascii and bit arrays in binary
+            dataFormat = 'ASC'
         else:
-            format, divisor = self.__getFormatAndDivisor(dataFormat)
-            data = self.__interpretBinaryFormat(data, format, divisor)
+            dataFormat = self._dataFormat
+        data = self._rawObj.lastReadRaw
+        if dataFormat.startswith('ASC'):
+            data = self.__interpretAsciiFormat(data, dtype)
+        else:
+
+            data = self.__interpretBinaryFormat(data, dataFormat, dtype)
         if data is None:
-            return numpy.fromstring("", dtype=float)
+            return numpy.fromstring("", dtype=dtype)
         return data
 
-    def __interpretAsciiFormat(self, data):
+    def __interpretAsciiFormat(self, data, dtype):
         if data[0] == '#':
             bodyBlock = self.__interpretHeader(data)
             if not bodyBlock:
                 self.error_stream('Impossible to interpret the header')
                 return
-            return numpy.fromstring(bodyBlock, dtype=float, sep=',')
+            if dtype == numpy.bool:
+                return numpy.array([bool(i.lower() not in ['0', 'false'])
+                                    for i in bodyBlock.split(',')])
+            else:
+                return numpy.fromstring(bodyBlock, dtype=dtype, sep=',')
         else:
             try:
-                return numpy.fromstring(data, dtype=float, sep=',')
+                if dtype == numpy.bool:
+                    return numpy.array(
+                        [bool(i.lower() not in ['0', 'false', 'off'])
+                         for i in data.split(',')])
+                else:
+                    return numpy.fromstring(data, dtype=dtype, sep=',')
             except Exception as e:
                 self.error_stream("Impossible to interpret raw data")
                 self.debug_stream("Exception: %s" % (e))
 
-    def __interpretBinaryFormat(self, data, format, divisor):
+    def __interpretBinaryFormat(self, data, dataFormat, dtype):
+        format, divisor = self.__getFormatAndDivisor(dataFormat)
         bodyBlock = self.__interpretHeader(data)
         if not bodyBlock:
             self.error_stream('Impossible to interpret the header')
@@ -293,7 +389,7 @@ class ArrayDataInterpreterFeature(SkippyFeature):
         completBytes = self.__getCompleteBytes(bodyBlock, divisor)
         unpackedData = self.__unpackBytes(data, format, divisor)
         if unpackedData:
-            floats = numpy.array(unpackInt, dtype=float)
+            floats = numpy.array(unpackInt, dtype=dtype)
             return self._Origin + (self._increment * floats)
 
     def __interpretHeader(self, buffer):
@@ -309,15 +405,7 @@ class ArrayDataInterpreterFeature(SkippyFeature):
                 return bodyBlock
 
     def __getFormatAndDivisor(self, dataFormat):
-        if dataFormat.startswith('BYT'):  # signed char, 1byte
-            format, divisor = 'b', 1
-        elif dataFormat.startswith('WORD'):  # signed short, 2byte
-            format, divisor = 'h', 2
-        elif dataFormat.lower() in ['real,32', 'asc']:
-            format, divisor = 'I', 4
-        else:
-            raise AssertionError("Cannot decodify data received with format %r"
-                                 % (dataFormat))
+        format, divisor = interpret_binary_format(dataFormat)
         self.debug_stream("dataFormat %s: unpack with %s, %d"
                           % (dataFormat, format, divisor))
         return format, divisor

@@ -42,25 +42,25 @@ class AbstractSkippyObj(object):
         if hasattr(self, '_parent') and self._parent:
             self._parent.debug_stream(msg)
         else:
-            print("DEBUG: %s" % (msg))
+            print("DEBUG: {0}".format(msg))
 
     def info_stream(self, msg):
         if hasattr(self, '_parent') and self._parent:
             self._parent.info_stream(msg)
         else:
-            print("INFO:  %s" % (msg))
+            print("INFO:  {0}".format(msg))
 
     def warn_stream(self, msg):
         if hasattr(self, '_parent') and self._parent:
             self._parent.warn_stream(msg)
         else:
-            print("WARN:  %s" % (msg))
+            print("WARN:  {0}".format(msg))
 
     def error_stream(self, msg):
         if hasattr(self, '_parent') and self._parent:
             self._parent.error_stream(msg)
         else:
-            print("ERROR: %s" % (msg))
+            print("ERROR: {0}".format(msg))
 
     def _get_state(self):
         if hasattr(self, '_statemachine') and self._statemachine:

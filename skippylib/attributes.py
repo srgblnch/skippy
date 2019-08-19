@@ -18,6 +18,7 @@
 
 from .abstracts import AbstractSkippyAttribute
 from .features import RampFeature, RawDataFeature, ArrayDataInterpreterFeature
+from numpy import bool, int16, uint16, int32, uint32, int64, uint64
 import PyTango
 from time import time, sleep
 import traceback
@@ -29,6 +30,10 @@ __license__ = "GPLv3+"
 
 
 class SkippyAttribute(AbstractSkippyAttribute):
+
+    _switchObj = None
+    _switchName = None
+
     def __init__(self, id, type, dim, parent=None, withRawData=False,
                  *args, **kwargs):
         super(SkippyAttribute, self).__init__(*args, **kwargs)
@@ -43,14 +48,9 @@ class SkippyAttribute(AbstractSkippyAttribute):
         if self.dim == 1:
             if not hasattr(self, '_raw') or not self._raw:
                 self._raw = RawDataFeature(name="rawdata", parent=self)
-            # FIXME: format, origin, increment
-            format = 'WaveformDataFormat'
-            origin = 'WaveformOrigin'
-            increment = 'WaveformIncrement'
             self._array_interpreter = \
                 ArrayDataInterpreterFeature(
-                    name="array", parent=self, rawObj=self._raw, format=format,
-                    origin=origin, increment=increment)
+                    name="array", parent=self, rawObj=self._raw)
 
     @property
     def id(self):
@@ -90,9 +90,18 @@ class SkippyAttribute(AbstractSkippyAttribute):
             return False
         return True
 
+    def hasSwitchAttribute(self):
+        return self._switchName is not None
+
     def _buildrepr_(self, attributes):
         def lambda2str(func):
-            self.info_stream("constants: {x}".format(x=func.__code__.co_consts))
+            try:
+                self.debug_stream(
+                    "constants: {0!r}".format(func.func_code.co_consts))
+            except Exception as exc:
+                self.error_stream(
+                    "for attr {}, couldn't print the {} lambda consts "
+                    "{}".format(self.name, key, func.func_code))
             if isinstance(func.__code__.co_consts[1], str):
                 return func.__code__.co_consts[1]
             elif str(type(func.__code__.co_consts[1])) == "<type 'code'>":
@@ -101,6 +110,7 @@ class SkippyAttribute(AbstractSkippyAttribute):
                 self.error_stream(
                     "unknown how to represent {x}"
                     "".format(x=func.__code__.co_consts))
+
         repr = "%s (%s):\n" % (self.name, self.__class__.__name__)
         for key in attributes:
             if hasattr(self, key):
@@ -145,9 +155,42 @@ class SkippyAttribute(AbstractSkippyAttribute):
 #
 #         return property(getter, setter)
 
-    def interpretArray(self):
+    def getSwitchAttrObj(self):
+        if self._switchName is not None and self._switchObj is None:
+            self._linkSwitchAttr()
+        return self._switchObj
+
+    def setSwitchAttrName(self, attrName):
+        if self._parent is not None:
+            if attrName == self._switchName:
+                self.warn_stream(
+                    "{0} changing switch attribute from {1} to {2}".format(
+                        self.name, self._switchName, attrName))
+            self._switchName = attrName
+            self._linkSwitchAttr()
+
+    def _linkSwitchAttr(self):
+        if self._switchName in self._parent._attributes:
+            self._switchObj = self._parent._attributes[self._switchName]
+            self.info_stream("Link {0} with {1} switch attribute".format(
+                self.name, self._switchObj.name))
+
+    def interpretBoolean(self, value):
+        if isinstance(value, str):
+            value = value.lower()
+        if value in [False, 0, '0', 'false', 'off']:
+            return False
+        elif value in [True, 1, '1', 'true', 'on']:
+            return True
+        return False
+
+    @property
+    def arrayInterpreter(self):
+        return self._array_interpreter
+
+    def interpretArray(self, dtype):
         if self._array_interpreter:
-            return self._array_interpreter.interpretArray()
+            return self._array_interpreter.interpretArray(dtype)
 
 
 class SkippyReadAttribute(SkippyAttribute):
@@ -183,12 +226,23 @@ class SkippyReadAttribute(SkippyAttribute):
 
     @property
     def rvalue(self):
+        if self.getSwitchAttrObj() is not None and \
+                self.getSwitchAttrObj().rvalue is False:
+            self.info_stream(
+                "Inhibit {0} reading because the {1} switch attribute is OFF"
+                "".format(self.name, self._switchName))
+            self.quality = PyTango.AttrQuality.ATTR_INVALID
+            self._lastReadValue = None
+            return
         if self._timestamp is not None and \
                 time() - self._timestamp < self.timestampsThreshold:
             return self._lastReadValue
-        # TODO: check if has to be read from cache
         newReadValue = self._read(self.readCmd)
         if newReadValue is None:
+            self.quality = PyTango.AttrQuality.ATTR_INVALID
+            return
+        elif isinstance(newReadValue, str) and len(newReadValue) == 0:
+            self.debug_stream("Uninterpretable data received")
             self.quality = PyTango.AttrQuality.ATTR_INVALID
             return
         t = time()
@@ -211,7 +265,7 @@ class SkippyReadAttribute(SkippyAttribute):
                         self._lastReadValue = float(newReadValue)
                     elif self.dim == 1:
                         self._raw.lastReadRaw = newReadValue
-                        self._lastReadValue = self.interpretArray()
+                        self._lastReadValue = self.interpretArray(dtype=float)
                     else:
                         raise BufferError("Unsuported multidimensional data")
                 elif self.type in [PyTango.DevShort, PyTango.DevUShort,
@@ -225,16 +279,25 @@ class SkippyReadAttribute(SkippyAttribute):
                         else:
                             self._lastReadValue = int(newReadValue)
                     elif self.dim == 1:
-                        raise BufferError("Unsupported array data")
-                        # FIXME:
-                        #  self._lastReadValue = nparray(eval(newReadValue))
+                        self._raw.lastReadRaw = newReadValue
+                        dtype = {PyTango.DevShort: int16,
+                                 PyTango.DevUShort: uint16,
+                                 PyTango.DevInt: int,
+                                 PyTango.DevLong: int32,
+                                 PyTango.DevULong: uint32,
+                                 PyTango.DevLong64: int64,
+                                 PyTango.DevULong64: uint64,
+                                 }[self.type]
+                        self._lastReadValue = self.interpretArray(dtype=dtype)
                     else:
                         raise BufferError("Unsupported multidimensional data")
                 elif self.type in [PyTango.DevBoolean]:
                     if self.dim == 0:
-                        self._lastReadValue = bool(newReadValue)
+                        self._lastReadValue = self.interpretBoolean(
+                            newReadValue)
                     elif self.dim == 1:
-                        raise BufferError("Unsupported array data")
+                        self._raw.lastReadRaw = newReadValue
+                        self._lastReadValue = self.interpretArray(dtype=bool)
                     else:
                         raise BufferError("Unsupported multidimensional data")
                 elif self.type in [PyTango.DevString]:

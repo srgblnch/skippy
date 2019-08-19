@@ -25,36 +25,54 @@ __license__ = "GPLv3+"
 __status__ = "Development"
 
 
+Attribute("boolean_scalar_ro",
+          {'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': 'source:readable:boolean:value?'
+           })
+
+Attribute("boolean_scalar_rw",
+          {'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': "source:writable:boolean:value?",
+           'writeCmd': lambda value: "source:writable:boolean:"
+                                     "value {0}".format(value)
+           })
+
 Attribute("short_scalar_ro",
           {'type': PyTango.CmdArgType.DevShort,
            'dim': [0],
-           'readCmd': "source:readable:short:value?"})
+           'readCmd': "source:readable:short:value?"
+           })
 
 Attribute("short_scalar_rw",
           {'type': PyTango.CmdArgType.DevShort,
            'dim': [0],
            'readCmd': "source:writable:short:value?",
-           'writeCmd': lambda value: "source:writable:short:value %s"
-           % (value)})
+           'writeCmd': lambda value: "source:writable:short:"
+                                     "value {0}".format(value)
+           })
 
 Attribute("float_scalar_ro",
           {'type': PyTango.CmdArgType.DevFloat,
            'dim': [0],
-           'readCmd': "source:readable:float:value?"})
+           'readCmd': "source:readable:float:value?"
+           })
 
 Attribute("float_scalar_rw",
           {'type': PyTango.CmdArgType.DevFloat,
            'dim': [0],
            'readCmd': "source:writable:float:value?",
-           'writeCmd': lambda value: "source:writable:float:value %s"
-           % (value)})
+           'writeCmd': lambda value: "source:writable:float:"
+                                     "value {0}".format(value)
+           })
 
 # Test rampeable attributes ---
 Attribute('Rampeable',
           {'type': PyTango.CmdArgType.DevDouble,
            'dim': [0],
            'readCmd': "rampeable?",
-           'writeCmd': lambda value: "rampeable %s" % (str(value)),
+           'writeCmd': lambda value: "rampeable {0}".format(str(value)),
            'rampeable': True,
            'memorized': True,
            })
@@ -64,20 +82,112 @@ Attribute("Fallible",
            'dim': [0],
            'readCmd': "fallible?"})
 
-Attribute('short_spectrum_ro',
-          {'type': PyTango.CmdArgType.DevDouble,
-           'format': '%9.6f',
-           'dim': [1, 40000000],
-           'readCmd': "source:readable:array:short:value?",
-           })
-
 # FIXME: generalise this attrName and specify in the spectrum attr
 Attribute('WaveformDataFormat',
           {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
            'readCmd': "dataformat?",
-           'writeCmd': lambda value: "dataformat %s" % (str(value)),
-           'writeValues': ['BYTE', 'BYT',
-                           'WORD', 'WOR',
-                           'ASCII', 'ASCI', 'ASC'],
+           'writeCmd': lambda value: "dataformat {0}".format(str(value)),
+           'writeValues': ['HALF', 'SINGLE', 'DOUBLE', 'QUADRUPLE'],
            })
+
+Attribute('WaveformOrigin',
+          {'type': PyTango.CmdArgType.DevFloat,
+           'dim': [0],
+           'readCmd': "dataorigin?",
+           'writeCmd': lambda value: "dataorigin {0}".format(str(value)),
+           })
+
+Attribute('WaveformIncrement',
+          {'type': PyTango.CmdArgType.DevString,
+           'dim': [0],
+           'readCmd': "dataincrement?",
+           'writeCmd': lambda value: "dataincrement {0}".format(str(value)),
+           })
+
+Attribute('boolean_spectrum_ro',
+          {'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [1, 40000000],
+           'readCmd': "source:readable:array:boolean:value?",
+           })
+
+Attribute('short_spectrum_ro',
+          {'type': PyTango.CmdArgType.DevShort,
+           'format': '%9.6f',
+           'dim': [1, 40000000],
+           'readCmd': "source:readable:array:short:value?",
+           })
+
+Attribute('float_spectrum_ro',
+          {'type': PyTango.CmdArgType.DevFloat,
+           'format': '%9.6f',
+           'dim': [1, 40000000],
+           'readCmd': "source:readable:array:float:value?",
+           })
+
+Attribute('Waveform',
+          {'type': PyTango.CmdArgType.DevFloat,
+           'format': '%9.6f',
+           'dim': [1, 40000000],
+           'readCmd': "source:switchable:array:float:value?",
+           'switch': 'Waveform_switch',
+           'dataFormat': 'WaveformDataFormat',
+           'dataOrigin': 'WaveformOrigin',
+           'dataIncrement': 'WaveformIncrement'
+           })
+
+Attribute('Waveform_switch',
+          {'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': "source:switchable:array:float:switch?",
+           'writeCmd': lambda value: "source:switchable:array:float:"
+                                     "switch {0}".format(
+               "ON" if value else "OFF")
+           })
+
+Attribute('Waveform_samples',
+          {'type': PyTango.CmdArgType.DevUShort,
+           'dim': [0],
+           'readCmd': "source:switchable:array:float:samples?",
+           'writeCmd': lambda value: "source:switchable:array:"
+                                     "float:samples {0}".format(value),
+           })
+
+Attribute('Waveform_periods',
+          {'type': PyTango.CmdArgType.DevUShort,
+           'dim': [0],
+           'readCmd': "source:switchable:array:float:periods?",
+           'writeCmd': lambda value: "source:switchable:array:"
+                                     "float:periods {0}".format(value),
+           })
+
+Attribute('wfState',
+          {'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': lambda ch, num: "source:readable:{0}{1:02d}:float:"
+                                      "switch?".format(ch, num),
+           'writeCmd': lambda ch, num: (
+               lambda value: "source:readable:{0}{1:02d}:float:"
+                             "switch {2}".format(ch, num,
+                                                  'ON' if value else 'OFF')),
+           'channels': True,
+           'functions': True,
+           })
+
+Attribute('wfChannels',
+          {'type': PyTango.CmdArgType.DevDouble,
+           'dim': [1, 40000000],
+           'readCmd': lambda ch, num: "source:readable:{0}{1:02d}:float:"
+                                      "value?".format(ch, num),
+           'channels': True,
+           'functions': True,
+           'switch': 'wfState'
+           })
+
+# Attribute('wfMultiple',
+#           {'type': PyTango.CmdArgType.DevDouble,
+#            'dim': [1, 40000000],
+#            'readCmd': lambda ch, num: "source:{0}{1:02d}:array:"
+#                                       "float?".format(ch, num),
+#            'multiple': {'scpiPrefix': 'multiple', 'attrSuffix': 'Multi'}
+#            })

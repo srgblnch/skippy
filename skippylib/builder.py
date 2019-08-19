@@ -141,6 +141,13 @@ class Builder(AbstractSkippyObj):
         else:
             try:
                 self.__getAttrObj(attributeName, attributeDefinition)
+                self.__setup_switch_attr(attributeName, attributeDefinition)
+                self.__setup_data_format_attr(
+                    attributeName, attributeDefinition)
+                self.__setup_data_origin_attr(
+                    attributeName, attributeDefinition)
+                self.__setup_data_increment_attr(
+                    attributeName, attributeDefinition)
                 self.debug_stream("Added attribute: %s" % (attributeName))
             except Exception as e:
                 self.error_stream("NOT added normal attribute: "
@@ -239,6 +246,10 @@ class Builder(AbstractSkippyObj):
                 self.__getAttrObj("%s%d" % (attrName, i),
                                   defcopy, channel=ch, function=fn,
                                   multiple=multiple)
+                self.__setup_switch_attr(name, definition, attrSuffix, i)
+                self.__setup_data_format_attr(name, definition)
+                self.__setup_data_origin_attr(name, definition)
+                self.__setup_data_increment_attr(name, definition)
                 self.debug_stream("Added attribute: "
                                   "{name}{seq:d}".format(name=attrName, seq=i))
             except Exception as e:
@@ -366,6 +377,52 @@ class Builder(AbstractSkippyObj):
             if 'writeValues' in definition:
                 self.__prepareWriteValues(attrName, definition, aprop, attr)
         return attr
+
+    def __setup_switch_attr(self, attrName, definition,
+                            attrSuffix=None, number=None):
+        if 'switch' in definition:
+            switchName = definition['switch']
+            if attrSuffix:
+                switchName = "{0}{1}{2}".format(switchName, attrSuffix, number)
+            self.debug_stream(
+                "{0} has {1} as switch attribute".format(attrName, switchName))
+            if attrSuffix:
+                attrObj = self._parent.attributes[
+                    "{0}{1}{2}".format(attrName, attrSuffix, number)]
+            else:
+                attrObj = self._parent.attributes[attrName]
+            attrObj.setSwitchAttrName(switchName)
+
+    def __setup_data_format_attr(self, attrName, definition):
+        if 'dataFormat' in definition:
+            self.__prepareDataInterpreterFields(
+                attrName, 'dataFormat', definition)
+
+    def __setup_data_origin_attr(self, attrName, definition):
+        if 'dataOrigin' in definition:
+            self.__prepareDataInterpreterFields(
+                attrName, 'dataOrigin', definition)
+
+    def __setup_data_increment_attr(self, attrName, definition):
+        if 'dataIncrement' in definition:
+            self.__prepareDataInterpreterFields(
+                attrName, 'dataIncrement', definition)
+
+    def __prepareDataInterpreterFields(self, attrName, fieldName, definition):
+        attrObj = self._parent.attributes[attrName]
+        if not attrObj.hasArrayInterpreter():
+            self.error_stream(
+                "{0} cannot setup {1} definition without array interpreter"
+                "".format(attrName, fieldName))
+        else:
+            fieldAttrName = definition[fieldName]
+            self.debug_stream("{0} has {1} in {2} field"
+                              "".format(attrName, fieldAttrName, fieldName))
+            featureObj = self._parent.attributes[attrName].arrayInterpreter
+            {'dataFormat': featureObj.dataFormatAttr,
+             'dataOrigin': featureObj.originAttr,
+             'dataIncrement': featureObj.incrementAttr
+            }[fieldName] = fieldAttrName
 
     def __prepareChannelLikeAttr(self, like, number, definition, attrName):
         if like == 'channel':

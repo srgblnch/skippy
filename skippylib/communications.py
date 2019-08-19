@@ -130,11 +130,12 @@ class CommunicatorBuilder(object):
 class Communicator(object):
     _terminator = '\n'
 
-    def __init__(self, parent=None, *args, **kwargs):
+    def __init__(self, parent=None, read_after_write=False, *args, **kwargs):
         super(Communicator, self).__init__(*args, **kwargs)
         self.mutex = threading.Lock()
         self._parent = parent
         self._timeBetweenSendAndReceive = TIME_BETWEEN_SENDANDRECEIVE
+        self._read_after_write = read_after_write
 
     def debug_stream(self, msg):
         if hasattr(self._parent, 'debug_stream'):
@@ -161,6 +162,17 @@ class Communicator(object):
                               % (self._timeBetweenSendAndReceive, value))
             self._timeBetweenSendAndReceive = value
 
+    @property
+    def read_after_write(self):
+        return self._read_after_write
+
+    @read_after_write.setter
+    def read_after_write(self, value):
+        try:
+            self._read_after_write = bool(value)
+        except:
+            raise AssertionError("read_after_write is a boolean attribute")
+
     def ask(self, commandList, waittimefactor=1):
         '''Prepare the command list and do a combination of
            send(msg) and recv()
@@ -180,9 +192,12 @@ class Communicator(object):
     def write(self, commandList):
         '''Do a write operation to the remote
         '''
+        if self._read_after_write:
+            return self.ask(commandList)
         with self.mutex:
             command = self.prepareCommand(commandList)
             self._send(command)
+
 
     def read(self):
         '''Read if the remote have said something
