@@ -11,6 +11,6 @@ else
     VERBOSE=$2
 fi
 
-DNAME=Skippy
+DNAME=skippy
 
 screen -dm -S $DNAME-$1 $SICILIA/bin/$DNAME $1 $VERBOSE
