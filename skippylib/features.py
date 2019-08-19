@@ -198,7 +198,12 @@ class RawDataFeature(SkippyFeature):
 
     @lastReadRaw.setter
     def lastReadRaw(self, value):
-        self.debug_stream("set raw data: %s" % (value))
+        if len(value) > 100:
+            answer_repr = "{0!r}(...){1!r}".format(
+                value[:25], value[len(value)-25:])
+        else:
+            answer_repr = "{0!r}".format(value)
+        self.debug_stream("set raw data: %s" % (answer_repr))
         self._lastReadRaw = value
 
 

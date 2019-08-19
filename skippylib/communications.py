@@ -143,6 +143,18 @@ class Communicator(object):
         else:
             print("DEBUG: "+msg)
 
+    def info_stream(self, msg):
+        if hasattr(self._parent, 'info_stream'):
+            self._parent.info_stream(msg)
+        else:
+            print("INFO: "+msg)
+
+    def warn_stream(self, msg):
+        if hasattr(self._parent, 'warn_stream'):
+            self._parent.warn_stream(msg)
+        else:
+            print("WARN: "+msg)
+
     def error_stream(self, msg):
         if hasattr(self._parent, 'error_stream'):
             self._parent.error_stream(msg)
@@ -227,7 +239,7 @@ class Communicator(object):
 
 SOCKET_TIMEOUT = 1
 DEFAULT_PORT = 5025
-DEFAULT_BUFFERSIZE = 10240
+DEFAULT_BUFFERSIZE = 1024000
 
 
 class BySocket(Communicator):
@@ -304,12 +316,15 @@ class BySocket(Communicator):
         else:
             try:
                 while not completeMsg[len(completeMsg)-1] == '\n':
-                    self.warn_stream("In _recv(), incomplete read")
+                    self.warn_stream(
+                        "In _recv() incomplete read ({0})".format(
+                            len(completeMsg)))
                     buffer = self._socket.recv(bufsize)
                     completeMsg = ''.join([completeMsg, buffer])
                 if completeMsg[len(completeMsg)-1] == '\n':
-                    self.debug_stream("In _recv() read complete %d bytes"
-                                      % (len(completeMsg)))
+                    self.debug_stream(
+                        "In _recv() read complete {0} bytes".format(
+                            len(completeMsg)))
             except socket.timeout:
                 self.error_stream("Exception in %s: time out!"
                                   % (self.__hostName))

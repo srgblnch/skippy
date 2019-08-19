@@ -890,8 +890,14 @@ class Skippy(AbstractSkippyObj):
             attrWithEvents = []
             for i, answer in enumerate(answers):
                 attrName = indexes[i][0]
-                self.debug_stream("__postHardwareSpectrumRead() for %s: %s"
-                                  % (attrName, repr(answer)))
+                if len(answer) > 100:
+                    answer_repr = "{0!r}(...){1!r}".format(
+                        answer[:25], answer[len(answer)-25:])
+                else:
+                    answer_repr = "{0!r}".format(answer)
+                self.debug_stream(
+                    "__postHardwareSpectrumRead() for {0}: {1}".format(
+                        attrName, answer_repr))
                 attrStruct = self.attributes[attrName]
 
                 # TODO: hardcoded attrNames!!!
