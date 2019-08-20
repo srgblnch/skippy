@@ -292,27 +292,27 @@ Attribute('HVvoltage',
            'writeCmd': lambda value: "CONFigure:HV:VOLTage {v}".format(v=value)
            })
 
-# Attribute('HVvoltageOutput',
-#           {'description': 'Output voltage',
-#            'type': PyTango.CmdArgType.DevDouble,
-#            'dim': [0],
-#            'readCmd': "DIAGnostic:HV:VOLTage?"
-#            })
-#
-# Attribute('HVcurrentOutput',
-#           {'description': 'Output current in mA',
-#            'type': PyTango.CmdArgType.DevDouble,
-#            'dim': [0],
-#            'readCmd': "DIAGnostic:HV:CURRent?"
-#            })
-#
-# Attribute('HVoverCurrent',
-#           {'description': 'Current output beyond safe levels',
-#            'type': PyTango.CmdArgType.DevBoolean,
-#            'dim': [0],
-#            'readCmd': "DIAGnostic:HV:OVERcurrent?"
-#            })
-#
+Attribute('HVvoltageOutput',
+          {'description': 'Output voltage',
+           'type': PyTango.CmdArgType.DevDouble,
+           'dim': [0],
+           'readCmd': "DIAGnostic:HV:VOLTage?"
+           })
+
+Attribute('HVcurrentOutput',
+          {'description': 'Output current in mA',
+           'type': PyTango.CmdArgType.DevDouble,
+           'dim': [0],
+           'readCmd': "DIAGnostic:HV:CURRent?"
+           })
+
+Attribute('HVoverCurrent',
+          {'description': 'Current output beyond safe levels',
+           'type': PyTango.CmdArgType.DevBoolean,
+           'dim': [0],
+           'readCmd': "DIAGnostic:HV:OVERcurrent?"
+           })
+
 # Attribute('temperature',
 #           {'description': 'Rpi temperature',
 #            'type': PyTango.CmdArgType.DevDouble,
