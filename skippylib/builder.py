@@ -81,7 +81,7 @@ class Builder(AbstractSkippyObj):
         self.debug_stream('Parse of the attribute file done.')
 
     def parse(self, text):
-        exec(text in self.globals_, self.locals_)
+        exec(text, self.globals_, self.locals_)
 
     def add_Attribute(self, attributeName, attributeDefinition):
         '''Method to dynamically add an attribute

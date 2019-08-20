@@ -320,6 +320,26 @@ class Skippy(AbstractSkippyObj):
             self.error_stream("Exception removing dynattributes: %s" % (e))
             return False
 
+    def inject_extra_attributes(self, definitionString):
+        """
+        In a similar way than the attributes defined on the files that describe
+        an instrument after an identification, this method can apply the same
+        syntax to insert specific definitions on a given skippy object.
+        :param definitionString: similar to a PyTango.DevVarStringArray to
+        interpret it as Attribute(...) definition in a multi-line.
+        :return:
+        """
+        if isinstance(definitionString, str) and len(definitionString) > 0:
+            self.debug_stream(
+                "definitionString: {0!r}".format(definitionString))
+            try:
+                self._identificator.parse(definitionString)
+                return True
+            except Exception as exc:
+                self.error_stream("Parser failed: {0}".format(exc))
+                return False
+        return False
+
     def Standby(self):
         """
             Two possible transition to Standby: from Off or from On
