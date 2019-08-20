@@ -17,6 +17,7 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from .abstracts import AbstractSkippyObj
+from .builder import Builder
 from .communications import CommunicatorBuilder
 from .dataformat import interpret_binary_format
 from .identify import identifier
@@ -333,6 +334,8 @@ class Skippy(AbstractSkippyObj):
             self.debug_stream(
                 "definitionString: {0!r}".format(definitionString))
             try:
+                if self._identificator is None:
+                    self._identificator = Builder(name="Builder", parent=self)
                 self._identificator.parse(definitionString)
                 return True
             except Exception as exc:
@@ -394,6 +397,10 @@ class Skippy(AbstractSkippyObj):
             return True
 
     def Start(self):
+        if self._monitor is None:
+            self.warn_stream(
+                "Monitor not yet build: ignored the Start() command")
+            return False
         state = self._get_state()
         self.debug_stream("Start() called from %s" % (state))
         try:
@@ -598,14 +605,20 @@ class Skippy(AbstractSkippyObj):
                                           % (attrName))
                 else:
                     # filter attributes depending if they are monitored
-                    if self._get_state() == DevState.RUNNING and \
-                            (fromMonitor and
-                             attrIndex not in self._monitor.monitoredIds) or\
-                            (not fromMonitor and
-                             attrIndex in self._monitor.monitoredIds):
-                        self.debug_stream("In __filterAttributes() excluding "
-                                          "%s because the monitoring "
-                                          "dependency" % (attrName))
+                    if self._monitor is not None:
+                        is_running = self._get_state() == DevState.RUNNING
+                        when_it_is_from_monitor = \
+                            fromMonitor and \
+                            attrIndex not in self._monitor.monitoredIds
+                        when_it_is_not_from_monitor = \
+                            not fromMonitor and \
+                            attrIndex in self._monitor.monitoredIds
+                        if is_running and \
+                                when_it_is_from_monitor or \
+                                when_it_is_not_from_monitor:
+                            self.debug_stream("In __filterAttributes() excluding "
+                                              "%s because the monitoring "
+                                              "dependency" % (attrName))
                     else:
                         # discard if the channel or function is not open
                         attrName = self.__checkChannelManager(attrName)
@@ -614,7 +627,8 @@ class Skippy(AbstractSkippyObj):
                             try:
                                 t_a = attrStruct.timestamp
                                 attrDim = attrStruct.dim
-                                if attrIndex not in \
+                                if self._monitor is not None and \
+                                        attrIndex not in \
                                         self._monitor.monitoredIds and \
                                         t_a is not None and t - t_a < delta_t:
                                     self.debug_stream("In __filterAttributes"
