@@ -34,14 +34,15 @@ def identifier(idn, parent):
     '''
     company, model = splitIDN(idn)
     file = {'agilent technologies': agilent,
-            'tektronix': tektronix,
-            'rohde&schwarz': rohdeschwarz,
-            'arroyo': arroyo,
             'albasynchrotron': albasynchrotron,
+            'arroyo': arroyo,
+            'fakeinstruments. inc': fakeinstrument,  # testing purposes
             'keithley instruments inc.': keithley,
+            'keysight technologies': agilent,
             'norhof': norhof,
+            'rohde&schwarz': rohdeschwarz,
+            'tektronix': tektronix,
             'ub': ub,
-            'fakeinstruments. inc': fakeinstrument,
             }[company](model)
     builder = Builder(name="Builder", parent=parent)
     builder.parseFile(file)
