@@ -317,7 +317,10 @@ class Builder(AbstractSkippyObj):
             if 'max' in definition:
                 aprop.set_max_value(str(definition['max']))
             if 'format' in definition:
-                aprop.set_format(latin1(definition['format']))
+                format = latin1(definition['format'])
+                if format.count("%") == 2:
+                    format = format.replace('%', '', 1)
+                aprop.set_format(format)
             if 'description' in definition:
                 aprop.set_description(latin1(definition['description']))
             if 'label' in definition:
