@@ -355,25 +355,26 @@ class TestManager(object):
 
     def _createTestDevice(self):
         tangodb = PyTango.Database()
-        self.log("Creating a %s device in %s:%s"
-                 % (DevName, tangodb.get_db_host(), tangodb.get_db_port()),
-                 color=bcolors.HEADER)
+        self.log(
+            "Creating a {0} device in {1}:{2}".format(
+                DevName, tangodb.get_db_host(), tangodb.get_db_port()),
+            color=bcolors.HEADER)
         devInfo = PyTango.DbDevInfo()
         devInfo.name = DevName
         devInfo._class = DevClass
         devInfo.server = DevServer+"/"+DevInstance
         tangodb.add_device(devInfo)
-        self.log("Server %s added" % (DevServer+"/"+DevInstance),
+        self.log("Server {0} added".format(DevServer+"/"+DevInstance),
                  color=bcolors.OKBLUE)
-        for (propertyName, propertyValue) in [
-            ['Instrument', 'localhost'],
-            ['NumChannels', '4'], ['NumFunctions', '8']]:
-            property = PyTango.DbDatum(propertyName)
-            property.value_string.append(propertyValue)
-            self.log("Set property %s: %s" % (propertyName, propertyValue),
-                     color=bcolors.OKBLUE)
-            tangodb.put_device_property(DevName, property)
-
+        for (propertyName, propertyValue) in \
+                [['Instrument', 'localhost'],
+                 ['NumChannels', '4'], ['NumFunctions', '8']]:
+            _property = PyTango.DbDatum(propertyName)
+            _property.value_string.append(propertyValue)
+            self.log(
+                "Set property {0}: {1}".format(propertyName, propertyValue),
+                color=bcolors.OKBLUE)
+            tangodb.put_device_property(DevName, _property)
 
     def _startTestDevice(self):
         if not self._isAlreadyRunning():
@@ -478,7 +479,8 @@ class TestManager(object):
                        self.test_readings,
                        self.test_writes,
                        self.test_glitch,
-                       self.test_waveform_switch]
+                       self.test_waveform_switch,
+                       self.test_dyn_attr_injection]
         reports = []
         for i, test in enumerate(testMethods):
             result, report = test(deviceProxy)
@@ -661,6 +663,80 @@ class TestManager(object):
             self.log("{0}:\t{1}".format(testTitle, msg))
             return False, [testTitle, msg]
 
+    def test_dyn_attr_injection(self, device):
+        testTitle = "DynamicAttributes injection"
+        try:
+            tangodb = PyTango.Database()
+            propertyName = "DynamicAttributes"
+            _property = PyTango.DbDatum(propertyName)
+            propertyValue = \
+                'Attribute("float_scalar_ro_bis",\n' \
+                '          {\'type\': PyTango.CmdArgType.DevFloat,\n' \
+                '           \'dim\': [0],\n' \
+                '           \'readCmd\': "source:readable:float:value?"\n' \
+                '           })\n' \
+                '\n' \
+                'Attribute("float_scalar_rw_bis",\n' \
+                '          {\'type\': PyTango.CmdArgType.DevFloat,\n' \
+                '           \'dim\': [0],\n' \
+                '           \'readCmd\': "source:writable:float:value?",\n' \
+                '           \'writeCmd\': \n' \
+                '               lambda value: "source:writable:float:"\n' \
+                '                             "value {0}".format(value)\n' \
+                '           })'
+            _property.value_string.append(propertyValue)
+            self.log(
+                "Set property {0}: {1}".format(propertyName, propertyValue),
+                color=bcolors.OKBLUE)
+            tangodb.put_device_property(DevName, _property)
+            if not device.updateDynamicAttributes():
+                raise AssertionError("Device did NOT update the attributes")
+            try:
+                device['QueryWindow'] = 2
+                attrs = device.read_attributes(['float_scalar_ro',
+                                                'float_scalar_ro_bis'])
+                values = [attr.value for attr in attrs]
+                nones = [value is None for value in values]
+                if any(nones):
+                    raise AssertionError("ReadOnly read failed")
+            except AssertionError as e:
+                raise e
+            except Exception as e:
+                self.log(e, color=bcolors.FAIL)
+                raise AssertionError(
+                    "ReadOnly attribute did NOT work as expected")
+            try:
+                wait_time = device['TimeStampsThreshold'].value
+                attrs = device.read_attributes(['float_scalar_rw',
+                                                'float_scalar_rw_bis'])
+                values = [attr.value for attr in attrs]
+                if values[0] != values[1]:
+                    raise AssertionError("ReadWrite read failed")
+                rvalue = values[0]
+                wvalue = int(rvalue / 1.1)+(rvalue % 1)
+                device['float_scalar_rw'] = wvalue
+                sleep(wait_time)
+                if device['float_scalar_rw_bis'].value != wvalue:
+                    raise AssertionError("ReadWrite write failed (1)")
+                device['float_scalar_rw_bis'] = rvalue
+                sleep(wait_time)
+                if device['float_scalar_rw'].value != rvalue:
+                    raise AssertionError("ReadWrite write failed (2)")
+            except AssertionError as e:
+                raise e
+            except Exception as e:
+                self.log(e, color=bcolors.FAIL)
+                raise AssertionError(
+                    "ReadWrite attribute did NOT work as expected")
+        except Exception as exc:
+            msg = "{0}TEST FAILED{1}:\n\t{2}{3}{1}" \
+                  "".format(bcolors.FAIL, bcolors.ENDC, bcolors.WARNING, exc)
+            self.log("{0}:\t{1}".format(testTitle, msg))
+            return False, [testTitle, msg]
+        else:
+            msg = bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC
+            self.log("%s:\t%s"%(testTitle, msg))
+            return True, [testTitle, msg]
 
 
     def _waitUntilReaction(self, device, reactionPeriod, statesLst):

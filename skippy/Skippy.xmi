@@ -43,6 +43,10 @@
       <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
       <DefaultPropValue>True</DefaultPropValue>
     </deviceProperties>
+    <deviceProperties name="DynamicAttributes" description="Way to define specific attributes on a single instrument. Like the ones in the definition file.">
+      <type xsi:type="pogoDsl:StringVectorType"/>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+    </deviceProperties>
     <commands name="State" description="This command gets the device state (stored in its device_state data member) and returns it to the caller." execMethod="dev_state" displayLevel="OPERATOR" polledPeriod="0">
       <argin description="none">
         <type xsi:type="pogoDsl:VoidType"/>
@@ -209,6 +213,15 @@
       <excludedStates>INIT</excludedStates>
     </commands>
     <commands name="Standby" description="Stablish communication with the instrument." execMethod="standby" displayLevel="OPERATOR" polledPeriod="0">
+      <argin description="">
+        <type xsi:type="pogoDsl:VoidType"/>
+      </argin>
+      <argout description="">
+        <type xsi:type="pogoDsl:BooleanType"/>
+      </argout>
+      <status abstract="false" inherited="false" concrete="true" concreteHere="true"/>
+    </commands>
+    <commands name="updateDynamicAttributes" description="Passes the content in the DynamicAttributes property to the internal skippy object to inject some extra attributes defined in the property" execMethod="update_dynamic_attributes" displayLevel="EXPERT" polledPeriod="0" isDynamic="false">
       <argin description="">
         <type xsi:type="pogoDsl:VoidType"/>
       </argin>

@@ -110,6 +110,7 @@ class Skippy (PyTango.Device_4Impl):
                                     nFunctions=self.NumFunctions,
                                     nMultiple=self.NumMultiple,
                                     attrs2Monitor=attr2Monitor)
+            self.updateDynamicAttributes()
         except Exception as e:
             self.error_stream("Exception building SkippyObj: %s" % (e))
             traceback.print_exc()
@@ -1122,7 +1123,25 @@ class Skippy (PyTango.Device_4Impl):
         argout = self.skippy.Standby()
         #----- PROTECTED REGION END -----#  //  Skippy.Standby
         return argout
-        
+
+    def updateDynamicAttributes(self):
+        """ Passes the content in the DynamicAttributes property to the
+        internal skippy object to inject some extra attributes defined in the
+        property.
+
+        :param :
+        :type: PyTango.DevVoid
+        :return:
+        :rtype: PyTango.DevBoolean """
+        self.debug_stream("In Standby()")
+        argout = False
+        # ----- PROTECTED REGION ID(Skippy.Standby) ENABLED START -----#
+        self.get_device_properties(self.get_device_class())  # reload from db
+        argout = self.skippy.inject_extra_attributes(
+                '\n'.join(["{0}".format(element)
+                           for element in self.DynamicAttributes]))
+        # ----- PROTECTED REGION END -----#  //  Skippy.Standby
+        return argout
 
     #----- PROTECTED REGION ID(Skippy.programmer_methods) ENABLED START -----#
     
@@ -1228,6 +1247,10 @@ class SkippyClass(PyTango.DeviceClass):
             [PyTango.DevBoolean,
             "When device startup, try an standby() to connect to the instrument authomatically.",
             [True]],
+        'DynamicAttributes':
+            [PyTango.DevVarStringArray,
+             "Way to define specific attributes on a single instrument. Like the ones in the definition file.",
+             []],
         }
 
 
@@ -1279,6 +1302,9 @@ class SkippyClass(PyTango.DeviceClass):
         #         'Display level': PyTango.DispLevel.EXPERT,
         #     } ],
         'Standby':
+            [[PyTango.DevVoid, "none"],
+            [PyTango.DevBoolean, "none"]],
+        'updateDynamicAttributes':
             [[PyTango.DevVoid, "none"],
             [PyTango.DevBoolean, "none"]],
         }

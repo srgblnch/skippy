@@ -75,6 +75,7 @@
 				<li> <a href="FullDocument.html#cmdCMD"> CMD </a>
 				<li> <a href="FullDocument.html#cmdCMDfloat"> CMDfloat </a>
 				<li> <a href="FullDocument.html#cmdStandby"> Standby </a>
+				<li> <a href="FullDocument.html#cmdupdateDynamicAttributes"> updateDynamicAttributes </a>
 			</ul>
 			<li> <a href="FullDocument.html#attributes">   Attributes   </a>
 			<ul>
@@ -206,6 +207,12 @@
 		<td> boolean </td>
 		<td> True <br> </td>
 	</tr>
+	<tr>
+		<td> DynamicAttributes </td>
+		<td> Way to define specific attributes on a single instrument. Like the ones in the definition file. </td>
+		<td> String[] </td>
+		<td> none </td>
+	</tr>
 </table>
 <br><br>
 <hr>
@@ -325,6 +332,13 @@
 		<td> DEV_BOOLEAN </td>
 		<td> OPERATOR </td>
 		<td> Stablish communication with the instrument. </td>
+	</tr>
+	<tr>
+		<td> <a href="CmdupdateDynamicAttributes.html"> updateDynamicAttributes </a> </td>
+		<td> DEV_VOID </td>
+		<td> DEV_BOOLEAN </td>
+		<td> EXPERT </td>
+		<td> Passes the content in the DynamicAttributes property to the internal skippy object to inject some extra attributes defined in the property </td>
 	</tr>
 </table>
 <br><br><hr>
@@ -1038,6 +1052,55 @@
 	<tr>
 		<td> DisplayLevel </td>
 		<td> OPERATOR </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Inherited </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Abstract </td>
+		<td> false </td>
+		<td> .. </td>
+	</tr>
+	<tr>
+		<td> Polling Period </td>
+		<td> Not polled </td>
+		<td> .. </td>
+	</tr>
+<Tr BGCOLOR="#CCCCFF"><Td><Hr></Td><Td><Hr></Td><Td><Hr></Td></Tr>
+	<tr>
+		<td> Command allowed for </td>
+		<td> All states </td>
+		<td> .. </td>
+	</tr>
+</table>
+<br><br><hr>
+<a name="cmdupdateDynamicAttributes"> </a>
+<br><br><br>
+<font size="+1"><u><b> Command updateDynamicAttributes : </b></u></font>
+<ul>
+	Passes the content in the DynamicAttributes property to the internal skippy object to inject some extra attributes defined in the property
+</ul>
+<br><br><br>
+<Table Border=2 Cellpadding=3 CELLSPACING=0>
+	<tr bgcolor="#CCCCFF" class="TableHeadingColor">
+	<td colspan=0> <font size=+1> <center><b> updateDynamicAttributes Definition </b></font></center></td>
+	</tr>
+	<tr>
+		<td> Input Argument </td>
+		<td> Tango::DEV_VOID </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> Output Argument </td>
+		<td> Tango::DEV_BOOLEAN </td>
+		<td>  </td>
+	</tr>
+	<tr>
+		<td> DisplayLevel </td>
+		<td> EXPERT </td>
 		<td> .. </td>
 	</tr>
 	<tr>
