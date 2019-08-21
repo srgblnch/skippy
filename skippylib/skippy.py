@@ -788,7 +788,8 @@ class Skippy(AbstractSkippyObj):
                                 attrStruct.quality = AttrQuality.ATTR_CHANGING
                             elif attrStruct.quality != AttrQuality.ATTR_VALID:
                                 attrStruct.quality = AttrQuality.ATTR_VALID
-                            if attrId in self._monitor.monitoredIds:
+                            if self._monitor is not None and \
+                                    attrId in self._monitor.monitoredIds:
                                 attrWithEvents.\
                                     append([attrName,
                                             attrStruct.lastReadValue,
