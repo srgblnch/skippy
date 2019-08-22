@@ -325,8 +325,11 @@ class SkippyReadAttribute(SkippyAttribute):
 
     @property
     def lastReadValue(self):
-        self.debug_stream("Requested %s.lastReadValue %s"
-                          % (self.name, self._lastReadValue))
+        if self._lastReadValue is None:
+            self.rvalue
+        self.debug_stream(
+            "Requested {0}.lastReadValue {1}".format(
+                self.name, self._lastReadValue))
         return self._lastReadValue
 
     @lastReadValue.setter
