@@ -180,6 +180,17 @@ Attribute('I',
            'multiple': {'scpiPrefix': 'CHAN', 'attrSuffix': ''}
            })
 
+# FIXME: duplicated attribute because compatibility between MaxIV and Alba
+#  This would be solved adding alias to attributes (as well as the possibility
+#  to inhibit certain attributes to be build using a property).
+Attribute('InstantCurrent',
+          {'type': PyTango.CmdArgType.DevDouble,
+           'dim': [0],
+           'readCmd': lambda ch, num: "{0}{1:02d}:INSCurrent?".format(ch, num),
+           'channels': True,
+           'multiple': {'scpiPrefix': 'CHAN', 'attrSuffix': ''}
+           })
+
 Attribute('Current',
           {'type': PyTango.CmdArgType.DevString,
            # FIXME: DevString? should it be an array of doubles?
