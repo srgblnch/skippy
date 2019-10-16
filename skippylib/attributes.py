@@ -309,8 +309,8 @@ class SkippyReadAttribute(SkippyAttribute):
                         raise BufferError("Unsupported multidimensional data")
                 else:
                     self.warn_stream(
-                        "type {x} not in the list of managed types"
-                        "".format(x=self.type))
+                        "type {0} not in the list of managed types"
+                        "".format(self.type))
             except Exception as e:
                 self.error_stream("Cannot convert string to %s (dim %d)"
                                   % (self.type, self.dim))
