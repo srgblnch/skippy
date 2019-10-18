@@ -331,21 +331,9 @@ global exitCode
 exitCode = -1
 
 
-class TestManager(object):
-
-    _deviceProcess = None
-
+class TestLogger(object):
     def __init__(self, *args, **kwargs):
-        super(TestManager, self).__init__(*args, **kwargs)
-        self._instrument = FakeInstrument()
-        self.log("FakeInstrument build: %r" % (self._instrument))
-        self.log("\tCommand tree: %s" % (self._instrument.tree()))
-        self._createTestDevice()
-        self._startTestDevice()
-
-    def __del__(self):
-        self._stopTestDevice()
-        self._deleteTestDevice()
+        super(TestLogger, self).__init__(*args, **kwargs)
 
     def log(self, msg, color=None):
         if color:
@@ -353,18 +341,42 @@ class TestManager(object):
         else:
             print("%s" % (msg))
 
-    def _createTestDevice(self):
+
+class TestDevice(TestLogger):
+
+    _device_name = None
+    _device_instance = None
+    _device_process = None
+
+    def __init__(self, device_name, device_instance, *args, **kwargs):
+        super(TestDevice, self).__init__(*args, **kwargs)
+        self._device_name = device_name
+        self._device_instance = device_instance
+        self._create_device()
+        self._start_device()
+
+    def __del__(self):
+        self._stop_device()
+        self._delete_device()
+
+    @property
+    def name(self):
+        return self._device_name
+
+    def _create_device(self):
         tangodb = PyTango.Database()
         self.log(
             "Creating a {0} device in {1}:{2}".format(
-                DevName, tangodb.get_db_host(), tangodb.get_db_port()),
+                self._device_name, tangodb.get_db_host(),
+                tangodb.get_db_port()),
             color=bcolors.HEADER)
         devInfo = PyTango.DbDevInfo()
-        devInfo.name = DevName
+        devInfo.name = self._device_name
         devInfo._class = DevClass
-        devInfo.server = DevServer+"/"+DevInstance
+        devInfo.server = DevServer+"/"+self._device_instance
         tangodb.add_device(devInfo)
-        self.log("Server {0} added".format(DevServer+"/"+DevInstance),
+        self.log("Server {0} added".format(
+            DevServer+"/"+self._device_instance),
                  color=bcolors.OKBLUE)
         for (propertyName, propertyValue) in \
                 [['Instrument', 'localhost'],
@@ -376,67 +388,44 @@ class TestManager(object):
                 color=bcolors.OKBLUE)
             tangodb.put_device_property(DevName, _property)
 
-    def _startTestDevice(self):
-        if not self._isAlreadyRunning():
-            try:
-                self._deviceProcess = Popen([DevServer, DevInstance, "-v4"])
-            except OSError:
-                launcher = "/usr/lib/tango/"+DevServer
-                self._deviceProcess = Popen([launcher, DevInstance, "-v4"])
-            self.log("Launched the device server has pid %d"
-                     % (self._deviceProcess.pid), color=bcolors.OKBLUE)
-        else:
-            self.log("Test device already running!", color=bcolors.WARNING)
-
-    def _stopTestDevice(self):
-        if self._deviceProcess is None:
-            return
-        process = Process(self._deviceProcess.pid)
-        if not self.__stopProcess(process):
-            self.log(" Process %d needs to be killed" % (process.pid),
-                     color=bcolors.WARNING)
-            self.__killProcess(process)
-        self.log("Test device stopped")
-
-    def __stopProcess(self, process):
-        nChildren = len(process.children())
-        if nChildren > 0:
-            self.log("Process %d has %d children to be stopped"
-                     % (process.pid, nChildren), color=bcolors.OKBLUE)
-            for child in process.children():
-                if not self.__stopProcess(child):
-                    self.log("Process %d still running, proceed to kill"
-                             % (child.pid), color=bcolors.WARNING)
-                    self.__killProcess(child)
-        process.terminate()
-        for i in range(10):  # 1 second waiting
-            if not process.is_running():
-                return True
-            print(".", end='')  # , flush=True) # it is not that future
-            sys.stdout.flush()
-            process.terminate()
-            sleep(0.1)
-        return False
-
-    def __killProcess(self, process):
-        try:
-            process.kill()
-        except:
-            pass
-
-    def _deleteTestDevice(self):
+    def _delete_device(self):
         try:
             tangodb = PyTango.Database()
             self.log("Remove a %s device in %s:%s"
-                     % (DevName, tangodb.get_db_host(), tangodb.get_db_port()),
+                     % (self._device_name, tangodb.get_db_host(),
+                        tangodb.get_db_port()),
                      color=bcolors.OKBLUE)
-            tangodb.delete_device(DevName)
-            tangodb.delete_server(DevServer+"/"+DevInstance)
+            tangodb.delete_device(self._device_name)
+            tangodb.delete_server(DevServer+"/"+self._device_instance)
         except Exception as e:
             self.log("* Deletion failed, please review manually "
                      "for garbage *\n", color=bcolors.FAIL)
 
-    def _isAlreadyRunning(self):
+    def _start_device(self):
+        if not self._is_already_running():
+            try:
+                self._device_process = Popen([DevServer,
+                                              self._device_instance, "-v4"])
+            except OSError:
+                launcher = "/usr/lib/tango/"+DevServer
+                self._device_process = Popen([launcher,
+                                              self._device_instance, "-v4"])
+            self.log("Launched the device server has pid %d"
+                     % (self._device_process.pid), color=bcolors.OKBLUE)
+        else:
+            self.log("Test device already running!", color=bcolors.WARNING)
+
+    def _stop_device(self):
+        if self._device_process is None:
+            return
+        process = Process(self._device_process.pid)
+        if not self.__stop_process(process):
+            self.log(" Process %d needs to be killed" % (process.pid),
+                     color=bcolors.WARNING)
+            self.__kill_process(process)
+        self.log("Test device stopped")
+
+    def _is_already_running(self):
         procs = []
         for proc in process_iter():
             if proc.name() == 'python':
@@ -453,28 +442,75 @@ class TestManager(object):
                      color=bcolors.FAIL)
         return True
 
-    def _isDeviceReady(self):
-        if self._deviceProcess is None:
+    def __stop_process(self, process):
+        nChildren = len(process.children())
+        if nChildren > 0:
+            self.log("Process %d has %d children to be stopped"
+                     % (process.pid, nChildren), color=bcolors.OKBLUE)
+            for child in process.children():
+                if not self.__stop_process(child):
+                    self.log("Process %d still running, proceed to kill"
+                             % (child.pid), color=bcolors.WARNING)
+                    self.__kill_process(child)
+        process.terminate()
+        for i in range(10):  # 1 second waiting
+            if not process.is_running():
+                return True
+            print(".", end='')  # , flush=True) # it is not that future
+            sys.stdout.flush()
+            process.terminate()
+            sleep(0.1)
+        return False
+
+    def __kill_process(self, process):
+        try:
+            process.kill()
+        except:
+            pass
+
+
+class TestManager(TestLogger):
+
+    _device = None
+
+    def __init__(self, *args, **kwargs):
+        super(TestManager, self).__init__(*args, **kwargs)
+        self._instrument = FakeInstrument()
+        self.log("FakeInstrument build: %r" % (self._instrument))
+        self.log("\tCommand tree: %s" % (self._instrument.tree()))
+        self._device = TestDevice(DevName, DevInstance)
+
+    def __del__(self):
+        del self._device
+
+    def log(self, msg, color=None):
+        if color:
+            print(color+"%s" % (msg)+bcolors.ENDC)
+        else:
+            print("%s" % (msg))
+
+    def _is_device_ready(self):
+        if self._device is None:
             return False
         try:
-            deviceProxy = PyTango.DeviceProxy(DevName)
-            self.log("Device is in %s state" % deviceProxy.State())
+            device_proxy = PyTango.DeviceProxy(self._device.name)
+            self.log("Device is in %s state" % device_proxy.State())
             return True
         except:
             return False
 
     # Tests ---
     def launchTest(self):
-        while not self._isDeviceReady():
+        while not self._is_device_ready():
             self.log("Waiting the device", color=bcolors.WARNING)
             sleep(1)
         self.log("Start the test", color=bcolors.HEADER)
-        deviceProxy = PyTango.DeviceProxy(DevName)
+        device_proxy = PyTango.DeviceProxy(DevName)
         # FIXME: once the scpilib supports it, the tests must be made with
         #  and without this flag raised.
-        deviceProxy['ReadAfterWrite'] = True
+        device_proxy['ReadAfterWrite'] = True
         self.log("Testing {0} a read after write".format(
-            "with" if deviceProxy['ReadAfterWrite'].value else "with out"))
+            "with" if device_proxy['ReadAfterWrite'].value else "with out"))
         testMethods = [self.test_communications,
                        self.test_readings,
                        self.test_writes,
@@ -483,7 +519,7 @@ class TestManager(object):
                        self.test_dyn_attr_injection]
         reports = []
         for i, test in enumerate(testMethods):
-            result, report = test(deviceProxy)
+            result, report = test(device_proxy)
             if not result:
                 return i+1
             if isinstance(report[0], list):
@@ -737,7 +773,6 @@ class TestManager(object):
             msg = bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC
             self.log("%s:\t%s"%(testTitle, msg))
             return True, [testTitle, msg]
-
 
     def _waitUntilReaction(self, device, reactionPeriod, statesLst):
         tries = 0
