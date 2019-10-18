@@ -581,7 +581,7 @@ class Skippy(AbstractSkippyObj):
         except Exception as e:
             self.error_stream("In _readAttrProcedure() Exception: %s" % (e))
 
-    def __filterAttributes(self, data, fromMonitor):
+    def __filterAttributes(self, attr_id_lst, from_monitor):
         '''Avoid hardware readings of:
            - attributes that are internals to the device
            - attributes that reading is recent
@@ -593,81 +593,57 @@ class Skippy(AbstractSkippyObj):
             scalar = []
             spectrum = []
             image = []
-            # self.debug_stream("__filterAttributes(%s, %s)"
-            #                   % (data, fromMonitor))
-            for attrIndex in data:
-                attrName = self._identificator._getAttrNameById(attrIndex)
-                # attrObj = multiattr.get_attr_by_ind(attrIndex)
-                # attrName = attrObj.get_name()
-                if attrName not in self.attributes:
-                        self.debug_stream("In __filterAttributes() "
-                                          "excluding %r: is not a hw attr."
-                                          % (attrName))
+            self.debug_stream(
+                "__filterAttributes({0}, {1})".format(attr_id_lst,
+                                                      from_monitor))
+            for attr_index in attr_id_lst:
+                attr_name = \
+                    self._identificator.get_attribute_name_by_id(attr_index)
+                # attr_obj = multiattr.get_attr_by_ind(attr_index)
+                # attr_name = attr_obj.get_name()
+                if attr_name not in self.attributes:
+                    self.debug_stream(
+                        "\texcluding {0!r}: is not a hw attr."
+                        "".format(attr_name))
+                    continue  # go to the next element in the loop
+                if self.__is_attr_monitored(attr_index) and not from_monitor:
+                    self.debug_stream(
+                        "\texclude {0} because it is being monitored"
+                        "".format(attr_name))
+                    continue  # go to the next element in the loop
+                if self.attributes[attr_name].hasSwitchAttribute():
+                    switch_obj = self.attributes[attr_name].getSwitchAttrObj()
+                    if switch_obj.rvalue is False:
+                        self.debug_stream(
+                            "\texclude {0} because switch off")
+                        continue
+                if not self.__is_timestamp_aging(self.attributes[attr_name]):
+                    self.debug_stream(
+                        "\texclude {0} because cache value is stil valid"
+                        "".format(attr_name))
+                    continue
+                dimensions = self.attributes[attr_name].dim
+                if dimensions == 0:
+                    scalar.append(attr_name)
+                elif dimensions == 1:
+                    spectrum.append(attr_name)
+                    # TODO: hardcoded attr_names!!!
+                    for auxiliar_attr in ['WaveformDataFormat',
+                                          'WaveformOrigin',
+                                          'WaveformIncrement']:
+                        if auxiliar_attr in self.attributes:
+                            scalar.append(auxiliar_attr)
+                elif dimensions == 2:
+                    image.append(attr_name)
                 else:
-                    # filter attributes depending if they are monitored
-                    if self._monitor is not None:
-                        is_running = self._get_state() == DevState.RUNNING
-                        when_it_is_from_monitor = \
-                            fromMonitor and \
-                            attrIndex not in self._monitor.monitoredIds
-                        when_it_is_not_from_monitor = \
-                            not fromMonitor and \
-                            attrIndex in self._monitor.monitoredIds
-                        if is_running and \
-                                when_it_is_from_monitor or \
-                                when_it_is_not_from_monitor:
-                            self.debug_stream("In __filterAttributes() excluding "
-                                              "%s because the monitoring "
-                                              "dependency" % (attrName))
-                    else:
-                        # discard if the channel or function is not open
-                        attrName = self.__checkChannelManager(attrName)
-                        if attrName is not None:
-                            attrStruct = self.attributes[attrName]
-                            try:
-                                t_a = attrStruct.timestamp
-                                attrDim = attrStruct.dim
-                                if self._monitor is not None and \
-                                        attrIndex not in \
-                                        self._monitor.monitoredIds and \
-                                        t_a is not None and t - t_a < delta_t:
-                                    self.debug_stream("In __filterAttributes"
-                                                      "() excluding %s: "
-                                                      "t < delta_t"
-                                                      % (attrName))
-                                else:
-                                    if attrDim == 0:
-                                        scalar.append(attrName)
-                                    elif attrDim == 1:
-                                        spectrum.append(attrName)
-                                        # TODO: hardcoded attrNames!!!
-                                        # when an spectrum are required, some
-                                        # reference attributes will be needed
-                                        if 'WaveformDataFormat' in \
-                                                self.attributes:
-                                            scalar.append('WaveformDataFormat')
-                                        if 'WaveformOrigin' in self.attributes:
-                                            scalar.append('WaveformOrigin')
-                                        if 'WaveformIncrement' in \
-                                                self.attributes:
-                                            scalar.append('WaveformIncrement')
-                                    elif attrDim == 2:
-                                        image.append(attrName)
-                                    else:
-                                        self.error_stream("In "
-                                                          "__filterAttributes"
-                                                          "() unknown data "
-                                                          "format for "
-                                                          "attribute %s"
-                                                          % (attrName))
-                            except Exception as e:
-                                self.error_stream("In __filterAttributes() "
-                                                  "cannot manage the filter "
-                                                  "for the attribute %s: %s"
-                                                  % (attrName, e))
-            self.debug_stream("In __filterAttributes():\n\tscalar list:\t%s;"
-                              "\n\tspectrum list:\t%s;\n\timage list:\t%s;"
-                              % (scalar, spectrum, image))
+                    self.error_stream(
+                        "\texclude {0} because too much dimensions"
+                        "".format(attr_name))
+            self.debug_stream(
+                "In __filterAttributes():\n"
+                "\tscalar list:\t{0};\n"
+                "\tspectrum list:\t{1};\n"
+                "\timage list:\t{2};".format(scalar, spectrum, image))
             # Remove repeated attributes
             for attr in scalar:
                 while scalar.count(attr) > 1:
@@ -680,28 +656,23 @@ class Skippy(AbstractSkippyObj):
                     image.pop(image.index(attr))
             return scalar, spectrum, image
         except Exception as e:
-            self.error_stream("In __filterAttributes(%s) Exception: %s"
-                              % (data, e))
+            self.error_stream(
+                "In __filterAttributes({0}) Exception: {1}"
+                "".format(attr_id_lst, e))
             traceback.print_exc()
             return [], [], []
             # FIXME: does this return the same list object 3 times?
             #        could it return 3 Nones?
 
-    def __checkChannelManager(self, attrName):
-        if attrName[-3:-1] in ['Ch', 'Fn']:
-            if attrName[-3:] in self.attributesFlags:
-                managerName = self.attributesFlags[attrName[-3:]]
-                if managerName == attrName:
-                    return attrName
-                managerValue = self.attributes[managerName].lastReadValue
-                if managerValue is None:
-                    return managerName
-                elif not managerValue:
-                    self.debug_stream("In __checkChannelManager() "
-                                      "excluding %s from filter: channel or "
-                                      "function is close" % (attrName))
-                    return None
-        return attrName
+    def __is_attr_monitored(self, attr_index):
+        if self._monitor is not None:
+            is_running = self._get_state() == DevState.RUNNING
+            if is_running and attr_index in self._monitor.monitoredIds:
+                return True
+        return False
+
+    def __is_timestamp_aging(self, attr_obj):
+        return time() - attr_obj.timestamp >= self._timestampsThreshold
 
     def __preHardwareRead(self, attrList, window=None):
         '''Given a list of attributes to be read, prepare it.

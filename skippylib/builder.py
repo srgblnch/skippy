@@ -265,7 +265,7 @@ class Builder(AbstractSkippyObj):
         self._attributeIds[id] = attrName
         return id
 
-    def _getAttrNameById(self, id):
+    def get_attribute_name_by_id(self, id):
         if id in self._attributeIds:
             return self._attributeIds[id]
         if self.__device is not None:
