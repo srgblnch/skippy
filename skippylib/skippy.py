@@ -672,7 +672,9 @@ class Skippy(AbstractSkippyObj):
         return False
 
     def __is_timestamp_aging(self, attr_obj):
-        return time() - attr_obj.timestamp >= self._timestampsThreshold
+        if attr_obj.timestamp is not None:
+            return time() - attr_obj.timestamp >= self._timestampsThreshold
+        return True
 
     def __preHardwareRead(self, attrList, window=None):
         '''Given a list of attributes to be read, prepare it.
