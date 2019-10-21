@@ -394,8 +394,8 @@ class ArrayDataInterpreterFeature(SkippyFeature):
         completBytes = self.__getCompleteBytes(bodyBlock, divisor)
         unpackedData = self.__unpackBytes(data, format, divisor)
         if unpackedData:
-            floats = numpy.array(unpackInt, dtype=dtype)
-            return self._Origin + (self._increment * floats)
+            floats = numpy.array(unpackedData, dtype=dtype)
+            return self._origin + (self._increment * floats)
 
     def __interpretHeader(self, buffer):
         if buffer[0] == '#' and len(buffer) > 2:
