@@ -39,6 +39,7 @@ def trace(method):
         answer = method(*args, **kwargs)
         printer("< {0}.{1}: {2}"
                 "".format(klass, method.__name__, answer))
+        return answer
     return logging
 
 
