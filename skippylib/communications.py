@@ -21,7 +21,7 @@ import array
 
 try:
     import serial
-except:
+except Exception:
     serial = None
 import PyTango
 import socket
@@ -30,7 +30,7 @@ from time import sleep
 try:
     import visa
     import pyvisa
-except:
+except Exception:
     pyvisa = None
 
 __author__ = "Sergi Blanch-Torne, Antonio Milan Otero"
@@ -44,8 +44,8 @@ TIME_BETWEEN_SENDANDRECEIVE = 0.05
 
 
 class CommunicatorBuilder(object):
-    def __init__(self, instrumentName, parent=None, port=None, serial_args=None,
-                 terminator=None, log=None, *args, **kwargs):
+    def __init__(self, instrumentName, parent=None, port=None,
+                 serial_args=None, terminator=None, log=None, *args, **kwargs):
         try:
             super(CommunicatorBuilder, self).__init__(*args, **kwargs)
             self._instrumentName = instrumentName
@@ -87,7 +87,7 @@ class CommunicatorBuilder(object):
         try:
             socket.gethostbyname(name)
             return True
-        except:
+        except Exception:
             return False
 
     def __isSerialDevice(self, name):
@@ -97,7 +97,7 @@ class CommunicatorBuilder(object):
                 return True
             else:
                 return False
-        except:
+        except Exception:
             return False
 
     def __isSerialName(self, name):
@@ -106,7 +106,7 @@ class CommunicatorBuilder(object):
                 serial.Serial(name)
                 return True
             return False
-        except:
+        except Exception:
             return False
 
     def __isVisaDevice(self, devName):
@@ -116,7 +116,7 @@ class CommunicatorBuilder(object):
                 return True
             else:
                 return False
-        except:
+        except Exception:
             return False
 
     def __isVisaName(self, name):
@@ -125,7 +125,7 @@ class CommunicatorBuilder(object):
                 pyvisa.visa.instrument(name)
                 return True
             return False
-        except:
+        except Exception:
             return False
 
 
@@ -184,7 +184,7 @@ class Communicator(object):
     def read_after_write(self, value):
         try:
             self._read_after_write = bool(value)
-        except:
+        except Exception:
             raise AssertionError("read_after_write is a boolean attribute")
 
     def ask(self, commandList, waittimefactor=1):
@@ -212,7 +212,6 @@ class Communicator(object):
         with self.mutex:
             command = self.prepareCommand(commandList)
             self._send(command)
-
 
     def read(self):
         '''Read if the remote have said something
@@ -337,7 +336,7 @@ class BySocket(Communicator):
                 self.error_stream("Exception in %s:%d string data "
                                   "interpretation: %s"
                                   % (self.__hostName, self.__port, e))
-        while len(completeMsg) > 0 and completeMsg[-1] in ['\n','\r']:
+        while len(completeMsg) > 0 and completeMsg[-1] in ['\n', '\r']:
             completeMsg = completeMsg[:-1]
         return completeMsg
 
