@@ -37,8 +37,13 @@ def trace(method):
         printer("> {0}.{1}(*args: {2}, **kwargs: {3})"
                 "".format(klass, method.__name__, args[1:], kwargs))
         answer = method(*args, **kwargs)
+        if isinstance(answer, str) and len(answer) > 100:
+            answer_str = "{0}...{1}".format(answer[:25], answer[-25:])
+        else:
+            answer_str = "{0}".format(answer)
+
         printer("< {0}.{1}: {2}"
-                "".format(klass, method.__name__, answer))
+                "".format(klass, method.__name__, answer_str))
         return answer
     return logging
 
