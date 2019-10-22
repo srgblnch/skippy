@@ -422,8 +422,8 @@ class SkippyReadWriteAttribute(SkippyReadAttribute):
 
     @lastWriteValue.setter
     def lastWriteValue(self, value):
-        self.debug_stream("New %s.lastWriteValue received %s"
-                  % (self.name, value))
+        self.debug_stream("New {0}.lastWriteValue received {1}"
+                          "".format(self.name, value))
         self._lastWriteValue = value
 
     def isRampeable(self):
