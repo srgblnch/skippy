@@ -16,12 +16,30 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from __future__ import print_function
+import builtins
 from PyTango import DevState
 
 __author__ = "Sergi Blanch-Torné"
 __email__ = "sblanch@cells.es"
 __copyright__ = "Copyright 2017, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
+
+
+def trace(method):
+    def logging(*args, **kwargs):
+        self = args[0]
+        klass = self.__class__.__name__
+        if hasattr(self, "debug_stream"):
+            printer = self.debug_stream
+        else:
+            printer = builtins.print
+        printer("> {0}.{1}(*args: {2}, **kwargs: {3})"
+                "".format(klass, method.__name__, args[1:], kwargs))
+        answer = method(*args, **kwargs)
+        printer("< {0}.{1}: {2}"
+                "".format(klass, method.__name__, answer))
+    return logging
 
 
 class AbstractSkippyObj(object):
