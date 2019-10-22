@@ -16,7 +16,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from .abstracts import AbstractSkippyAttribute
+from .abstracts import AbstractSkippyAttribute, trace
 from .features import RampFeature, RawDataFeature, ArrayDataInterpreterFeature
 from numpy import bool, int16, uint16, int32, uint32, int64, uint64
 import PyTango
@@ -393,6 +393,7 @@ class SkippyReadWriteAttribute(SkippyReadAttribute):
     def writeCmd(self):
         return self._writeCmd
 
+    @trace
     def _write(self, cmd):
         if self._parent is not None and\
                 hasattr(self._parent, 'Write'):

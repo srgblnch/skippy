@@ -15,6 +15,8 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from .abstracts import trace
+
 import array
 
 try:
@@ -201,6 +203,7 @@ class Communicator(object):
             # self.debug_stream("In Communicator.ask() Answer %r" % (answer))
             return answer
 
+    @trace
     def write(self, commandList):
         '''Do a write operation to the remote
         '''
@@ -277,6 +280,7 @@ class BySocket(Communicator):
     def isConnected(self):
         return hasattr(self, '_socket') and self._socket is not None
 
+    @trace
     def _send(self, msg):
         if self.isConnected():
             self._socket.send(msg)
