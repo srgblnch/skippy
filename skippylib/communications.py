@@ -263,11 +263,14 @@ class BySocket(Communicator):
                 self.build()
             self._socket.settimeout(SOCKET_TIMEOUT)
             self._socket.connect((self.__hostName, self.__port))
+            self._stream = self._socket.makefile('rwb', bufsize=0)
         except Exception as e:
             self._socket = None
             raise e
 
     def disconnect(self):
+        self._stream.close()
+        self._stream = None
         self._socket = None
         if not self.mutex.acquire(False):
             self.debug_stream("Disconnecting: forcing to release mutex")
@@ -282,14 +285,17 @@ class BySocket(Communicator):
     @trace
     def _send(self, msg):
         if self.isConnected():
-            self._socket.send(msg)
+            self._stream.write(msg)
 
+    @trace
     def _recv(self, bufsize=DEFAULT_BUFFERSIZE):
+        # FIXME: this method doesn't need the bufsize any more
+        #  perhaps neither the multiple reads when a 1D doesn't fit in one read
         if not self.isConnected():
             return ''
         completeMsg = ''
         try:
-            buffer = self._socket.recv(bufsize)
+            buffer = self._stream.readline()
             # self.debug_stream("In _recv(%d) %d bytes"
             #                   % (bufsize, len(buffer)))
             if buffer == '':
@@ -310,7 +316,7 @@ class BySocket(Communicator):
                 #                   % (repr(completeMsg[:10]),
                 #                      nBytesHeaderLength, nBytesWaveElement))
                 while len(completeMsg) < nBytesWaveElement:
-                    buffer = self._socket.recv(bufsize)
+                    buffer = self._stream.readline()
                     completeMsg = ''.join([completeMsg, buffer])
             except Exception as e:
                 self.error_stream("Exception in %s:%d array data "
@@ -322,7 +328,7 @@ class BySocket(Communicator):
                     self.warn_stream(
                         "In _recv() incomplete read ({0})".format(
                             len(completeMsg)))
-                    buffer = self._socket.recv(bufsize)
+                    buffer = self._stream.readline()
                     completeMsg = ''.join([completeMsg, buffer])
                 if completeMsg[len(completeMsg)-1] == '\n':
                     self.debug_stream(
