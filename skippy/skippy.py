@@ -109,7 +109,9 @@ class Skippy (PyTango.Device_4Impl):
                                     nChannels=self.NumChannels,
                                     nFunctions=self.NumFunctions,
                                     nMultiple=self.NumMultiple,
-                                    attrs2Monitor=attr2Monitor)
+                                    attrs2Monitor=attr2Monitor,
+                                    instructions_file=self.InstructionsFile,
+                                    avoid_IDN=self.AvoidIDN)
             self.updateDynamicAttributes()
         except Exception as e:
             self.error_stream("Exception building SkippyObj: %s" % (e))
@@ -1251,6 +1253,14 @@ class SkippyClass(PyTango.DeviceClass):
             [PyTango.DevVarStringArray,
              "Way to define specific attributes on a single instrument. Like the ones in the definition file.",
              []],
+        'InstructionsFile':
+            [PyTango.DevString,
+             "Special property to force the use of an specific instruction file and not use the instrument identification",
+             ['']],
+        'AvoidIDN':
+            [PyTango.DevBoolean,
+             "Special property to avoid the identification of an instrument",
+             [False]],
         }
 
 

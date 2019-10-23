@@ -61,6 +61,9 @@ class Skippy(AbstractSkippyObj):
     _attributesFlags = {}
     _attrs2Monitor = None
 
+    _instructions_file = None
+    _avoid_IDN = None
+
     def __init__(self,
                  # communications parameters
                  terminator=None, port=None, baudrate=None,
@@ -70,7 +73,7 @@ class Skippy(AbstractSkippyObj):
                  autoStandby=True, autoOn=True, autoStart=True,
                  nChannels=None, nFunctions=None, nMultiple=None,
                  # monitoring parameters
-                 attrs2Monitor=None,
+                 attrs2Monitor=None, instructions_file=None, avoid_IDN=False,
                  *args, **kwargs):
         """
         Object construction requires access parametrization to the instrument
@@ -88,6 +91,10 @@ class Skippy(AbstractSkippyObj):
         self._serial = {'baudrate': baudrate, 'bytesize': bytesize,
                         'parity': parity, 'stopbits': stopbits,
                         'timeout': timeout, 'xonxoff': xonxoff}
+        if isinstance(instructions_file, str) and \
+                len(instructions_file) > 0:
+            self._instructions_file = instructions_file
+        self._avoid_IDN = avoid_IDN
         if not self._buildCommunications():
             raise Exception("Constructor cannot prepare the communications")
         self._autoStandby = autoStandby
@@ -117,8 +124,12 @@ class Skippy(AbstractSkippyObj):
         elif not self.Start():
             self.warn_stream("Failed to go to the Running state")
             return
-        self._watchdog = WatchDog(name="WatchDog", parent=self)
-        self._watchdog.start()
+        if self._avoid_IDN:
+            self.info_stream("Watchdog inhibited when there is no way to "
+                             "identify the instrument")
+        else:
+            self._watchdog = WatchDog(name="WatchDog", parent=self)
+            self._watchdog.start()
 
     @property
     def version(self):
@@ -250,6 +261,9 @@ class Skippy(AbstractSkippyObj):
         try:
             self._communications.connect()
             self._idn = ''
+            if self._avoid_IDN:
+                self.info_stream("Inhibited to identify the instrument")
+                return True
             for i in range(1, tries+1):
                 self._idn = self._communications.ask(
                     "*IDN?", waittimefactor=i)
@@ -296,7 +310,12 @@ class Skippy(AbstractSkippyObj):
     def build(self):
         # TODO: check it is already build
         try:
-            if hasattr(self, '_idn') and self._idn not in [None, ""]:
+            if self._instructions_file is not None:
+                self.info_stream("Build based on an specified file")
+                self._identificator = Builder(name="Builder", parent=self)
+                self._identificator.parseFile(self._instructions_file)
+            elif hasattr(self, '_idn') and self._idn not in [None, ""]:
+                self.info_stream("Build based on the instrument identification")
                 self._identificator = identifier(self._idn, self)
             else:
                 raise Exception("*IDN? not available")
@@ -455,10 +474,10 @@ class Skippy(AbstractSkippyObj):
     def monitorRemove(self, attrId):
         if self._monitor is None:
             self.warn_stream("Monitor not yet build: ignored the append of "
-                             "%s (%s)" % (attrName, attrPeriod))
+                             "id:%s" % (attrId))
             return False
-        self.info_stream("In RemoveMonitoring(): Removing %s "
-                         "attribute from monitoring" % (argin))
+        self.info_stream("In RemoveMonitoring(): Removing id:%s "
+                         "attribute from monitoring" % (attrId))
         return self._monitor.Remove(attrId)
 
     def getMonitorPeriod(self, attrId):
