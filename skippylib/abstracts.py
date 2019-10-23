@@ -30,12 +30,24 @@ def trace(method):
     def logging(*args, **kwargs):
         self = args[0]
         klass = self.__class__.__name__
+        lst_args = args[1:]
+        dct_args = kwargs
+        lst_str = "*args: {0}".format(lst_args) if len(lst_args) > 0 else ""
+        dct_str = "**kwargs: {0}".format(dct_args) if len(dct_args) > 0 else ""
+        if len(lst_str) > 0 and len(dct_args) > 0:
+            args_str = "{0}, {1}".format(lst_str, dct_str)
+        elif len(lst_str) > 0:
+            args_str = "{0}".format(lst_str)
+        elif len(dct_str) > 0:
+            args_str = "{0}".format(dct_str)
+        else:
+            args_str = ""
         if hasattr(self, "debug_stream"):
             printer = self.debug_stream
         else:
             printer = builtins.print
-        printer("> {0}.{1}(*args: {2}, **kwargs: {3})"
-                "".format(klass, method.__name__, args[1:], kwargs))
+        printer("> {0}.{1}({2})"
+                "".format(klass, method.__name__, args_str))
         answer = method(*args, **kwargs)
         if isinstance(answer, str) and len(answer) > 100:
             answer_str = "{0}...{1}".format(answer[:25], answer[-25:])
