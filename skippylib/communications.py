@@ -15,11 +15,13 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from .abstracts import trace
+
 import array
 
 try:
     import serial
-except:
+except Exception:
     serial = None
 import PyTango
 import socket
@@ -28,7 +30,7 @@ from time import sleep
 try:
     import visa
     import pyvisa
-except:
+except Exception:
     pyvisa = None
 
 __author__ = "Sergi Blanch-Torne, Antonio Milan Otero"
@@ -42,8 +44,8 @@ TIME_BETWEEN_SENDANDRECEIVE = 0.05
 
 
 class CommunicatorBuilder(object):
-    def __init__(self, instrumentName, parent=None, port=None, serial_args=None,
-                 terminator=None, log=None, *args, **kwargs):
+    def __init__(self, instrumentName, parent=None, port=None,
+                 serial_args=None, terminator=None, log=None, *args, **kwargs):
         try:
             super(CommunicatorBuilder, self).__init__(*args, **kwargs)
             self._instrumentName = instrumentName
@@ -85,7 +87,7 @@ class CommunicatorBuilder(object):
         try:
             socket.gethostbyname(name)
             return True
-        except:
+        except Exception:
             return False
 
     def __isSerialDevice(self, name):
@@ -95,7 +97,7 @@ class CommunicatorBuilder(object):
                 return True
             else:
                 return False
-        except:
+        except Exception:
             return False
 
     def __isSerialName(self, name):
@@ -104,7 +106,7 @@ class CommunicatorBuilder(object):
                 serial.Serial(name)
                 return True
             return False
-        except:
+        except Exception:
             return False
 
     def __isVisaDevice(self, devName):
@@ -114,7 +116,7 @@ class CommunicatorBuilder(object):
                 return True
             else:
                 return False
-        except:
+        except Exception:
             return False
 
     def __isVisaName(self, name):
@@ -123,7 +125,7 @@ class CommunicatorBuilder(object):
                 pyvisa.visa.instrument(name)
                 return True
             return False
-        except:
+        except Exception:
             return False
 
 
@@ -182,7 +184,7 @@ class Communicator(object):
     def read_after_write(self, value):
         try:
             self._read_after_write = bool(value)
-        except:
+        except Exception:
             raise AssertionError("read_after_write is a boolean attribute")
 
     def ask(self, commandList, waittimefactor=1):
@@ -201,6 +203,7 @@ class Communicator(object):
             # self.debug_stream("In Communicator.ask() Answer %r" % (answer))
             return answer
 
+    @trace
     def write(self, commandList):
         '''Do a write operation to the remote
         '''
@@ -209,7 +212,6 @@ class Communicator(object):
         with self.mutex:
             command = self.prepareCommand(commandList)
             self._send(command)
-
 
     def read(self):
         '''Read if the remote have said something
@@ -261,11 +263,14 @@ class BySocket(Communicator):
                 self.build()
             self._socket.settimeout(SOCKET_TIMEOUT)
             self._socket.connect((self.__hostName, self.__port))
+            self._stream = self._socket.makefile('rwb', bufsize=0)
         except Exception as e:
             self._socket = None
             raise e
 
     def disconnect(self):
+        self._stream.close()
+        self._stream = None
         self._socket = None
         if not self.mutex.acquire(False):
             self.debug_stream("Disconnecting: forcing to release mutex")
@@ -277,16 +282,20 @@ class BySocket(Communicator):
     def isConnected(self):
         return hasattr(self, '_socket') and self._socket is not None
 
+    @trace
     def _send(self, msg):
         if self.isConnected():
-            self._socket.send(msg)
+            self._stream.write(msg)
 
+    @trace
     def _recv(self, bufsize=DEFAULT_BUFFERSIZE):
+        # FIXME: this method doesn't need the bufsize any more
+        #  perhaps neither the multiple reads when a 1D doesn't fit in one read
         if not self.isConnected():
             return ''
         completeMsg = ''
         try:
-            buffer = self._socket.recv(bufsize)
+            buffer = self._stream.readline()
             # self.debug_stream("In _recv(%d) %d bytes"
             #                   % (bufsize, len(buffer)))
             if buffer == '':
@@ -307,7 +316,7 @@ class BySocket(Communicator):
                 #                   % (repr(completeMsg[:10]),
                 #                      nBytesHeaderLength, nBytesWaveElement))
                 while len(completeMsg) < nBytesWaveElement:
-                    buffer = self._socket.recv(bufsize)
+                    buffer = self._stream.readline()
                     completeMsg = ''.join([completeMsg, buffer])
             except Exception as e:
                 self.error_stream("Exception in %s:%d array data "
@@ -319,7 +328,7 @@ class BySocket(Communicator):
                     self.warn_stream(
                         "In _recv() incomplete read ({0})".format(
                             len(completeMsg)))
-                    buffer = self._socket.recv(bufsize)
+                    buffer = self._stream.readline()
                     completeMsg = ''.join([completeMsg, buffer])
                 if completeMsg[len(completeMsg)-1] == '\n':
                     self.debug_stream(
@@ -333,7 +342,7 @@ class BySocket(Communicator):
                 self.error_stream("Exception in %s:%d string data "
                                   "interpretation: %s"
                                   % (self.__hostName, self.__port, e))
-        while len(completeMsg) > 0 and completeMsg[-1] in ['\n','\r']:
+        while len(completeMsg) > 0 and completeMsg[-1] in ['\n', '\r']:
             completeMsg = completeMsg[:-1]
         return completeMsg
 

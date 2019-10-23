@@ -16,12 +16,52 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
+from __future__ import print_function
+import builtins
 from PyTango import DevState
 
 __author__ = "Sergi Blanch-Torné"
 __email__ = "sblanch@cells.es"
 __copyright__ = "Copyright 2017, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
+
+
+def trace(method):
+    def _compact_args(lst_args, dct_args):
+        lst_str = "*args: {0}".format(lst_args) if len(lst_args) > 0 else ""
+        dct_str = "**kwargs: {0}".format(dct_args) if len(dct_args) > 0 else ""
+        if len(lst_str) > 0 and len(dct_args) > 0:
+            return "{0}, {1}".format(lst_str, dct_str)
+        elif len(lst_str) > 0:
+            return "{0}".format(lst_str)
+        elif len(dct_str) > 0:
+            return "{0}".format(dct_str)
+        return ""
+
+    def _get_printer(obj):
+        if hasattr(obj, "debug_stream"):
+            return obj.debug_stream
+        return builtins.print
+
+    def _compact_answer(answer):
+        if isinstance(answer, str) and len(answer) > 100:
+            return "{0}...{1}".format(answer[:25], answer[-25:])
+        return "{0}".format(answer)
+
+    def logging(*args, **kwargs):
+        self = args[0]
+        klass = self.__class__.__name__
+        method_name = method.__name__
+        args_str = _compact_args(args[1:], kwargs)
+        printer = _get_printer(self)
+        printer("> {0}.{1}({2})"
+                "".format(klass, method_name, args_str))
+        answer = method(*args, **kwargs)
+        answer_str = _compact_answer(answer)
+        printer("< {0}.{1}: {2}"
+                "".format(klass, method_name, answer_str))
+        return answer
+    return logging
 
 
 class AbstractSkippyObj(object):

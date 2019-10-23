@@ -251,26 +251,26 @@ class Skippy(AbstractSkippyObj):
             self._communications.connect()
             self._idn = ''
             for i in range(1, tries+1):
-                self._idn = self._communications.ask("*IDN?", waittimefactor=i)
-                if len(self._idn) > 0:
+                self._idn = self._communications.ask(
+                    "*IDN?", waittimefactor=i)
+                if isinstance(self._idn, str) and len(self._idn) > 0:
                     break
                 # if self._reconnectAwaker.isSet():
                 #     self.info_stream("Abort reconnection to the instrument")
                 #     return False
                 self.warn_stream("In connect() -no answer to the"
-                                 " identification request (try %d)" % (i))
+                                 " identification request (try {0})".format(i))
                 sleep(self._communications.timeBetweenSendAndReceive*10)
-            if len(self._idn) == 0:
+            if isinstance(self._idn, str) and len(self._idn) == 0:
                 self.error_stream("In connect() Cannot identify"
-                                  " the instrument after %d tries" % (i))
+                                  " the instrument after {0} tries".format(i))
                 return False
             self.info_stream("In connect() instrument "
-                             "identification: %r" % (self._idn))
+                             "identification: {0!r}".format(self._idn))
             return True
         except Exception as e:
             msg = "Cannot connect to the instrument."
-            self.error_stream("In connect() %s due to: %s"
-                              % (msg, e))
+            self.error_stream("In connect() {0} due to: {1}".format(msg, e))
             traceback.print_exc()
             self._change_state_status(newState=DevState.FAULT,
                                       newLine=msg)
@@ -672,7 +672,9 @@ class Skippy(AbstractSkippyObj):
         return False
 
     def __is_timestamp_aging(self, attr_obj):
-        return time() - attr_obj.timestamp >= self._timestampsThreshold
+        if attr_obj.timestamp is not None:
+            return time() - attr_obj.timestamp >= self._timestampsThreshold
+        return True
 
     def __preHardwareRead(self, attrList, window=None):
         '''Given a list of attributes to be read, prepare it.
