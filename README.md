@@ -5,7 +5,7 @@ This project is to provide [tango](http://tango-controls.org) access to instrume
 
 ![license GPLv3+](https://img.shields.io/badge/license-GPLv3+-green.svg)
 
-Current version is `1.6.0-alpha1`.
+Current version is `1.6.0-alpha2`.
 
 There is a brother project called [scpilib](https://github.com/srgblnch/python-scpilib) also written in python and it is used in the tests.
 
