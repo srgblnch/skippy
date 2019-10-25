@@ -238,17 +238,18 @@ class Skippy(AbstractSkippyObj):
             self._communications = builder.build()
             if self._read_after_write != self._communications.read_after_write:
                 self._communications.read_after_write = self._read_after_write
-        except SyntaxError as e:
-            self.error_stream("Error in the instrument name: %s" % (e))
+        except SyntaxError as exception:
+            self.error_stream("Error in the instrument name: {0}"
+                              "".format(exception))
             self._change_state_status(newState=DevState.FAULT,
-                                      newLine="%s: review the 'instrument' "
-                                      "property" % (e))
+                                      newLine="{0}: review the 'instrument' "
+                                              "property".format(exception))
             return False
-        except Exception as e:
-            self.error_stream("Generic exception: %s" % (e))
+        except Exception as exception:
+            self.error_stream("Generic exception: %s" % (exception))
             self._change_state_status(newState=DevState.FAULT,
-                                      newLine="initialisation exception: %s"
-                                      % (e))
+                                      newLine="initialisation exception: {0}"
+                                              "".format(exception))
             traceback.print_exc()
             return False
         if updateState:
@@ -310,21 +311,24 @@ class Skippy(AbstractSkippyObj):
     def build(self):
         # TODO: check it is already build
         try:
-            if self._instructions_file is not None:
-                self.info_stream("Build based on an specified file")
+            if self._avoid_IDN is True:
+                self.info_stream("Build without the information of IDN")
                 self._identificator = Builder(name="Builder", parent=self)
-                self._identificator.parseFile(self._instructions_file)
             elif hasattr(self, '_idn') and self._idn not in [None, ""]:
                 self.info_stream("Build based on the instrument identification")
                 self._identificator = identifier(self._idn, self)
             else:
-                raise Exception("*IDN? not available")
-        except Exception as e:
+                raise Exception("*IDN? not available (but not inhibited)")
+            if self._instructions_file is not None:
+                self.info_stream("Build based on an specified file")
+                self._identificator.parseFile(self._instructions_file)
+        except Exception as _exception:
             if hasattr(self, '_idn'):
-                msg = "identification error: %s (*IDN?:%r)" % (e, self._idn)
+                msg = "identification error: {0} (*IDN?:{1!r})" \
+                      "".format(_exception, self._idn)
             else:
-                msg = "identification error: %s" % (e)
-            self.error_stream("%s %s" % (self.name, msg))
+                msg = "identification error: {0}".format(_exception)
+            self.error_stream("{0} {1}".format(self.name, msg))
             self._change_state_status(newState=DevState.UNKNOWN,
                                       newLine=msg)
             return False
@@ -634,7 +638,8 @@ class Skippy(AbstractSkippyObj):
                     switch_obj = self.attributes[attr_name].getSwitchAttrObj()
                     if switch_obj.rvalue is False:
                         self.debug_stream(
-                            "\texclude {0} because switch off")
+                            "\texclude {0} because switch off"
+                            "".format(attr_name))
                         continue
                 if not self.__is_timestamp_aging(self.attributes[attr_name]):
                     self.debug_stream(

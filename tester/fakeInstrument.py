@@ -27,6 +27,7 @@ from instrAttrs import (ROinteger, RWinteger, ROfloat, RWfloat,
                         ROIntegerArray, ROFloatArray, Waveform,
                         ROboolean, RWboolean, ROBooleanArray, ROFloatChannel)
 from instrIdn import InstrumentIdentification, __version__
+import os
 from psutil import process_iter, Process
 import PyTango
 import signal
@@ -51,45 +52,37 @@ DevClass = 'Skippy'
 DevName = 'fake/skyppy/instrument-01'
 
 
-class bcolors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-
-
 class FakeInstrument(object):
 
     _identity = None
+    _port = None
     _scpiObj = None
     _attrObjs = {}
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, port=5025, *args, **kwargs):
         super(FakeInstrument, self).__init__(*args, **kwargs)
-        self._buildFakeSCPI()
+        self._port = port
+        self._build_fake_scpi()
 
-    def _buildFakeSCPI(self):
-        version = "%s+scpilib_%s" % (__version__, scpilib.version.version())
-        self._identity = InstrumentIdentification('FakeInstruments. Inc',
-                                                  'Tester', 0, version)
-        self._scpiObj = scpilib.scpi(local=True, debug=True, log2File=True,
-                                     loggerName="SkippyTester")
-        self._buildSpecialCommands()
-        self._buildNormalCommands()
+    def _build_fake_scpi(self):
+        version = "{0}scpilib{1}" \
+                  "".format(__version__, scpilib.version.version())
+        self._identity = InstrumentIdentification(
+            'FakeInstruments. Inc', 'Tester', 0, version)
+        self._scpiObj = scpilib.scpi(local=True, debug=True, port=self._port,
+                                     log2File=True, loggerName="SkippyTester")
+        self._build_special_commands()
+        self._build_normal_commands()
         self.open()
 
     def __str__(self):
-        return "%s" % self._scpiObj
+        return "{0}".format(self._scpiObj)
 
     def __repr__(self):
-        return "%r" % self._scpiObj
+        return "{0!r}".format(self._scpiObj)
 
     def tree(self):
-        return "%r" % self._scpiObj._commandTree
+        return "{0!r}".format(self._scpiObj._commandTree)
 
     def open(self):
         self._scpiObj.open()
@@ -97,10 +90,10 @@ class FakeInstrument(object):
     def close(self):
         self._scpiObj.close()
 
-    def _buildSpecialCommands(self):
+    def _build_special_commands(self):
         self._scpiObj.addSpecialCommand('IDN', self._identity.idn)
 
-    def _buildNormalCommands(self):
+    def _build_normal_commands(self):
         self._attrObjs['roboolean'] = self.__build_ROBoolean()
         self._attrObjs['rwboolean'] = self.__build_RWBoolean()
         self._attrObjs['rointeger'] = self.__build_ROInteger()
@@ -331,15 +324,26 @@ global exitCode
 exitCode = -1
 
 
+class bcolors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    OKGREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+
 class TestLogger(object):
     def __init__(self, *args, **kwargs):
         super(TestLogger, self).__init__(*args, **kwargs)
 
     def log(self, msg, color=None):
         if color:
-            print(color+"%s" % (msg)+bcolors.ENDC)
+            print("{0}{1}{2}".format(color, msg, bcolors.ENDC))
         else:
-            print("%s" % (msg))
+            print("{0}".format(msg))
 
 
 class TestDevice(TestLogger):
@@ -348,60 +352,105 @@ class TestDevice(TestLogger):
     _device_instance = None
     _device_process = None
 
-    def __init__(self, device_name, device_instance, *args, **kwargs):
+    def __init__(self, device_name, device_instance, extra_properties=None,
+                 *args, **kwargs):
         super(TestDevice, self).__init__(*args, **kwargs)
         self._device_name = device_name
         self._device_instance = device_instance
-        self._create_device()
-        self._start_device()
+        if isinstance(extra_properties, dict):
+            self._extra_properties = extra_properties
+        else:
+            self._extra_properties = {}
+        self._create_device_server()
+        self._start_device_server()
 
     def __del__(self):
-        self._stop_device()
+        self._stop_device_server()
         self._delete_device()
 
     @property
     def name(self):
         return self._device_name
 
-    def _create_device(self):
+    def _create_device_server(self):
         tangodb = PyTango.Database()
-        self.log(
-            "Creating a {0} device in {1}:{2}".format(
-                self._device_name, tangodb.get_db_host(),
-                tangodb.get_db_port()),
-            color=bcolors.HEADER)
+        self.log("Creating a {0} device in {1}:{2}"
+                 "".format(self._device_name, tangodb.get_db_host(),
+                           tangodb.get_db_port()),
+                 color=bcolors.HEADER)
         devInfo = PyTango.DbDevInfo()
         devInfo.name = self._device_name
         devInfo._class = DevClass
         devInfo.server = DevServer+"/"+self._device_instance
         tangodb.add_device(devInfo)
-        self.log("Server {0} added".format(
-            DevServer+"/"+self._device_instance),
+        self.log("Server {0}/{1} added"
+                 "".format(DevServer, self._device_instance),
                  color=bcolors.OKBLUE)
-        for (propertyName, propertyValue) in \
-                [['Instrument', 'localhost'],
-                 ['NumChannels', '4'], ['NumFunctions', '8']]:
-            _property = PyTango.DbDatum(propertyName)
-            _property.value_string.append(propertyValue)
-            self.log(
-                "Set property {0}: {1}".format(propertyName, propertyValue),
-                color=bcolors.OKBLUE)
-            tangodb.put_device_property(DevName, _property)
+        if 'Instrument' not in self._extra_properties:
+            self._extra_properties['Instrument'] = 'localhost'
+        if 'NumChannels' not in self._extra_properties:
+            self._extra_properties['NumChannels'] = "4"
+        if 'NumFunctions' not in self._extra_properties:
+            self._extra_properties['NumFunctions'] = "8"
+        for (propertyName, propertyValue) in self._extra_properties.iteritems():
+            self.set_device_property(propertyName, propertyValue)
+
+    def set_device_property(self, property_name, property_value):
+        _property = PyTango.DbDatum(property_name)
+        _property.value_string.append(property_value)
+        self.log("Set property {0}: {1}"
+                 "".format(property_name, property_value),
+                 color=bcolors.OKBLUE)
+        PyTango.Database().put_device_property(self._device_name, _property)
+
+    def remove_device_property(self, property_name):
+        PyTango.Database().delete_device_property(
+            self._device_name, property_name)
+
+    def device_init_command(self):
+        try:
+            proxy = PyTango.DeviceProxy(self._device_name)
+            proxy.Init()
+            for i in range(10, 0, -1):
+                if not proxy.State() in [PyTango.DevState.ON]:
+                    self.log("Waiting the device ({0}) it is in {0} state"
+                             "".format(i, proxy.State()))
+                    sleep(1)
+                else:
+                    return True
+        except Exception as exc:
+            self.log("* Init() failed *\n", color=bcolors.FAIL)
+            self.log(exc)
+        return False
+
+    def device_update_dynamic_attributes_command(self):
+        try:
+            proxy = PyTango.DeviceProxy(self._device_name)
+            result = proxy.updateDynamicAttributes()
+            self.log("updated dynamic attributes")
+            return result
+        except Exception as exc:
+            self.log("* update dynamic attributes failed *\n",
+                     color=bcolors.FAIL)
+            self.log(exc)
+        return False
 
     def _delete_device(self):
         try:
             tangodb = PyTango.Database()
-            self.log("Remove a %s device in %s:%s"
-                     % (self._device_name, tangodb.get_db_host(),
-                        tangodb.get_db_port()),
+            self.log("Remove a {0} device in {1}:{2}"
+                     "".format(self._device_name, tangodb.get_db_host(),
+                               tangodb.get_db_port()),
                      color=bcolors.OKBLUE)
             tangodb.delete_device(self._device_name)
-            tangodb.delete_server(DevServer+"/"+self._device_instance)
-        except Exception as e:
+            tangodb.delete_server("{0}/{1}".format(
+                DevServer, self._device_instance))
+        except Exception as exc:
             self.log("* Deletion failed, please review manually "
                      "for garbage *\n", color=bcolors.FAIL)
+            self.log(exc)
 
-    def _start_device(self):
+    def _start_device_server(self):
         if not self._is_already_running():
             try:
                 self._device_process = Popen([DevServer,
@@ -410,17 +459,17 @@ class TestDevice(TestLogger):
                 launcher = "/usr/lib/tango/"+DevServer
                 self._device_process = Popen([launcher,
                                               self._device_instance, "-v4"])
-            self.log("Launched the device server has pid %d"
-                     % (self._device_process.pid), color=bcolors.OKBLUE)
+            self.log("Launched the device server has pid {0}"
+                     "".format(self._device_process.pid), color=bcolors.OKBLUE)
         else:
             self.log("Test device already running!", color=bcolors.WARNING)
 
-    def _stop_device(self):
+    def _stop_device_server(self):
         if self._device_process is None:
             return
         process = Process(self._device_process.pid)
         if not self.__stop_process(process):
-            self.log(" Process %d needs to be killed" % (process.pid),
+            self.log(" Process {0} needs to be killed".format(process.pid),
                      color=bcolors.WARNING)
             self.__kill_process(process)
         self.log("Test device stopped")
@@ -433,7 +482,7 @@ class TestDevice(TestLogger):
                 if len(cmd) == 3 and \
                         cmd[1].lower().startswith(DevServer.lower()) and\
                         cmd[2].lower() == DevInstance.lower():
-                    self.log("found process %d" % (proc.pid))
+                    self.log("found process {0}".format(proc.pid))
                     procs.append(proc)
         if len(procs) == 0:
             return False
@@ -445,12 +494,12 @@ class TestDevice(TestLogger):
     def __stop_process(self, process):
         nChildren = len(process.children())
         if nChildren > 0:
-            self.log("Process %d has %d children to be stopped"
-                     % (process.pid, nChildren), color=bcolors.OKBLUE)
+            self.log("Process {0} has {1} children to be stopped"
+                     "".format(process.pid, nChildren), color=bcolors.OKBLUE)
             for child in process.children():
                 if not self.__stop_process(child):
-                    self.log("Process %d still running, proceed to kill"
-                             % (child.pid), color=bcolors.WARNING)
+                    self.log("Process {0} still running, proceed to kill"
+                             "".format(child.pid), color=bcolors.WARNING)
                     self.__kill_process(child)
         process.terminate()
         for i in range(10):  # 1 second waiting
@@ -465,212 +514,239 @@ class TestDevice(TestLogger):
     def __kill_process(self, process):
         try:
             process.kill()
-        except:
+        except Exception as exc:
             pass
+
+
+dynAttr_sample_content = \
+    'Attribute("float_scalar_ro_bis",\n' \
+    '          {\'type\': PyTango.CmdArgType.DevFloat,\n' \
+    '           \'dim\': [0],\n' \
+    '           \'readCmd\': "source:readable:float:value?"\n' \
+    '           })\n' \
+    '\n' \
+    'Attribute("float_scalar_rw_bis",\n' \
+    '          {\'type\': PyTango.CmdArgType.DevFloat,\n' \
+    '           \'dim\': [0],\n' \
+    '           \'readCmd\': "source:writable:float:value?",\n' \
+    '           \'writeCmd\': \n' \
+    '               lambda value: "source:writable:float:"\n' \
+    '                             "value {0}".format(value)\n' \
+    '           })'
 
 
 class TestManager(TestLogger):
 
-    _device = None
+    _instrument = None
+    _tester = None
 
     def __init__(self, *args, **kwargs):
         super(TestManager, self).__init__(*args, **kwargs)
         self._instrument = FakeInstrument()
-        self.log("FakeInstrument build: %r" % (self._instrument))
-        self.log("\tCommand tree: %s" % (self._instrument.tree()))
-        self._device = TestDevice(DevName, DevInstance)
+        self.log("FakeInstrument build: {0!r}".format(self._instrument))
+        self.log("\tCommand tree: {0}".format(self._instrument.tree()))
+        self._tester = TestDevice(DevName, DevInstance)
 
     def __del__(self):
-        del self._device
+        del self._tester
+        del self._instrument
 
-    def log(self, msg, color=None):
-        if color:
-            print(color+"%s" % (msg)+bcolors.ENDC)
-        else:
-            print("%s" % (msg))
-
-    def _is_device_ready(self):
-        if self._device is None:
+    def _is_device_ready(self, test_device):
+        if test_device is None:
             return False
         try:
-            device_proxy = PyTango.DeviceProxy(self._device.name)
-            self.log("Device is in %s state" % device_proxy.State())
+            device_proxy = PyTango.DeviceProxy(test_device.name)
+            self.log("Device is in {0} state".format(device_proxy.State()))
             return True
-        except:
+        except Exception as exc:
+            self.log("Exception checking if the device is ready: {0}"
+                     "".format(exc))
             return False
 
-    # Tests ---
-    def launchTest(self):
-        while not self._is_device_ready():
+    def launch_test(self):
+        while not self._is_device_ready(self._tester):
             self.log("Waiting the device", color=bcolors.WARNING)
             sleep(1)
         self.log("Start the test", color=bcolors.HEADER)
-        device_proxy = PyTango.DeviceProxy(DevName)
+        device_proxy = PyTango.DeviceProxy(self._tester.name)
         # FIXME: once the scpilib supports it, the tests must be made with
         #  and without this flag raised.
         device_proxy['ReadAfterWrite'] = True
-        self.log("Testing {0} a read after write".format(
-            "with" if device_proxy['ReadAfterWrite'].value else "with out"))
-        testMethods = [self.test_communications,
-                       self.test_readings,
-                       self.test_writes,
-                       self.test_glitch,
-                       self.test_waveform_switch,
-                       self.test_dyn_attr_injection]
+        self.log("Testing {0} a read after write"
+                 "".format("with" if device_proxy['ReadAfterWrite'].value
+                                            else "with out"))
+        test_methods = [
+            self.test_communications,
+            self.test_readings,
+            self.test_writes,
+            self.test_glitch,
+            self.test_waveform_switch,
+            self.test_dyn_attr_injection,
+            self.test_avoid_idn_and_specify_instructions_set,
+        ]
         reports = []
-        for i, test in enumerate(testMethods):
+        for i, test in enumerate(test_methods):
             result, report = test(device_proxy)
             if not result:
                 return i+1
-            if isinstance(report[0], list):
+            if isinstance(report, list) and len(report) > 0 \
+                    and isinstance(report[0], list):
                 reports += report
             else:
                 reports.append(report)
         self.log("All tests passed", color=bcolors.HEADER)
-        for name, msg in reports:
-            self.log("\t%s:\t%s" % (name, msg))
+        try:
+            for name, msg in reports:
+                self.log("\t{0:30}:\t{1}".format(name, msg))
+        except Exception as exc:
+            self.log(reports)
         return 0
 
-    def _checkTest(self, names, values):
+    def _check_test(self, names, values):
         nones = [value is None for value in values]
         if any(nones):
-            msg = bcolors.FAIL+"TEST FAILED"+bcolors.ENDC+":\n"
+            msg = "{0}TEST FAILED{1}:\n".format(bcolors.FAIL. bcolors.ENDC)
             for i, name in enumerate(names):
-                msg = ''.join("%s\t%s = %r\n" % (msg, name, values[i]))
-            return (False, msg)
+                msg = ''.join("{0}\t{1} = {2!r}\n"
+                              "".format(msg, name, values[i]))
+            return False, msg
         else:
-            return (True, bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC)
+            return True, "{0}TEST PASSED{1}" \
+                         "".format(bcolors.OKGREEN, bcolors.ENDC)
 
-    def test_communications(self, device):
-        testTitle = "Communications"
-        attrNames = ['QueryWindow', 'TimeStampsThreshold', 'ReadAfterWrite',
-                     'State', 'Status']
-        attrs = device.read_attributes(attrNames)
+    ###########################################################################
+    # Tests area
+    def test_communications(self, device_proxy):
+        test_title = "Communications"
+        attr_names = ['QueryWindow', 'TimeStampsThreshold', 'ReadAfterWrite',
+                      'State', 'Status']
+        attrs = device_proxy.read_attributes(attr_names)
         values = [attr.value for attr in attrs]
-        result, msg = self._checkTest(attrNames, values)
-        self.log("%s:\t%s" % (testTitle, msg))
-        return result, [testTitle, msg]
+        result, msg = self._check_test(attr_names, values)
+        self.log("{0}:\t{1}".format(test_title, msg))
+        return result, [test_title, msg]
 
-    def test_readings(self, device):
-        testTitle = "Readings"
-        excludeName = ['Idn', 'QueryWindow', 'TimeStampsThreshold', 'Version',
-                       'ReadAfterWrite', 'State', 'Status',
-                       'RampeableStep', 'RampeableStepSpeed', 'Fallible']
-        excludePattern = {'startswith': ['Waveform', 'wfState', 'wfChannels']}
-        attrNames = []
-        results = []
-        for attrName in device.get_attribute_list():
-            if attrName in excludeName:
+    def test_readings(self, device_proxy):
+        test_title = "Readings"
+        exclude_name = ['Idn', 'QueryWindow', 'TimeStampsThreshold', 'Version',
+                        'ReadAfterWrite', 'State', 'Status',
+                        'RampeableStep', 'RampeableStepSpeed', 'Fallible']
+        exclude_pattern = {'startswith': ['Waveform', 'wfState', 'wfChannels']}
+        attr_names = []
+        for attrName in device_proxy.get_attribute_list():
+            if attrName in exclude_name:
                 continue  # next step in the loop
             in_the_loop = False
-            for startstr in excludePattern['startswith']:
-                if attrName.startswith(startstr):
+            for start_str in exclude_pattern['startswith']:
+                if attrName.startswith(start_str):
                     in_the_loop = True
             if not in_the_loop:
-                attrNames.append(attrName)
+                attr_names.append(attrName)
             # TODO: special attributes like ramps descriptors or spectra
-        self.log("attributes for the %s test" % (testTitle),
+        self.log("attributes for the {0} test".format(test_title),
                  color=bcolors.OKBLUE)
-        for attrName in attrNames:
-            self.log("\t{0}".format(attrName))
+        for attr_name in attr_names:
+            self.log("\t{0}".format(attr_name))
         reports = []
-        for i in range(1, len(attrNames)+1):
-            device['QueryWindow'] = i
-            attrs = device.read_attributes(attrNames)
+        for i in range(1, len(attr_names)+1):
+            device_proxy['QueryWindow'] = i
+            attrs = device_proxy.read_attributes(attr_names)
             values = [attr.value for attr in attrs]
             nones = [value is None for value in values]
-            result, msg = self._checkTest(attrNames, values)
-            self.log("Readings[%d]\t%s" % (i, msg))
-            reports.append(["%s[%d]" % (testTitle, i), msg])
+            result, msg = self._check_test(attr_names, values)
+            self.log("Readings[{0}]\t{1}".format(i, msg))
+            reports.append(["{0}[{1}]".format(test_title, i), msg])
             if not result:
                 return False, reports
-            sleep(1.1*device['TimeStampsThreshold'].value)
+            sleep(1.1*device_proxy['TimeStampsThreshold'].value)
         return True, reports
 
-    def test_writes(self, device):
-        testTitle = "Writes"
-        attrNames = []
+    def test_writes(self, device_proxy):
+        test_title = "Writes"
+        attr_names = []
         values = []
-        for attrName in device.get_attribute_list():
-            if attrName.endswith('_rw'):
-                rvalue = device[attrName].value
-                if device[attrName].type == PyTango.DevFloat:
-                    wvalue = int(rvalue/1.1) + (rvalue % 1)
-                elif device[attrName].type == PyTango.DevShort:
-                    wvalue = rvalue+1
-                elif device[attrName].type == PyTango.DevBoolean:
-                    wvalue = not rvalue
-                self.log(
-                    "*** {0} has {1} and going to write {2}".format(
-                        attrName, rvalue, wvalue))
-                device[attrName] = wvalue
+        for attr_name in device_proxy.get_attribute_list():
+            if attr_name.endswith('_rw'):
+                r_value = device_proxy[attr_name].value
+                if device_proxy[attr_name].type == PyTango.DevFloat:
+                    w_value = int(r_value/1.1) + (r_value % 1)
+                elif device_proxy[attr_name].type == PyTango.DevShort:
+                    w_value = r_value+1
+                elif device_proxy[attr_name].type == PyTango.DevBoolean:
+                    w_value = not r_value
+                self.log("*** {0} has {1} and going to write {2}"
+                         "".format(attr_name, r_value, w_value))
+                device_proxy[attr_name] = w_value
                 # Time between those two reads must be below the
                 # 'TimeStampsThreshold' to check that, even the time hasn't
                 # passed, it has been change by the write.
                 sleep(0.05)
-                new_rvalue = device[attrName].value
-                self.log(
-                    "*** {0}: had {1}, sent {2}, now {3}".format(
-                        attrName, rvalue, wvalue, new_rvalue))
-                if new_rvalue == wvalue:
-                    values.append(wvalue)
+                new_rvalue = device_proxy[attr_name].value
+                self.log("*** {0}: had {1}, sent {2}, now {3}"
+                         "".format(attr_name, r_value, w_value, new_rvalue))
+                if new_rvalue == w_value:
+                    values.append(w_value)
                 else:
                     values.append(None)
-        result, msg = self._checkTest(attrNames, values)
-        self.log("%s:\t%s" % (testTitle, msg))
-        return result, [testTitle, msg]
+        result, msg = self._check_test(attr_names, values)
+        self.log("{0}:\t{1}".format(test_title, msg))
+        return result, [test_title, msg]
 
-    def test_glitch(self, device):
-        testTitle = "Glitch"
-        if device['State'].value in [PyTango.DevState.ON,
-                                     PyTango.DevState.RUNNING]:
-            if device.Exec("self.skippy.watchdogObj") == 'None':
+    def test_glitch(self, device_proxy):
+        test_title = "Glitch"
+        if device_proxy['State'].value in [PyTango.DevState.ON,
+                                           PyTango.DevState.RUNNING]:
+            if device_proxy.Exec("self.skippy.watchdogObj") == 'None':
                 msg = "Device doesn't have the watchdog feature!"
                 self.log(msg, color=bcolors.WARNING)
-                return False, [testTitle, msg]
-            reactiontime = device.Exec("self.skippy.watchdogObj.checkPeriod")
-            self.log("reactiontime: %s" % reactiontime)
-            reactiontime = float(reactiontime)
+                return False, [test_title, msg]
+            reaction_time = device_proxy.Exec(
+                "self.skippy.watchdogObj.checkPeriod")
+            self.log("reactiontime: {0}".format(reaction_time))
+            reaction_time = float(reaction_time)
             t_0 = datetime.now()
             self._instrument.close()
             self.log("Instrument closed", color=bcolors.OKBLUE)
-            reacted = self._waitUntilReaction(device, reactiontime,
-                                              [PyTango.DevState.FAULT,
-                                               PyTango.DevState.DISABLE])
+            reacted = self._wait_until_reaction(
+                device_proxy, reaction_time,
+                [PyTango.DevState.FAULT, PyTango.DevState.DISABLE])
             if not reacted:
-                msg = "No device reaction after %s" % (datetime.now()-t_0)
+                msg = "No device reaction after {0}" \
+                      "".format(datetime.now()-t_0)
                 self.log(msg)
-                fullmsg = bcolors.FAIL + "TEST FAILED" + bcolors.ENDC + \
-                    ":\n\t" + bcolors.WARNING + msg + bcolors.ENDC
-                return False, [testTitle, fullmsg]
+                fullmsg = "{0}TEST FAILED{1}:\n\t{2}{3}{1}" \
+                          "".format(bcolors.FAIL, bcolors.ENDC,
+                                    bcolors.WARNING, msg)
+                return False, [test_title, fullmsg]
             self.log("Device has reacted", color=bcolors.OKBLUE)
             t_1 = datetime.now()
             self._instrument.open()
             self.log("Instrument reopened", color=bcolors.OKBLUE)
-            reacted = self._waitUntilReaction(device, reactiontime,
-                                              [PyTango.DevState.ON,
-                                               PyTango.DevState.RUNNING])
+            reacted = self._wait_until_reaction(
+                device_proxy, reaction_time,
+                [PyTango.DevState.ON, PyTango.DevState.RUNNING])
             if not reacted:
-                msg = "No device recovery after %s" % (datetime.now()-t_1)
+                msg = "No device recovery after {0}" \
+                      "".format(datetime.now()-t_1)
                 self.log(msg)
-                fullmsg = bcolors.FAIL + "TEST FAILED" + bcolors.ENDC + \
-                    ":\n\t" + bcolors.WARNING + msg + bcolors.ENDC
-                return False, [testTitle, fullmsg]
+                full_msg = "{0}TEST FAILED{1}:\n\t{2}{3}{1}" \
+                          "".format(bcolors.FAIL, bcolors.ENDC,
+                                    bcolors.WARNING, msg)
+                return False, [test_title, full_msg]
             self.log("Device has recovered", color=bcolors.OKBLUE)
-            msg = bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC
-            self.log("%s:\t%s" % (testTitle, msg))
-            return True, [testTitle, msg]
+            msg = "{0}TEST PASSED{1}".format(bcolors.OKGREEN, bcolors.ENDC)
+            self.log("{0}:\t{1}".format(test_title, msg))
+            return True, [test_title, msg]
         else:
-            msg = bcolors.FAIL + "TEST FAILED" + bcolors.ENDC + \
-                    ":\n\t" + bcolors.WARNING + \
-                    "Wrong device state %s" % (device['State'].value) \
-                    + bcolors.ENDC
-            self.log("%s:\t%s" % (testTitle, msg))
-            return False, [testTitle, msg]
+            msg = "{0}TEST FAILED{1}:\n\t{2}Wrong device state {3}{1}" \
+                  "".format(bcolors.FAIL, bcolors.ENDC,
+                            bcolors.WARNING, device_proxy['State'].value)
+            self.log("{0}:\t{1}".format(test_title, msg))
+            return False, [test_title, msg]
 
-    def test_waveform_switch(self, device):
-        testTitle = "Waveform Switch"
-        self.log("attributes for the {0} test".format(testTitle),
+    def test_waveform_switch(self, device_proxy):
+        test_title = "Waveform Switch"
+        self.log("attributes for the {0} test".format(test_title),
                  color=bcolors.OKBLUE)
 
         def check():
@@ -680,120 +756,165 @@ class TestManager(TestLogger):
                 raise Exception("Attributes not read when should")
 
         try:
-            waveformAttr = 'Waveform'
-            switchAttr = 'Waveform_switch'
-            quality = device[waveformAttr].quality
-            switch = device[switchAttr].value
+            waveform_attr = 'Waveform'
+            switch_attr = 'Waveform_switch'
+            quality = device_proxy[waveform_attr].quality
+            switch = device_proxy[switch_attr].value
             check()
-            device[switchAttr] = not switch
-            quality = device[waveformAttr].quality
-            switch = device[switchAttr].value
+            device_proxy[switch_attr] = not switch
+            quality = device_proxy[waveform_attr].quality
+            switch = device_proxy[switch_attr].value
             check()
-            device[switchAttr] = not switch
-            msg = bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC
-            self.log("%s:\t%s"%(testTitle, msg))
-            return True, [testTitle, msg]
+            device_proxy[switch_attr] = not switch
+            msg = "{0}TEST PASSED{1}".format(bcolors.OKGREEN, bcolors.ENDC)
+            self.log("{0}:\t{1}".format(test_title, msg))
+            return True, [test_title, msg]
         except Exception as exc:
             msg = "{0}TEST FAILED{1}:\n\t{2}{3}{1}" \
                   "".format(bcolors.FAIL, bcolors.ENDC, bcolors.WARNING, exc)
-            self.log("{0}:\t{1}".format(testTitle, msg))
-            return False, [testTitle, msg]
+            self.log("{0}:\t{1}".format(test_title, msg))
+            return False, [test_title, msg]
 
-    def test_dyn_attr_injection(self, device):
-        testTitle = "DynamicAttributes injection"
+    def test_dyn_attr_injection(self, device_proxy):
+        test_title = "DynamicAttributes injection"
         try:
-            tangodb = PyTango.Database()
-            propertyName = "DynamicAttributes"
-            _property = PyTango.DbDatum(propertyName)
-            propertyValue = \
-                'Attribute("float_scalar_ro_bis",\n' \
-                '          {\'type\': PyTango.CmdArgType.DevFloat,\n' \
-                '           \'dim\': [0],\n' \
-                '           \'readCmd\': "source:readable:float:value?"\n' \
-                '           })\n' \
-                '\n' \
-                'Attribute("float_scalar_rw_bis",\n' \
-                '          {\'type\': PyTango.CmdArgType.DevFloat,\n' \
-                '           \'dim\': [0],\n' \
-                '           \'readCmd\': "source:writable:float:value?",\n' \
-                '           \'writeCmd\': \n' \
-                '               lambda value: "source:writable:float:"\n' \
-                '                             "value {0}".format(value)\n' \
-                '           })'
-            _property.value_string.append(propertyValue)
-            self.log(
-                "Set property {0}: {1}".format(propertyName, propertyValue),
-                color=bcolors.OKBLUE)
-            tangodb.put_device_property(DevName, _property)
-            if not device.updateDynamicAttributes():
+            property_name = "DynamicAttributes"
+            property_value = dynAttr_sample_content
+            self._tester.set_device_property(property_name, property_value)
+            if not self._tester.device_update_dynamic_attributes_command():
                 raise AssertionError("Device did NOT update the attributes")
             try:
-                device['QueryWindow'] = 2
-                attrs = device.read_attributes(['float_scalar_ro',
-                                                'float_scalar_ro_bis'])
+                device_proxy['QueryWindow'] = 2
+                attrs = device_proxy.read_attributes(['float_scalar_ro',
+                                                      'float_scalar_ro_bis'])
                 values = [attr.value for attr in attrs]
                 nones = [value is None for value in values]
                 if any(nones):
                     raise AssertionError("ReadOnly read failed")
-            except AssertionError as e:
-                raise e
-            except Exception as e:
-                self.log(e, color=bcolors.FAIL)
+            except AssertionError as exc:
+                raise exc
+            except Exception as exc:
+                self.log(exc, color=bcolors.FAIL)
                 raise AssertionError(
                     "ReadOnly attribute did NOT work as expected")
             try:
-                wait_time = device['TimeStampsThreshold'].value
-                attrs = device.read_attributes(['float_scalar_rw',
-                                                'float_scalar_rw_bis'])
+                wait_time = device_proxy['TimeStampsThreshold'].value
+                attrs = device_proxy.read_attributes(['float_scalar_rw',
+                                                      'float_scalar_rw_bis'])
                 values = [attr.value for attr in attrs]
                 if values[0] != values[1]:
                     raise AssertionError("ReadWrite read failed")
-                rvalue = values[0]
-                wvalue = int(rvalue / 1.1)+(rvalue % 1)
-                device['float_scalar_rw'] = wvalue
+                r_value = values[0]
+                w_value = int(r_value / 1.1)+(r_value % 1)
+                device_proxy['float_scalar_rw'] = w_value
                 sleep(wait_time)
-                if device['float_scalar_rw_bis'].value != wvalue:
+                if device_proxy['float_scalar_rw_bis'].value != w_value:
                     raise AssertionError("ReadWrite write failed (1)")
-                device['float_scalar_rw_bis'] = rvalue
+                device_proxy['float_scalar_rw_bis'] = r_value
                 sleep(wait_time)
-                if device['float_scalar_rw'].value != rvalue:
+                if device_proxy['float_scalar_rw'].value != r_value:
                     raise AssertionError("ReadWrite write failed (2)")
-            except AssertionError as e:
-                raise e
-            except Exception as e:
-                self.log(e, color=bcolors.FAIL)
+            except AssertionError as exc:
+                raise exc
+            except Exception as exc:
+                self.log(exc, color=bcolors.FAIL)
                 raise AssertionError(
                     "ReadWrite attribute did NOT work as expected")
+            try:
+                self._tester.remove_device_property(property_name)
+                if not self._tester.device_init_command():
+                    raise AssertionError(
+                        "Device did NOT remove dynamic attributes")
+            except Exception as exc:
+                self.log(exc, color=bcolors.FAIL)
+                raise AssertionError(
+                    "Remove dynamic attributes did NOT work as excepted")
         except Exception as exc:
             msg = "{0}TEST FAILED{1}:\n\t{2}{3}{1}" \
                   "".format(bcolors.FAIL, bcolors.ENDC, bcolors.WARNING, exc)
-            self.log("{0}:\t{1}".format(testTitle, msg))
-            return False, [testTitle, msg]
+            self.log("{0}:\t{1}".format(test_title, msg))
+            return False, [test_title, msg]
+        else:
+            msg = "{0}TEST PASSED{1}".format(bcolors.OKGREEN, bcolors.ENDC)
+            self.log("{0}:\t{1}".format(test_title, msg))
+            return True, [test_title, msg]
+
+    def test_avoid_idn_and_specify_instructions_set(self, device_proxy):
+        test_title = "Avoid IDN and specify instruction set"
+        try:
+            property_name = "AvoidIDN"
+            property_value = 'True'
+            self._tester.set_device_property(property_name, property_value)
+
+            self.log("first part of the test: "
+                     "device that doesn't use the IDN")
+            if not self._tester.device_init_command():
+                raise Exception("Prepare to avoid IDN failed")
+            self.log("Second part of the test: "
+                     "dynamic attributes for this device")
+            property_name = "DynamicAttributes"
+            property_value = dynAttr_sample_content
+            self._tester.set_device_property(property_name, property_value)
+            if not self._tester.device_update_dynamic_attributes_command():
+                raise Exception("dynamic attributes failed")
+            self.log("Third part of the test: "
+                     "establish from where it should read the file with the "
+                     "instrument definition")
+
+            def _get_file_fullpath(filename):
+                path = os.getcwd()
+                full_path = os.path.join(path, filename)
+                return full_path
+
+            property_name = 'InstructionsFile'
+            property_value = _get_file_fullpath(
+                '../skippylib/instructions/fakeinstruments/tester.py')
+            self._tester.set_device_property(property_name, property_value)
+            if not self._tester.device_init_command():
+                raise Exception("Prepare to specify instructions file failed")
+            self.log("Device restored with the specified instruction set")
+
+            result, report = self.test_readings(device_proxy)
+            if result is False:
+                raise AssertionError(report)
+            result, report = self.test_writes(device_proxy)
+            if result is False:
+                raise AssertionError(report)
+            self.log("clean test modifications")
+            for property_name in ["AvoidIDN", "DynamicAttributes",
+                                 "InstructionsFile"]:
+                self._tester.remove_device_property(property_name)
+            self._tester.device_init_command()
+        except Exception as exc:
+            msg = "{0}TEST FAILED{1}:\n\t{2}{3}{1}" \
+                  "".format(bcolors.FAIL, bcolors.ENDC, bcolors.WARNING, exc)
+            self.log("{0}:\t{1}".format(test_title, msg))
+            return False, [test_title, msg]
         else:
             msg = bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC
-            self.log("%s:\t%s"%(testTitle, msg))
-            return True, [testTitle, msg]
+            self.log("{0}:\t{1}".format(test_title, msg))
+            return True, [test_title, msg]
 
-    def _waitUntilReaction(self, device, reactionPeriod, statesLst):
+    def _wait_until_reaction(self, device, reaction_period, states_lst):
         tries = 0
         state = device['State'].value
-        while state not in statesLst:
-            self.log("No device reaction yet... (%s)" % state,
+        while state not in states_lst:
+            self.log("No device reaction yet... ({0})".format(state),
                      bcolors.WARNING)
-            sleep(reactionPeriod)
+            sleep(reaction_period)
             tries += 1
             if tries == 10:
                 return False
             state = device['State'].value
-        self.log("Found a device reaction, state %s" % state)
+        self.log("Found a device reaction, state {0}".format(state))
         return True
 
 
-def signalHandler(signum, frame):
+def signal_handler(signum, frame):
     if signum == signal.SIGINT:
         print("\nCaptured a Ctrl+c: terminating the execution...")
     else:
-        print("Unmanaged signal received (%d)" % (signum))
+        print("Unmanaged signal received ({0})".format(signum))
 
 
 def main():
@@ -816,9 +937,9 @@ def main():
         sleep(3)
         manager.log("\n\tThe test is going to be launched",
                     color=bcolors.UNDERLINE)
-        signal.signal(signal.SIGINT, signalHandler)
+        signal.signal(signal.SIGINT, signal_handler)
         sleep(3)
-        exitCode = manager.launchTest()
+        exitCode = manager.launch_test()
         if args.no_remove:
             print("\n\tPress Ctrl+c to finish the fake device")
             signal.pause()

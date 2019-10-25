@@ -27,7 +27,7 @@ __license__ = "GPLv3+"
 __status__ = "Production"
 
 
-def identifier(idn, parent):
+def identifier(idn, parent, builder=None):
     '''This method has been designed to understand from the answer of an
        instrument to the '*IDN?' command, what is the correct object that
        contains the set of commands for this instrument.
@@ -44,7 +44,8 @@ def identifier(idn, parent):
             'tektronix': tektronix,
             'ub': ub,
             }[company](model)
-    builder = Builder(name="Builder", parent=parent)
+    if builder is None:
+        builder = Builder(name="Builder", parent=parent)
     builder.parseFile(file)
     return builder
 
