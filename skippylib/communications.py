@@ -15,7 +15,7 @@
 #
 # ##### END GPL LICENSE BLOCK #####
 
-from .abstracts import trace
+# from .abstracts import trace
 
 import array
 
@@ -203,7 +203,7 @@ class Communicator(object):
             # self.debug_stream("In Communicator.ask() Answer %r" % (answer))
             return answer
 
-    @trace
+    # @trace
     def write(self, commandList):
         '''Do a write operation to the remote
         '''
@@ -282,12 +282,12 @@ class BySocket(Communicator):
     def isConnected(self):
         return hasattr(self, '_socket') and self._socket is not None
 
-    @trace
+    # @trace
     def _send(self, msg):
         if self.isConnected():
             self._stream.write(msg)
 
-    @trace
+    # @trace
     def _recv(self, bufsize=DEFAULT_BUFFERSIZE):
         # FIXME: this method doesn't need the bufsize any more
         #  perhaps neither the multiple reads when a 1D doesn't fit in one read
@@ -330,10 +330,10 @@ class BySocket(Communicator):
                             len(completeMsg)))
                     buffer = self._stream.readline()
                     completeMsg = ''.join([completeMsg, buffer])
-                if completeMsg[len(completeMsg)-1] == '\n':
-                    self.debug_stream(
-                        "In _recv() read complete {0} bytes".format(
-                            len(completeMsg)))
+                # if completeMsg[len(completeMsg)-1] == '\n':
+                #     self.debug_stream(
+                #         "In _recv() read complete {0} bytes".format(
+                #             len(completeMsg)))
             except socket.timeout:
                 self.error_stream("Exception in %s: time out!"
                                   % (self.__hostName))

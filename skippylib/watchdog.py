@@ -101,8 +101,8 @@ class WatchDog(AbstractSkippyObj):
         # TODO: check first if the instrument has been contacted from another
         #       element of the skippylib. To avoid useless requests.
         answer = self._get_state() in [DevState.INIT, DevState.OFF]
-        self.debug_stream("Watchdog is %sinhibited"
-                          % ("" if answer else "not "))
+        # self.debug_stream("Watchdog is %sinhibited"
+        #                   % ("" if answer else "not "))
         return answer
 
     def standby(self):
@@ -140,10 +140,10 @@ class WatchDog(AbstractSkippyObj):
         try:
             tries = 0
             while tries <= 1:  # two tries
-                self.debug_stream("Watchdog check if instrument is there")
+                # self.debug_stream("Watchdog check if instrument is there")
                 idn = self._communications.ask("*IDN?")
                 if idn == self._parent._idn:
-                    self.debug_stream("Watchdog found the instrument ok")
+                    # self.debug_stream("Watchdog found the instrument ok")
                     return True
                 self.warn_stream("Watchdog received a bad answer from the "
                                  "instrument (%d): %r" % (tries, idn))
