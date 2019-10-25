@@ -651,6 +651,8 @@ class Skippy (PyTango.Device_4Impl):
         self.debug_stream("In IDN()")
         argout = ''
         #----- PROTECTED REGION ID(Skippy.IDN) ENABLED START -----#
+        if self.AvoidIDN:
+            return ''
         idn = self.skippy.Read("*IDN?")
         if self.skippy.idn != idn:
             self.warn_stream("In IDN(): current identity %r has changed to %r"
