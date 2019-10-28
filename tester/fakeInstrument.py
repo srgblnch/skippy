@@ -597,7 +597,7 @@ class TestManager(TestLogger):
         self.log("All tests passed", color=bcolors.HEADER)
         try:
             for name, msg in reports:
-                self.log("\t{0:30}:\t{1}".format(name, msg))
+                self.log("\t{0:40}\t{1}".format("{0}:".format(name), msg))
         except Exception as exc:
             self.log(reports)
         return 0
