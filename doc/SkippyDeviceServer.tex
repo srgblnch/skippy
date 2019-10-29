@@ -98,9 +98,14 @@ As \texttt{Tango} is an \emph{Object oriented} (OO paradigm) DCS, each of the ag
     \item {\tt AutoOn}: When device startup, try an on() begin communication with the instrument.\\ Default True.
     \item {\tt AutoStart}: When device startup, try an Start() to launch the necessary monitor threads (if {\tt MonitoredAttributes} is configured), authomatically.\\ Default True.
     \item {\tt TxTerminator}: by default the instruments uses '$\backslash${\tt n}' as a Transmission terminator, but there are instruments that requires to use '$\backslash${\tt r}', or both in a certain order like '$\backslash${\tt r}$\backslash${\tt n}'.
+    \item {\tt DynamicAttributes}: optional property to define specific attributes on a single instrument. The syntax is like they can be set in the definition file. If this property is modified with the device alive, there is a command '{\tt updateDynamicAttributes()}' to reload it.
+    \item {\tt InstructionsFile}: optional property specify from where, in the file system, the instruction set will be read. When set, the instrument identification will not be used to find the instruction set.
+    \item {\tt AvoidIDN}: optional property to avoid the instrument identification. So then, the only way to have dynamic attributes is specifing the file with the '{\tt InstructionsFile}' property or using the '{\tt DynamicAttributes}' property.
 \end{itemize}
 
 \subsubsection{Device Commands}\label{sec:devCmds}
+
+Many of those commands changes the device state. See the state machine in figure \ref{fig:stateMachine}.
 
 \begin{itemize}
     \item {\tt IDN()}: Request identification to the instrument.
@@ -115,9 +120,10 @@ As \texttt{Tango} is an \emph{Object oriented} (OO paradigm) DCS, each of the ag
     \item {\tt GetMonitoringPeriod(AttrName)}: Get the period that is checked an attribute monitored. {\tt NaN} if it is not monitored.
     \item {\tt \emph{Exec():}} Expert attribute to look inside the device during execution.
     \item {\tt \emph{CMD():}} Expert command for a direct send of a SCPI command and read the answer.
-    \item {\tt \emph{CMDfloat():}} Expert command for a direct send of a SCPI command and read the answer converted to a float list.
+    % \item {\tt \emph{CMDfloat():}} Expert command for a direct send of a SCPI command and read the answer converted to a float list.
     \item \todo{{\tt \emph{DumpAttr([file,time]):}} Once received, dump the raw data readed from the read of an attribute during the specified
  seconds}
+    \item {\tt \emph{updateDynamicAttributes():}} Expert command to reload, from the content in the '{\tt DynamicAttributes}' property, the dynamic attributes in a single device.
     \item \todo{{\tt DynamicCommands}}
 \end{itemize}
 
@@ -127,6 +133,8 @@ As \texttt{Tango} is an \emph{Object oriented} (OO paradigm) DCS, each of the ag
     \item {\tt idn}: read attribute with the identification of the instrument linked.
     \item {\tt QueryWindow}: Expert attribute to configure the number of request sent in parallel to the instrument. Bigger queries will be splitted in subqueries o of this size.
     \item {\tt TimeStampsThreshold}: This value sets the threshold time to use a cached value or hardware read it.
+    \item {\tt ReadAfterWrite}: This boolean instructs the behaviour of the device to check if the instrument answers an '{\tt ACK}' after each write.
+    \item {\tt Version}: Shows the version string of the running devices.
 \end{itemize}
 
 Other attributes can be built using a \href{http://en.wikipedia.org/wiki/Builder_pattern}{Builder pattern}. In fact, when the device starts and the instrument is identified, with the information provided in this identification, the device can find how to build the instructions set.
@@ -260,12 +268,6 @@ Monitor attributes. Having a property with a list of attributes, if they exist i
 
 \subsection{Known bugs}\label{sec:bugs}
 
-\begin{itemize}
-    \item \fixme{When all the monitored attributes are removed, the list ends inconsistent and dirty when newer attributes are added to this list.}
-    \item \fixme{The timestamp of an attribute come from when it was read from the hardware. But in case of an \texttt{INVALID} value, it will point forever to when it has decay: this produces issues when a plot show this and other attributes with different time scale.}
-    \item \fixme{The an instrument is powered off, if there is no attribute monitor the device will not see it until access the hardware. That is, request the \emph{state} before write will not update the information.}
-    %\item \fixme{It have seen, when the read frequency is very fast, like read a waveform above $5Hz$, some exceptions that suggest a responses cross between spectrum and scalar. This is potentially critical, because is undetectable if it happens between scalars.}
-    %\item \fixme{When a function is not defined (not when if off like a channel, this is like ask for a channel that doesn't exist physically), the device hangs due to an exception from the instrument and a very long time out.}
-\end{itemize}
+See the \href{https://github.com/srgblnch/skippy/issues?q=is\%3Aopen+is\%3Aissue+label\%3Abug}{open issues} that have the label '{\tt bug}' in the github's project.
 
 \end{document}
