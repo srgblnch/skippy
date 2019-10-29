@@ -37,6 +37,7 @@ from subprocess import Popen, PIPE
 import sys
 from time import sleep
 import traceback
+import tempfile
 
 __author__ = "Sergi Blanch-Torne"
 __maintainer__ = "Sergi Blanch-Torne"
@@ -583,6 +584,7 @@ class TestManager(TestLogger):
             self.test_waveform_switch,
             self.test_dyn_attr_injection,
             self.test_avoid_idn_and_specify_instructions_set,
+            self.test_specify_instructions_set_without_avoiding_idn,
         ]
         reports = []
         for i, test in enumerate(test_methods):
@@ -885,6 +887,47 @@ class TestManager(TestLogger):
                                  "InstructionsFile"]:
                 self._tester.remove_device_property(property_name)
             self._tester.device_init_command()
+        except Exception as exc:
+            msg = "{0}TEST FAILED{1}:\n\t{2}{3}{1}" \
+                  "".format(bcolors.FAIL, bcolors.ENDC, bcolors.WARNING, exc)
+            self.log("{0}:\t{1}".format(test_title, msg))
+            return False, [test_title, msg]
+        else:
+            msg = bcolors.OKGREEN+"TEST PASSED"+bcolors.ENDC
+            self.log("{0}:\t{1}".format(test_title, msg))
+            return True, [test_title, msg]
+
+    def test_specify_instructions_set_without_avoiding_idn(self, device_proxy):
+        test_title = "Specify instruction set without avoiding IDN"
+        attribute_name = "custom_float_attribute"
+        instructions = """Attribute("%s",
+                            {'type': PyTango.CmdArgType.DevFloat,
+                            'dim': [0],
+                            'readCmd': "source:readable:float:value?"
+                            })""" % (attribute_name,)
+        try:
+            old_idn = self._instrument._identity.idn
+            new_idn = lambda: "a,b,c,d"
+            self._instrument._scpiObj.addSpecialCommand('IDN', new_idn)
+
+            with tempfile.NamedTemporaryFile() as instructions_file:
+                instructions_file.write(instructions)
+                instructions_file.flush()
+                property_name = 'InstructionsFile'
+                property_value = instructions_file.name
+                self._tester.set_device_property(property_name, property_value)
+                if not self._tester.device_init_command():
+                    raise Exception("Re-init with instructions file failed")
+                self.log("Device restored with the specified instruction set")
+
+            self.log("Reading attribute {}".format(attribute_name))
+            device_proxy.read_attribute(attribute_name)
+
+            self.log("clean test modifications")
+            self._instrument._scpiObj.addSpecialCommand('IDN', old_idn)
+            self._tester.remove_device_property("InstructionsFile")
+            self._tester.device_init_command()
+
         except Exception as exc:
             msg = "{0}TEST FAILED{1}:\n\t{2}{3}{1}" \
                   "".format(bcolors.FAIL, bcolors.ENDC, bcolors.WARNING, exc)

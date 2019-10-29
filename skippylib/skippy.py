@@ -311,7 +311,11 @@ class Skippy(AbstractSkippyObj):
     def build(self):
         # TODO: check it is already build
         try:
-            if self._avoid_IDN is True:
+            if self._instructions_file is not None:
+                self.info_stream("Build based on an specified file")
+                self._identificator = Builder(name="Builder", parent=self)
+                self._identificator.parseFile(self._instructions_file)
+            elif self._avoid_IDN is True:
                 self.info_stream("Build without the information of IDN")
                 self._identificator = Builder(name="Builder", parent=self)
             elif hasattr(self, '_idn') and self._idn not in [None, ""]:
@@ -319,9 +323,6 @@ class Skippy(AbstractSkippyObj):
                 self._identificator = identifier(self._idn, self)
             else:
                 raise Exception("*IDN? not available (but not inhibited)")
-            if self._instructions_file is not None:
-                self.info_stream("Build based on an specified file")
-                self._identificator.parseFile(self._instructions_file)
         except Exception as _exception:
             if hasattr(self, '_idn'):
                 msg = "identification error: {0} (*IDN?:{1!r})" \
