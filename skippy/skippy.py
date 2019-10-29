@@ -1318,7 +1318,10 @@ class SkippyClass(PyTango.DeviceClass):
             [PyTango.DevBoolean, "none"]],
         'updateDynamicAttributes':
             [[PyTango.DevVoid, "none"],
-            [PyTango.DevBoolean, "none"]],
+            [PyTango.DevBoolean, "none"]
+            {
+                'Display level': PyTango.DispLevel.EXPERT,
+            } ],
         }
 
 
