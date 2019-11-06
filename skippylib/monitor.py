@@ -204,7 +204,7 @@ class Monitor(AbstractSkippyObj):
 
     def __doStop(self):
         self._generalMonitorEvent.set()
-        while any([self._monitorThreads[monitorTag]['Thread'].isAlive()
+        while any([self._monitorThreads[monitorTag]['Thread'].is_alive()
                    for monitorTag in self._monitorThreads.keys()]):
             self.info_stream("In %s.Stop() waiting for %d"
                              % (self.name, len(self._monitorThreads.keys())))

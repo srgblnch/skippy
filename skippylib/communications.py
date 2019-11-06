@@ -245,11 +245,14 @@ DEFAULT_BUFFERSIZE = 1024000
 
 
 class BySocket(Communicator):
+
+    _socket = None
+    _stream = None
+
     def __init__(self, hostName, port=DEFAULT_PORT, *args, **kwargs):
         super(BySocket, self).__init__(*args, **kwargs)
         self.__hostName = hostName
         self.__port = port
-        self._socket = None
         self.debug_stream("building a communication to %s by socket "
                           "using port %d" % (self.__hostName, self.__port))
         self.build()

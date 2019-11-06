@@ -105,7 +105,7 @@ class RampFeature(SkippyFeature):
 #         self._rampThread = value
 
     def isRamping(self):
-        if self.rampThread is not None and self.rampThread.isAlive():
+        if self.rampThread is not None and self.rampThread.is_alive():
             return True
         return False
 
