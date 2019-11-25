@@ -273,7 +273,7 @@ class FakeInstrument(object):
         return self.__build_ROFloatArray_aux('functions', 8)
 
     def __build_ROFloatArray_aux(self, name, how_many):
-        root_obj = self._scpiObj._commandTree
+        root_obj = self._scpiObj.command_tree
         source_obj = self._scpiObj.addComponent('source', root_obj)
         readable_obj = self._scpiObj.addComponent('readable', source_obj)
         channels_obj = self._scpiObj.addChannel(name, how_many, readable_obj)
