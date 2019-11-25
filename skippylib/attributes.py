@@ -403,6 +403,7 @@ class SkippyReadWriteAttribute(SkippyReadAttribute):
                     "{name} forces a delay after write of {v:f} seconds"
                     "".format(name=self.name, v=self._delayAfterWrite))
                 sleep(self._delayAfterWrite)
+            self._timestamp = None  # remove the mark of last read
 
     @property
     def writeFormula(self):
