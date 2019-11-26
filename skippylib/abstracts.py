@@ -17,7 +17,11 @@
 # ##### END GPL LICENSE BLOCK #####
 
 from __future__ import print_function
-import builtins
+try:
+    import __builtin__
+except ValueError:
+    # Python 3
+    import builtins as __builtin__
 from PyTango import DevState
 
 __author__ = "Sergi Blanch-Torné"
@@ -41,7 +45,7 @@ def trace(method):
     def _get_printer(obj):
         if hasattr(obj, "debug_stream"):
             return obj.debug_stream
-        return builtins.print
+        return __builtin__.print
 
     def _compact_answer(answer):
         if isinstance(answer, str) and len(answer) > 100:

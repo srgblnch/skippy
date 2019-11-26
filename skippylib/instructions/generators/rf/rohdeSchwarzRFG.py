@@ -46,7 +46,7 @@ Attribute('RfState',
           {'type': PyTango.CmdArgType.DevBoolean,
            'dim': [0],
            'readCmd': ":OUTP:STAT?",
-           'writeCmd': lambda value: ":OUTP:STAT %s" % (value),
+           'writeCmd': lambda value: ":OUTP:STAT %s" % int(value),
            })
 
 Attribute('FrequencyRangeLow',
