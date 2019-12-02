@@ -141,68 +141,76 @@ class Skippy (PyTango.Device_4Impl):
     #     # self.__hardwareWrite(cmd)
     #     self.skippy.Write(cmd)
 
+    def __set_value_date_quality(self, attr, value,
+                                 timestamp=None, quality=None):
+        def __none_value(_type):
+            if _type in [PyTango.DevString]:
+                return ""
+            return 0
+        value_length = None
+        try:
+            if quality is None:
+                quality = PyTango.AttrQuality.ATTR_VALID
+            if timestamp is None:
+                timestamp = time.time()
+            if value is None:
+                value = __none_value(attr.get_data_type())
+                quality = PyTango.AttrQuality.ATTR_INVALID
+                value_length = 0
+            elif isinstance(value, list):
+                if all(element is None for element in value):
+                    value = [__none_value(attr.get_data_type())]
+                    quality = PyTango.AttrQuality.ATTR_INVALID
+                value_length = 1
+            if value_length:
+                attr.set_value_date_quality(
+                    value, timestamp, quality, value_length)
+            else:
+                attr.set_value_date_quality(
+                    value, timestamp, quality)
+            self.info_stream(
+                "Set {0} to {1} {2} {3}".format(attr.get_name(), value,
+                                                timestamp, quality))
+        except Exception as exc:
+            attr_name = attr.get_name()
+            self.error_stream(
+                "Exception in set_value_date_quality {0}: {1}"
+                "".format(attr_name, exc))
+
     @AttrExc
     def read_attr(self, attr):
         if self.get_state() in [PyTango.DevState.FAULT]:
             # Try to return a quality invalid without knowing yet if the
             # attribute is a number or an string.
-            try:
-                attr.set_value_date_quality(
-                    0, time.time(), PyTango.AttrQuality.ATTR_INVALID)
-                return
-            except:
-                pass
-            try:
-                attr.set_value_date_quality(
-                    "", time.time(), PyTango.AttrQuality.ATTR_INVALID)
-                return
-            except:
-                pass
+            self.__set_value_date_quality(attr, None)
             return
-        attrName = attr.get_name()
-        if attrName in self.skippy.attributes:
-            attrStruct = self.skippy.attributes[attrName]
-            value = attrStruct.lastReadValue
-            timestamp = attrStruct.timestamp
-            quality = attrStruct.quality
-            if attrStruct.dim == 0:
-                if value is None:
-                    if attrStruct.type in [PyTango.DevString]:
-                        value = ""
-                    else:
-                        value = 0
-                    attr.set_value_date_quality(
-                        value, time.time(), PyTango.AttrQuality.ATTR_INVALID)
-                else:
-                    attr.set_value_date_quality(value, timestamp, quality)
-            elif attrStruct.dim == 1:
-                if value is None:
-                    attr.set_value_date_quality([0], time.time(),
-                                                PyTango.AttrQuality.
-                                                ATTR_INVALID, 1)
-                else:
-                    attr.set_value_date_quality(value, timestamp, quality,
-                                                len(value))
-            if attrStruct.isWritable():
-                wvalue = attrStruct.lastWriteValue
+        attr_name = attr.get_name()
+        if attr_name in self.skippy.attributes:
+            attr_struct = self.skippy.attributes[attr_name]
+            value = attr_struct.lastReadValue
+            timestamp = attr_struct.timestamp
+            quality = attr_struct.quality
+            self.__set_value_date_quality(attr, value, timestamp, quality)
+            if attr_struct.isWritable():
+                wvalue = attr_struct.lastWriteValue
                 if wvalue is not None:
                     attr.set_write_value(wvalue)
                 else:
                     attr.set_write_value(value)
                 # when there has been no read (yet) avoid the Non-initialised.
-        elif attrName.endswith("Step"):
-            parentAttrName = attrName.split('Step')[0]
-            parentAttrStruct = self.skippy.attributes[parentAttrName]
-            value = parentAttrStruct.getRampObj().rampStep
+        elif attr_name.endswith("Step"):
+            parent_attr_name = attr_name.split('Step')[0]
+            parent_attr_struct = self.skippy.attributes[parent_attr_name]
+            value = parent_attr_struct.getRampObj().rampStep
             if value is None:
                 attr.set_value_date_quality(0, time.time(),
                                             PyTango.AttrQuality.ATTR_INVALID)
             else:
                 attr.set_value(value)
-        elif attrName.endswith("StepSpeed"):
-            parentAttrName = attrName.split('StepSpeed')[0]
-            parentAttrStruct = self.skippy.attributes[parentAttrName]
-            value = parentAttrStruct.getRampObj().rampStepSpeed
+        elif attr_name.endswith("StepSpeed"):
+            parent_attr_name = attr_name.split('StepSpeed')[0]
+            parent_attr_struct = self.skippy.attributes[parent_attr_name]
+            value = parent_attr_struct.getRampObj().rampStepSpeed
             if value is None:
                 attr.set_value_date_quality(0, time.time(),
                                             PyTango.AttrQuality.ATTR_INVALID)
@@ -210,7 +218,7 @@ class Skippy (PyTango.Device_4Impl):
                 attr.set_value(value)
         else:
             raise AttributeError("Invalid read of the attribute %s"
-                                 % (attrName))
+                                 % (attr_name))
 
     @AttrExc
     def write_attr(self, attr):
@@ -384,14 +392,14 @@ class Skippy (PyTango.Device_4Impl):
         for attrName in attrList:
             if attrName not in self._alarmDueToMonitoring:
                 self._alarmDueToMonitoring.append(attrName)
-        self.skippy._change_state_status(rebuild=True)  # self.rebuildStatus()
+        self.skippy._change_state_status()  # self.rebuildStatus()
 
     def __removeFromAlarmCausingList(self, attrList):
         for attrName in attrList:
             if self._alarmDueToMonitoring.count(attrName):
                 self._alarmDueToMonitoring.pop(
                     self._alarmDueToMonitoring.index(attrName))
-        self.skippy._change_state_status(rebuild=True)  # self.rebuildStatus()
+        self.skippy._change_state_status()  # self.rebuildStatus()
 
     def __appendPropertyElement(self, propertyName, element):
         db = PyTango.Database()
