@@ -177,7 +177,7 @@ class RampFeature(SkippyFeature):
         self.info_stream("In _rampProcedure(): finished the movement at %f"
                          % (dest_pos))
         # close
-        self._change_state_status(newState=backup_state, rebuild=True)
+        self._change_state_status(newState=backup_state)
         self._rampThread = None
 
     def _write(self, cmd):

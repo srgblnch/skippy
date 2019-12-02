@@ -470,7 +470,7 @@ class ByVisaName(Communicator):
 class BySerialName(Communicator):
     def __init__(self, name, serial_args=None, terminator=None,
                  *args, **kwargs):
-        super(BySocket, self).__init__(*args, **kwargs)
+        super(BySerialName, self).__init__(*args, **kwargs)
         if serial is None:
             raise ImportError("soft dependency to Serial python package "
                               "unsatisfied")
