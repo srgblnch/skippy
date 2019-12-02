@@ -20,7 +20,7 @@ __email__ = "sblanch@cells.es"
 __copyright__ = "Copyright 2015, CELLS / ALBA Synchrotron"
 __license__ = "GPLv3+"
 
-__version__ = '1.5.5-alpha0'
+__version__ = '1.5.5'
 
 
 def VERSION():
