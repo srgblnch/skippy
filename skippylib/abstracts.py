@@ -22,7 +22,10 @@ try:
 except ValueError:
     # Python 3
     import builtins as __builtin__
-from PyTango import DevState
+try:
+    from tango import DevState
+except ValueError:
+    from PyTango import DevState
 
 __author__ = "Sergi Blanch-Torné"
 __email__ = "sblanch@cells.es"
