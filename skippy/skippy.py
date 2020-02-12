@@ -142,32 +142,28 @@ class Skippy (PyTango.Device_4Impl):
     #     self.skippy.Write(cmd)
 
     def __set_value_date_quality(self, attr, value,
-                                 timestamp=None, quality=None):
+                                 timestamp=None, quality=None, length=None):
         def __none_value(_type):
             if _type in [PyTango.DevString]:
                 return ""
             return 0
-        value_length = None
         try:
             if quality is None:
                 quality = PyTango.AttrQuality.ATTR_VALID
             if timestamp is None:
                 timestamp = time.time()
-            if value is None:
-                value = __none_value(attr.get_data_type())
+            if value is None or \
+                    (isinstance(value, list) and value.count(None) > 0):
+                if length is not None:
+                    none_value = __none_value(attr.get_data_type())
+                    value = [none_value] * length
+                else:
+                    value = __none_value(attr.get_data_type())
                 quality = PyTango.AttrQuality.ATTR_INVALID
-                value_length = 0
-            elif isinstance(value, list):
-                if all(element is None for element in value):
-                    value = [__none_value(attr.get_data_type())]
-                    quality = PyTango.AttrQuality.ATTR_INVALID
-                value_length = 1
-            if value_length:
-                attr.set_value_date_quality(
-                    value, timestamp, quality, value_length)
+            if length is not None:
+                attr.set_value_date_quality(value, timestamp, quality, length)
             else:
-                attr.set_value_date_quality(
-                    value, timestamp, quality)
+                attr.set_value_date_quality(value, timestamp, quality)
             self.info_stream(
                 "Set {0} to {1} {2} {3}".format(attr.get_name(), value,
                                                 timestamp, quality))
@@ -176,6 +172,7 @@ class Skippy (PyTango.Device_4Impl):
             self.error_stream(
                 "Exception in set_value_date_quality {0}: {1}"
                 "".format(attr_name, exc))
+            traceback.print_exc()
 
     @AttrExc
     def read_attr(self, attr):
@@ -190,7 +187,14 @@ class Skippy (PyTango.Device_4Impl):
             value = attr_struct.lastReadValue
             timestamp = attr_struct.timestamp
             quality = attr_struct.quality
-            self.__set_value_date_quality(attr, value, timestamp, quality)
+            if attr_struct.dim == 0:
+                self.__set_value_date_quality(attr, value, timestamp, quality)
+            elif attr_struct.dim == 1:
+                if value is None:
+                    value = [None]
+                self.__set_value_date_quality(attr, value, timestamp, quality,
+                                              len(value))
+            # TODO: dim == 2
             if attr_struct.isWritable():
                 wvalue = attr_struct.lastWriteValue
                 if wvalue is not None:
