@@ -100,7 +100,7 @@ Attribute('OscillatorSource',
           {'type': PyTango.CmdArgType.DevString,
            'dim': [0],
            'readCmd': ":ROSCillator:SOURce?",
-           # 'writeCmd': lambda value: ":ROSCillator:SOURce %s" % (str(value)),
+           'writeCmd': lambda value: ":ROSCillator:SOURce %s" % (str(value)),
            })
 
 Attribute('OscillatorExternalLostRFoff',
@@ -118,8 +118,8 @@ Attribute('OscillatorExternalFrequency',
            'readCmd': ":ROSCillator:EXTernal:Frequency?"
            })
 
-# Attribute('Errors',
-#           {'type': PyTango.CmdArgType.DevString,
-#            'dim': [1,100],
-#            'readCmd': ":SYST:SERROR?",
-#            })
+Attribute('Errors',
+           {'type': PyTango.CmdArgType.DevString,
+            'dim': [1,100],
+            'readCmd': ":SYST:SERROR?",
+            })
