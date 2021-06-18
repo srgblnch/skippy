@@ -1,1 +1,1 @@
-## skippy moved to git@gitlab.com:srgblnch-tangocs/skippy
+## skippy moved to https://gitlab.com/srgblnch-tangocs/skippy
